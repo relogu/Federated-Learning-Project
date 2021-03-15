@@ -72,7 +72,6 @@ if __name__ == "__main__":
     R_NOISE = 0.2
     np.random.seed(51550)
     i=args.client
-    #i=1
     if i<0:
         i=-i
     if i>19:
