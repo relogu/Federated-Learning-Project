@@ -17,6 +17,8 @@ import random
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+# for debug connection
+os.environ["GRPC_VERBOSITY"] = "debug"
 
 def parse_args():
     """Parse the arguments passed."""
@@ -135,5 +137,6 @@ if __name__ == "__main__":
         SERVER = "localhost:8081"
     else:
         SERVER = args.server
+    print(SERVER)
     # Start Flower client
     fl.client.start_numpy_client(SERVER, client=MakeMoonsClient())
