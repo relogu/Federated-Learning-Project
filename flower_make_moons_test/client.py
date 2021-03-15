@@ -10,38 +10,57 @@ import os
 import flwr as fl
 import tensorflow as tf
 from sklearn import datasets
+from argparse import RawTextHelpFormatter
 import numpy as np
+import random
+# disable possible gpu devices
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-
-if tf.test.gpu_device_name():
-    print('GPU found')
-else:
-    print("No GPU found")
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
-def parse_args ():
-    """Parse the arguments given."""
-    description = 'Client for moons test learning network using flower'
-
-    parser = argparse.ArgumentParser(description = description)
-
-    parser.add_argument('--client',
-                        dest='client',
+def parse_args():
+    """Parse the arguments passed."""
+    description = 'Client for moons test FL network using flower.\n' + \
+        'Give the id of the client and the number of local epoch you want to perform.\n' + \
+        'Give also the number of data samples you wanto to train for this client.\n' + \
+        'One can optionally give the server location to pass the client builder.\n' + \
+        'One can optionally give the noise to generate the dataset.\n' + \
+        'The number of test data samples is fixed by the program.\n' + \
+        'The client id will also initialize the seed for the train dataset.\n' + \
+        'The program is built to make all the client use the same test dataset.'
+    parser = argparse.ArgumentParser(description = description,
+                                     formatter_class=RawTextHelpFormatter)
+    parser.add_argument('--server',
+                        dest='server',
+                        required=False,
+                        type=type(''),
+                        action='store',
+                        help='server address to call')
+    parser.add_argument('--client_id',
+                        dest='client_id',
                         required=True,
                         type=int,
                         action='store',
-                        help='client id, 0-19 allowed')
-
+                        help='client id, set also the seed for the dataset')
     parser.add_argument('--rounds',
                         dest='rounds',
+                        required=False,
+                        type=int,
+                        action='store',
+                        help='number of local epochs to perform')
+    parser.add_argument('--n_train',
+                        dest='n_train',
                         required=True,
                         type=int,
                         action='store',
-                        help='number of local rounds to perform')
-
+                        help='number of samples in training set')
+    parser.add_argument('--noise',
+                        dest='noise',
+                        required=False,
+                        type=float,
+                        action='store',
+                        help='noise to put in the train dataset')
     _args = parser.parse_args()
-
     return _args
 
 if __name__ == "__main__":
@@ -63,31 +82,35 @@ if __name__ == "__main__":
                   metrics=["accuracy"])
 
     # parameters
-    N_TRAIN = 20
-    N_TEST = 1000
-    N_LOC_EPOCHS = args.rounds
+    N_TRAIN = int(args.n_train)
+    if N_TRAIN < 10:
+        N_TRAIN=10
+    if not args.rounds:
+        N_LOC_EPOCHS = 1
+    else:
+        N_LOC_EPOCHS = args.rounds
     if N_LOC_EPOCHS < 1:
         N_LOC_EPOCHS=1
     N_CLIENTS = 20
-    R_NOISE = 0.2
-    np.random.seed(51550)
-    i=args.client
-    if i<0:
-        i=-i
-    if i>19:
-        i=19
-    RANDOM_STATES = np.random.randint(0, 1000*N_CLIENTS, N_CLIENTS+1)
+    if not args.noise:
+        R_NOISE = 0.2
+    else:
+        R_NOISE = args.noise
+    random.seed(51550)
+    # TODO: control if these random states are equal and manage it
+    TEST_RAND_STATE = random.randint(0, 100000)
+    random.seed(args.client_id)
+    TRAIN_RAND_STATE = random.randint(0, 100000)
 
     # datasets
     (x_train, y_train) = datasets.make_moons(n_samples=N_TRAIN,
                                              shuffle=True,
                                              noise=R_NOISE,
-                                             random_state=RANDOM_STATES[i])
-
-    (x_test, y_test) = datasets.make_moons(n_samples=N_TEST,
+                                             random_state=TRAIN_RAND_STATE)
+    (x_test, y_test) = datasets.make_moons(n_samples=1000,
                                            shuffle=True,
-                                           noise=R_NOISE,
-                                           random_state=RANDOM_STATES[-1])
+                                           noise=0.2,
+                                           random_state=TEST_RAND_STATE)
 
     class MakeMoonsClient(fl.client.NumPyClient):
         """Client object, to set client performed operations."""
@@ -108,5 +131,9 @@ if __name__ == "__main__":
             loss, accuracy = model.evaluate(x_test, y_test)
             return loss, len(x_test), {"accuracy": accuracy}
 
+    if not args.server:
+        SERVER = "localhost:8081"
+    else:
+        SERVER = args.server
     # Start Flower client
-    fl.client.start_numpy_client("localhost:8081", client=MakeMoonsClient())
+    fl.client.start_numpy_client(SERVER, client=MakeMoonsClient())
