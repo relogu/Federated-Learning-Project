@@ -11,6 +11,8 @@ from argparse import RawTextHelpFormatter
 import flwr as fl
 # disable possible gpu devices
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+# for debug connection
+os.environ["GRPC_VERBOSITY"] = "debug"
 
 def parse_args ():
     """Parse the arguments passed."""
@@ -32,6 +34,12 @@ def parse_args ():
                         type=int,
                         action='store',
                         help='minimum number of active clients to perform an iteration step')
+    parser.add_argument('--address',
+                        dest='addres',
+                        required=False,
+                        type=type(''),
+                        action='store',
+                        help='complete address to launch server, e.g. 127.0.0.1:8081')
 
     _args = parser.parse_args()
 
@@ -46,7 +54,12 @@ if __name__ == "__main__":
     strategy = fl.server.strategy.FedAvg(
         min_available_clients=args.clients
     )
+
+    if not args.server:
+        SERVER = "192.168.1.191:5223"
+    else:
+        SERVER = args.server
     # starting the server
-    fl.server.start_server("localhost:8081",
+    fl.server.start_server(SERVER,
                            config={"num_rounds": args.rounds},
                            strategy=strategy)
