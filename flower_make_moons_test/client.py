@@ -37,7 +37,7 @@ def parse_args():
                         required=False,
                         type=type(''),
                         action='store',
-                        help='server address to call')
+                        help='server address to point')
     parser.add_argument('--client_id',
                         dest='client_id',
                         required=True,
