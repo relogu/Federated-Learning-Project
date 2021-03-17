@@ -91,8 +91,10 @@ def plot_decision_boundary(model, fed_iter, x, y):
     # Plot the contour and training examples
     plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)
     plt.scatter(x[:, 0], x[:, 1], c=y, cmap=plt.cm.Spectral)
-    #plt.show(block=False)
+    plt.draw()
+    plt.show(block=False)
     plt.savefig('output/dec_bound_F'+str(fed_iter)+'.png')
+    plt.close()
 
 if __name__ == "__main__":
 
