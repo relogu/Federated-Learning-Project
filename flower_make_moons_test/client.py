@@ -157,12 +157,12 @@ if __name__ == "__main__":
         
         def get_parameters(self):  # type: ignore
             """Get the model weights by model object."""
-            print("Getting parameters step.")
+            #print("Getting parameters step.")
             return model.get_weights()
 
         def fit(self, parameters, config):  # type: ignore
             """Perform the fit step after having assigned new weights."""
-            print("Fit step.")
+            #print("Fit step.")
             #print(config)
             self.f_round += 1
             print("Federated Round number " + str(self.f_round))
@@ -172,7 +172,7 @@ if __name__ == "__main__":
 
         def evaluate(self, parameters, config):  # type: ignore
             """Perform the evaluation step after having assigned new weights."""
-            print("Evaluation step.")
+            #print("Evaluation step.")
             #print(config)
             model.set_weights(parameters)
             if self.f_round%100 == 0 and PLOT:
