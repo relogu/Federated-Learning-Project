@@ -52,7 +52,9 @@ if __name__ == "__main__":
     args = parse_args()
     # instantiating the strategy
     strategy = fl.server.strategy.FedAvg(
-        min_available_clients=args.clients
+        min_available_clients=args.clients,
+        min_fit_clients=args.clients,
+        min_eval_clients=args.clients
     )
 
     if not args.address:
