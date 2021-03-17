@@ -12,7 +12,9 @@ import tensorflow as tf
 from sklearn import datasets
 from argparse import RawTextHelpFormatter
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.use('Agg')
 import random
 # disable possible gpu devices
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
