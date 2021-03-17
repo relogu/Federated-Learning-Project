@@ -148,7 +148,7 @@ if __name__ == "__main__":
                                              random_state=TRAIN_RAND_STATE)
     (x_test, y_test) = datasets.make_moons(n_samples=1000,
                                            shuffle=True,
-                                           noise=0.2,
+                                           noise=0.1,
                                            random_state=TEST_RAND_STATE)
 
     class MakeMoonsClient(fl.client.NumPyClient):
@@ -167,7 +167,6 @@ if __name__ == "__main__":
             #print("Fit step.")
             #print(config)
             self.f_round += 1
-            print("Federated Round number " + str(self.f_round))
             model.set_weights(parameters)
             model.fit(x_train, y_train, epochs=N_LOC_EPOCHS, verbose=0)#, batch_size=32)
             return model.get_weights(), len(x_train), {}
@@ -178,6 +177,7 @@ if __name__ == "__main__":
             #print(config)
             model.set_weights(parameters)
             if self.f_round%100 == 0 and PLOT:
+                print("Federated Round number " + str(self.f_round))
                 loss, accuracy = model.evaluate(x_test, y_test, verbose=1)
                 plot_decision_boundary(model, self.f_round, x_test, y_test)
             else :
