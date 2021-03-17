@@ -175,7 +175,7 @@ if __name__ == "__main__":
             print("Evaluation step.")
             #print(config)
             model.set_weights(parameters)
-            if self.f_round%10 == 0 and PLOT:
+            if self.f_round%100 == 0 and PLOT:
                 loss, accuracy = model.evaluate(x_test, y_test, verbose=1)
                 plot_decision_boundary(model, self.f_round, x_test, y_test)
             else :
