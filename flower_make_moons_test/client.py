@@ -178,7 +178,7 @@ if __name__ == "__main__":
             model.set_weights(parameters)
             if self.f_round%100 == 0 and PLOT:
                 print("Federated Round number " + str(self.f_round))
-                loss, accuracy = model.evaluate(x_test, y_test, verbose=1)
+                loss, accuracy = model.evaluate(x_test, y_test, verbose=2)
                 plot_decision_boundary(model, self.f_round, x_test, y_test)
             else :
                 loss, accuracy = model.evaluate(x_test, y_test, verbose=0)
