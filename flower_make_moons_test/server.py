@@ -35,7 +35,7 @@ def parse_args ():
                         action='store',
                         help='minimum number of active clients to perform an iteration step')
     parser.add_argument('--address',
-                        dest='addres',
+                        dest='address',
                         required=False,
                         type=type(''),
                         action='store',
@@ -55,10 +55,10 @@ if __name__ == "__main__":
         min_available_clients=args.clients
     )
 
-    if not args.server:
+    if not args.address:
         SERVER = "192.168.1.191:5223"
     else:
-        SERVER = args.server
+        SERVER = args.address
     # starting the server
     fl.server.start_server(SERVER,
                            config={"num_rounds": args.rounds},
