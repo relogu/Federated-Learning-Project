@@ -159,26 +159,22 @@ if __name__ == "__main__":
         
         def get_parameters(self):  # type: ignore
             """Get the model weights by model object."""
-            #print("Getting parameters step.")
             return model.get_weights()
 
         def fit(self, parameters, config):  # type: ignore
             """Perform the fit step after having assigned new weights."""
-            #print("Fit step.")
-            #print(config)
             self.f_round += 1
+            if self.f_round%10 == 0 :
+                print("Federated Round number " + str(self.f_round))
             model.set_weights(parameters)
             model.fit(x_train, y_train, epochs=N_LOC_EPOCHS, verbose=0)#, batch_size=32)
             return model.get_weights(), len(x_train), {}
 
         def evaluate(self, parameters, config):  # type: ignore
             """Perform the evaluation step after having assigned new weights."""
-            #print("Evaluation step.")
-            #print(config)
             model.set_weights(parameters)
             if self.f_round%100 == 0 and PLOT:
-                print("Federated Round number " + str(self.f_round))
-                loss, accuracy = model.evaluate(x_test, y_test, verbose=2)
+                loss, accuracy = model.evaluate(x_test, y_test, verbose=1)
                 plot_decision_boundary(model, self.f_round, x_test, y_test)
             else :
                 loss, accuracy = model.evaluate(x_test, y_test, verbose=0)
