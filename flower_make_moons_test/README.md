@@ -53,12 +53,16 @@ optional arguments:
 ```
 
 ## Results
-4 client (13,10,10,20)train_samples (1,1,1,1)local_rounds 10000fed_rounds 1000test_samples(shared)\
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> loss=0.14580243825912476; accuracy=0.369999766349792\
-4 client (13,10,10,20)train_samples (1,1,1,1)local_rounds 1000fed_rounds 1000test_samples(shared)\
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> loss=0.26961350440979004; accuracy=0.9129999876022339\
-4 client (13,10,11,20)train_samples (3,2,3,5)local_rounds 1000fed_rounds 1000test_samples(shared)\
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> loss=0.29000794887542725; accuracy=0.8820000290870667
+4 client (13,10,10,20)train_samples (1,1,1,1)local_rounds 5000fed_rounds 1000test_samples(shared)\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> (picking 2 out of 4 per federated round)  reached accuracy = 1 before end\
+4 client (13,10,10,20)train_samples (3,2,2,5)local_rounds 5000fed_rounds 1000test_samples(shared)\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> (picking 2 out of 4 per federated round)  reached accuracy = 0.9670000076293945\
+4 client (13,10,10,20)train_samples (1,1,1,1)local_rounds 5000fed_rounds 1000test_samples(shared)\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> loss: 0.1043 - accuracy: 1.0000\
+4 client (13,10,10,20)train_samples (5,5,5,5)local_rounds 5000fed_rounds 1000test_samples(shared)\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> loss: 0.0505 - accuracy: 0.9820\
+4 client (13,10,10,20)train_samples (3,2,2,5)local_rounds 5000fed_rounds 1000test_samples(shared)\
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> loss: 0.0937 - accuracy: 0.9670  
 
 
 ## References
