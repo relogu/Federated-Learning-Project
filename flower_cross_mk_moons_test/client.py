@@ -26,15 +26,13 @@ os.environ["GRPC_VERBOSITY"] = "debug"
 
 def parse_args():
     """Parse the arguments passed."""
-    description = 'Client for moons test FL network using flower.\n' + \
+    description = 'Client for moons test FL network using flower and cross-validation.\n' + \
         'Give the id of the client and the number of local epoch you want to perform.\n' + \
-        'Give also the number of data samples you wanto to train for this client.\n' + \
+        'Give also the number of data samples for this client.\n' + \
+        'One can optionally give the number of folds to use for the cross validation.\n' + \
         'One can optionally give the server location to pass the client builder.\n' + \
-        'One can optionally give the noise to generate the dataset.\n' + \
-        'One can optionally tell the program to plot the decision boundary at the evaluation step.\n' + \
-        'The number of test data samples is fixed by the program.\n' + \
-        'The client id will also initialize the seed for the train dataset.\n' + \
-        'The program is built to make all the client use the same test dataset.'
+        'One can optionally tell the program to plot the decision boundary at the evaluation step (only for the chosen model).\n' + \
+        'The client id will also initialize the seed for the train dataset.\n'
     parser = argparse.ArgumentParser(description = description,
                                      formatter_class=RawTextHelpFormatter)
     parser.add_argument('--server',
@@ -67,6 +65,12 @@ def parse_args():
                         type=int,
                         action='store',
                         help='number of folds for the cross validator')
+    parser.add_argument('--loss',
+                        dest='loss',
+                        required=False,
+                        type=bool,
+                        action='store',
+                        help='tells the program whether to use loss or accuracy for model selection')
     parser.add_argument('--plot',
                         dest='plot',
                         required=False,
@@ -118,16 +122,20 @@ if __name__ == "__main__":
                   metrics=["accuracy"])
 
     # parameters
-    N_SAMPLES = int(args.n_samples)
+    N_SAMPLES = args.n_samples
+    # may be I'll remove this
     if N_SAMPLES < 10:
-        N_SAMPLES=10
-    if N_SAMPLES < 10:
-        N_SAMPLES=10
+        N_SAMPLES = 10
         
     if not args.n_folds:
-        N_FOLDS = 2
+        N_FOLDS = 5 # 80-20
     else :
-        N_FOLDS = int(args.n_folds)
+        N_FOLDS = args.n_folds
+    
+    if not args.loss:
+        LOSS = False
+    else:
+        LOSS = args.loss
         
     if not args.rounds:
         N_LOC_EPOCHS = 1
@@ -136,7 +144,7 @@ if __name__ == "__main__":
     if N_LOC_EPOCHS < 1:
         N_LOC_EPOCHS = 1
         
-    NOISE = 0.2
+    NOISE = 0.1
     
     if not args.plot:
         PLOT = False
@@ -153,7 +161,7 @@ if __name__ == "__main__":
                                  random_state=RAND_STATE)
     
     # Define the K-fold Cross Validator
-    kfold = KFold(n_splits=N_FOLDS, shuffle=True) #shuffling may be useless
+    kfold = KFold(n_splits=N_FOLDS)
     n_splits  = kfold.get_n_splits(x, y)
     
     def get_train_set(f_round):
@@ -173,12 +181,41 @@ if __name__ == "__main__":
             if i==index :
                 return test
             i+=1
+    
+    def get_index_by_fold(fold):
+        """Return the index for the test and train dataset, given the fold split index."""
+        i=0
+        for train, test in kfold.split(x, y):
+            if i==fold :
+                return train, test
+            i+=1
+            
+    def model_selection_by_loss(weights):
+        """Perform the cross-validation selection of the model by the one that as minimum loss"""
+        losses=[]
+        for train, test in kfold.split(x, y):
+            model.set_weights(weights)
+            model.fit(x[train], y[train], epochs=N_LOC_EPOCHS, verbose=0)#, batch_size=32)
+            loss, accuracy = model.evaluate(x[test], y[test], verbose=0)
+            losses.append(loss)
+        return losses.index(max(losses))
+            
+    def model_selection_by_accuracy(weights):
+        """Perform the cross-validation selection of the model by the one that as maximum accuracy"""
+        accuracies=[]
+        for train, test in kfold.split(x, y):
+            model.set_weights(weights)
+            model.fit(x[train], y[train], epochs=N_LOC_EPOCHS, verbose=0)#, batch_size=32)
+            loss, accuracy = model.evaluate(x[test], y[test], verbose=0)
+            accuracies.append(accuracy)
+        return accuracies.index(min(accuracies))
 
     class MakeMoonsClient(fl.client.NumPyClient):
         """Client object, to set client performed operations."""
         
         def __init__( self ):
             self.f_round = 0
+            self.sel_fold = -1
         
         def get_parameters(self):  # type: ignore
             """Get the model weights by model object."""
@@ -189,23 +226,25 @@ if __name__ == "__main__":
             self.f_round += 1
             if self.f_round%10 == 0 :
                 print("Federated Round number " + str(self.f_round))
-            x_train = x[get_train_set(self.f_round)]
-            y_train = y[get_train_set(self.f_round)]
+            if LOSS :
+                self.sel_fold = model_selection_by_loss(parameters)
+            else :
+                self.sel_fold = model_selection_by_accuracy(parameters)
+            train, test = get_index_by_fold(self.sel_fold)
             model.set_weights(parameters)
-            model.fit(x_train, y_train, epochs=N_LOC_EPOCHS, verbose=0)#, batch_size=32)
-            return model.get_weights(), len(x_train), {}
+            model.fit(x[train], y[train], epochs=N_LOC_EPOCHS, verbose=0)#, batch_size=32)
+            return model.get_weights(), len(x[train]), {}
 
         def evaluate(self, parameters, config):  # type: ignore
             """Perform the evaluation step after having assigned new weights."""
             model.set_weights(parameters)
-            x_test = x[get_test_set(self.f_round)]
-            y_test = y[get_test_set(self.f_round)]
+            train, test = get_index_by_fold(self.sel_fold)
             if self.f_round%100 == 0 and PLOT:
-                loss, accuracy = model.evaluate(x_test, y_test, verbose=1)
-                plot_decision_boundary(model, self.f_round, x_test, y_test)
+                loss, accuracy = model.evaluate(x[test], y[test], verbose=1)
+                plot_decision_boundary(model, self.f_round, x[test], y[test])
             else :
-                loss, accuracy = model.evaluate(x_test, y_test, verbose=0)
-            return loss, len(x_test), {"accuracy": accuracy}
+                loss, accuracy = model.evaluate(x[test], y[test], verbose=0)
+            return loss, len(x[test]), {"accuracy": accuracy}
 
     if not args.server:
         SERVER = "192.168.1.191:5223"
