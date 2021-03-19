@@ -27,13 +27,12 @@ def parse_args():
     """Parse the arguments passed."""
     description = 'Client for moons test FL network using flower.\n' + \
         'Give the id of the client and the number of local epoch you want to perform.\n' + \
-        'Give also the number of data samples you wanto to train for this client.\n' + \
+        'Give also the number of data samples you want to train for this client.\n' + \
         'One can optionally give the server location to pass the client builder.\n' + \
         'One can optionally give the noise to generate the dataset.\n' + \
         'One can optionally tell the program to plot the decision boundary at the evaluation step.\n' + \
-        'The number of test data samples is fixed by the program.\n' + \
-        'The client id will also initialize the seed for the train dataset.\n' + \
-        'The program is built to make all the client use the same test dataset.'
+        'One can optionally tell the program to use the shared test set (default) or the train set as test also.\n' + \
+        'The client id will also initialize the seed for the train dataset.\n'
     parser = argparse.ArgumentParser(description = description,
                                      formatter_class=RawTextHelpFormatter)
     parser.add_argument('--server',
@@ -66,6 +65,12 @@ def parse_args():
                         type=float,
                         action='store',
                         help='noise to put in the train dataset')
+    parser.add_argument('--test',
+                        dest='test',
+                        required=False,
+                        type=bool,
+                        action='store',
+                        help='tells the program whether to use the shared test dataset (True) or the train dataset as test (False)')
     parser.add_argument('--plot',
                         dest='plot',
                         required=False,
@@ -134,6 +139,10 @@ if __name__ == "__main__":
         PLOT = False
     else:
         PLOT = args.plot
+    if not args.test:
+        TEST = True
+    else:
+        TEST = args.test
     random.seed(51550)
     # TODO: control if these random states are equal and manage it
     TEST_RAND_STATE = random.randint(0, 100000)
@@ -145,10 +154,14 @@ if __name__ == "__main__":
                                              shuffle=True,
                                              noise=R_NOISE,
                                              random_state=TRAIN_RAND_STATE)
-    (x_test, y_test) = datasets.make_moons(n_samples=1000,
-                                           shuffle=True,
-                                           noise=0.1,
-                                           random_state=TEST_RAND_STATE)
+    if TEST :
+        (x_test, y_test) = datasets.make_moons(n_samples=1000,
+                                            shuffle=True,
+                                            noise=0.1,
+                                            random_state=TEST_RAND_STATE)
+    else :
+        x_test = x_train
+        y_test = y_train
 
     class MakeMoonsClient(fl.client.NumPyClient):
         """Client object, to set client performed operations."""
