@@ -1,4 +1,4 @@
-# Test using FLOWER by Adap and sklearn.make_moons
+# Test using FLOWER by Adap on sklearn.make_moons generated dataset
 This test provides a client and a server program with minimal configuration
 
 ## Usage
