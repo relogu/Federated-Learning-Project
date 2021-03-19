@@ -119,14 +119,13 @@ if __name__ == "__main__":
     # parameters
     N_TRAIN = int(args.n_train)
     if N_TRAIN < 10:
-        N_TRAIN=10
+        N_TRAIN = 10
     if not args.rounds:
         N_LOC_EPOCHS = 1
     else:
         N_LOC_EPOCHS = args.rounds
     if N_LOC_EPOCHS < 1:
-        N_LOC_EPOCHS=1
-    N_CLIENTS = 20
+        N_LOC_EPOCHS = 1
     if not args.noise:
         R_NOISE = 0.2
     else:
