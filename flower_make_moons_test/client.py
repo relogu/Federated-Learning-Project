@@ -10,12 +10,14 @@ import os
 import flwr as fl
 import tensorflow as tf
 from sklearn import datasets
+from sklearn.model_selection import KFold
 from argparse import RawTextHelpFormatter
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 import random
+import pathlib
 # disable possible gpu devices
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # Make TensorFlow log less verbose
@@ -77,9 +79,26 @@ def parse_args():
                         type=bool,
                         action='store',
                         help='tells the program whether to plot decision boundary or not')
+    parser.add_argument('--dump_curve',
+                        dest='l_curve',
+                        required=False,
+                        type=bool,
+                        action='store',
+                        help='tells the program whether to dump the learning curve or not')
     _args = parser.parse_args()
     return _args
 
+def dump_learning_curve(filename, round, loss, accuracy):
+    path_to_file = pathlib.Path(__file__).parent.absolute()
+    path_to_file += "/output/"+filename+".dat"
+    
+    if round == 1: # first call, opening a new file
+        file = open(path_to_file, "w")
+        file.write("client,round,loss,accuracy\n")
+    else :
+        file = open(path_to_file, "a")
+    file.write("filename,"+str(round)+","+str(loss)+","+str(accuracy)+"\n")
+    file.close()
 
 def plot_decision_boundary(model, fed_iter, x, y):
     """Plot the decision boundary given the predictions of the model."""
@@ -122,7 +141,7 @@ if __name__ == "__main__":
                   metrics=["accuracy"])
 
     # parameters
-    N_TRAIN = int(args.n_train)
+    N_TRAIN = args.n_train
     if N_TRAIN < 10:
         N_TRAIN = 10
     if not args.rounds:
@@ -139,6 +158,10 @@ if __name__ == "__main__":
         PLOT = False
     else:
         PLOT = args.plot
+    if not args.plot:
+        DUMP = True
+    else:
+        DUMP = args.plot
     if not args.test:
         TEST = True
     else:
@@ -160,8 +183,13 @@ if __name__ == "__main__":
                                             noise=0.1,
                                             random_state=TEST_RAND_STATE)
     else :
-        x_test = x_train
-        y_test = y_train
+        # Define the K-fold Cross Validator
+        kfold = KFold(n_splits=5)
+        train, test = kfold.split(x_train, y_train)[0]
+        x_test = x_train[test]
+        y_test = y_train[test]
+        x_train = x_train[train]
+        y_train = y_train[train]
 
     class MakeMoonsClient(fl.client.NumPyClient):
         """Client object, to set client performed operations."""
@@ -190,6 +218,7 @@ if __name__ == "__main__":
                 plot_decision_boundary(model, self.f_round, x_test, y_test)
             else :
                 loss, accuracy = model.evaluate(x_test, y_test, verbose=0)
+            if DUMP: dump_learning_curve("l_curve_"+str(args.client_id), f_round, loss, accuracy)
             return loss, len(x_test), {"accuracy": accuracy}
 
     if not args.server:
