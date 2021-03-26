@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 import random
 import pathlib
+import flower_make_moons_test.common_fn as my_fn
 # disable possible gpu devices
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # Make TensorFlow log less verbose
@@ -88,54 +89,13 @@ def parse_args():
     _args = parser.parse_args()
     return _args
 
-def dump_learning_curve(filename, round, loss, accuracy):
-    path_to_file = pathlib.Path(__file__).parent.absolute()
-    path_to_file += "/output/"+filename+".dat"
-    
-    if round == 1: # first call, opening a new file
-        file = open(path_to_file, "w")
-        file.write("client,round,loss,accuracy\n")
-    else :
-        file = open(path_to_file, "a")
-    file.write("filename,"+str(round)+","+str(loss)+","+str(accuracy)+"\n")
-    file.close()
-
-def plot_decision_boundary(model, fed_iter, x, y):
-    """Plot the decision boundary given the predictions of the model."""
-    plt.figure(figsize=(18, 9))
-    ax = plt.subplot(1, 1, 1)
-    ax.set_title("Decision boundary for the test set at the federated round: " + str(fed_iter))
-    # Set min and max values and give it some padding
-    x_min, x_max = x[:, 0].min() - .5, x[:, 0].max() + .5
-    y_min, y_max = x[:, 1].min() - .5, x[:, 1].max() + .5
-    h = 0.01
-    # Generate a grid of points with distance h between them
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
-    # Predict the function value for the whole gid
-    Z = np.argmax(model.predict(np.c_[xx.ravel(), yy.ravel()]), axis=-1)
-    Z = Z.reshape(xx.shape)
-    # Plot the contour and training examples
-    plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)
-    plt.scatter(x[:, 0], x[:, 1], c=y, cmap=plt.cm.Spectral)
-    plt.draw()
-    #plt.show(block=False)
-    plt.savefig('output/dec_bound_F'+str(fed_iter)+'.png')
-    plt.close()
-
 if __name__ == "__main__":
 
     #parsing arguments
     args = parse_args()
 
     # Load and compile Keras model
-    model = tf.keras.models.Sequential([
-        tf.keras.layers.Input((2,)),
-        tf.keras.layers.Dense(4, activation='tanh',
-                              kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                              bias_initializer='ones',),
-        tf.keras.layers.Dense(2, activation='softmax',
-                              kernel_initializer=tf.keras.initializers.GlorotUniform(),
-                              bias_initializer='ones',)])
+    model = my_fn.create_keras_model
     model.compile("adam",
                   loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                   metrics=["accuracy"])
@@ -190,6 +150,8 @@ if __name__ == "__main__":
         y_test = y_train[test]
         x_train = x_train[train]
         y_train = y_train[train]
+        
+    my_fn.plot_client_dataset(args.client_id, x_train, y_train, x_test, y_test)
 
     class MakeMoonsClient(fl.client.NumPyClient):
         """Client object, to set client performed operations."""
@@ -215,10 +177,10 @@ if __name__ == "__main__":
             model.set_weights(parameters)
             if self.f_round%100 == 0 and PLOT:
                 loss, accuracy = model.evaluate(x_test, y_test, verbose=1)
-                plot_decision_boundary(model, self.f_round, x_test, y_test)
+                my_fn.plot_decision_boundary(model, self.f_round, x_test, y_test)
             else :
                 loss, accuracy = model.evaluate(x_test, y_test, verbose=0)
-            if DUMP: dump_learning_curve("l_curve_"+str(args.client_id), f_round, loss, accuracy)
+            if DUMP: my_fn.dump_learning_curve("l_curve_"+str(args.client_id), self.f_round, loss, accuracy)
             return loss, len(x_test), {"accuracy": accuracy}
 
     if not args.server:
