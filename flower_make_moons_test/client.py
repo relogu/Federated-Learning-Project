@@ -19,6 +19,8 @@ matplotlib.use('Agg')
 import random
 import math
 import pathlib
+import sys
+sys.path.append('../')
 import flower_make_moons_test.common_fn as my_fn
 # disable possible gpu devices
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
