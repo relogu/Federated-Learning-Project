@@ -4,5 +4,13 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"python.pythonPath": "/home/relogu/anaconda3/envs/flwr/bin/python",
+		"python.condaPath": "~/relogu/anaconda3/bin/conda",
+		"python.terminal.activateEnvInCurrentTerminal": true,
+		"python.venvPath": "~/anaconda3/envs",
+		"python.venvFolders": [
+			"~/anaconda3/envs"
+		]
+	}
 }
