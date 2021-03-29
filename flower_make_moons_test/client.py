@@ -110,7 +110,7 @@ if __name__ == "__main__":
     args = parse_args()
 
     # Load and compile Keras model
-    model = my_fn.create_keras_model
+    model = my_fn.create_keras_model()
     model.compile("adam",
                   loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                   metrics=["accuracy"])
