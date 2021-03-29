@@ -128,7 +128,7 @@ if __name__ == "__main__":
         N_LOC_EPOCHS = 1
         
     if not args.noise:
-        R_NOISE = 0.2
+        R_NOISE = 0.1
     else:
         R_NOISE = args.noise
         
