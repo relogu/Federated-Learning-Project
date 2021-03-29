@@ -186,7 +186,7 @@ if __name__ == "__main__":
     else :
         # Define the K-fold Cross Validator
         kfold = KFold(n_splits=5)
-        train, test = kfold.split(x_train, y_train)[0]
+        train, test = next(kfold.split(x_train, y_train))
         x_test = x_train[test]
         y_test = y_train[test]
         x_train = x_train[train]
