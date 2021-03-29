@@ -75,7 +75,7 @@ def parse_args():
     _args = parser.parse_args()
     return _args
 
-def build_dataset(n_clients=2, total_samples=320, noise=0.2,
+def build_dataset(n_clients, total_samples, noise,
                   is_translated=False, is_rotated=False):
     N_SAMPLES = total_samples/n_clients
     x = []
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         IS_ROT = args.is_rotated
         
     if not args.noise:
-        NOISE = 0.2
+        NOISE = 0.1
     else:
         NOISE = args.noise
     
