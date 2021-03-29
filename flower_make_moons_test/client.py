@@ -17,6 +17,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 import random
+import math
 import pathlib
 import flower_make_moons_test.common_fn as my_fn
 # disable possible gpu devices
@@ -38,36 +39,48 @@ def parse_args():
         'The client id will also initialize the seed for the train dataset.\n'
     parser = argparse.ArgumentParser(description = description,
                                      formatter_class=RawTextHelpFormatter)
-    parser.add_argument('--server',
-                        dest='server',
-                        required=False,
-                        type=type(''),
-                        action='store',
-                        help='server address to point')
     parser.add_argument('--client_id',
                         dest='client_id',
                         required=True,
                         type=int,
                         action='store',
                         help='client id, set also the seed for the dataset')
-    parser.add_argument('--rounds',
-                        dest='rounds',
-                        required=False,
-                        type=int,
-                        action='store',
-                        help='number of local epochs to perform')
     parser.add_argument('--n_train',
                         dest='n_train',
                         required=True,
                         type=int,
                         action='store',
                         help='number of samples in training set')
+    parser.add_argument('--server',
+                        dest='server',
+                        required=False,
+                        type=type(''),
+                        action='store',
+                        help='server address to point')
+    parser.add_argument('--rounds',
+                        dest='rounds',
+                        required=False,
+                        type=int,
+                        action='store',
+                        help='number of local epochs to perform')
     parser.add_argument('--noise',
                         dest='noise',
                         required=False,
                         type=float,
                         action='store',
                         help='noise to put in the train dataset')
+    parser.add_argument('--is_rotated',
+                        dest='is_rotated',
+                        required=False,
+                        type=bool,
+                        action='store',
+                        help='for producing a rotated dataset')
+    parser.add_argument('--is_traslated',
+                        dest='is_traslated',
+                        required=False,
+                        type=bool,
+                        action='store',
+                        help='for producing a traslated dataset')
     parser.add_argument('--test',
                         dest='test',
                         required=False,
@@ -104,28 +117,44 @@ if __name__ == "__main__":
     N_TRAIN = args.n_train
     if N_TRAIN < 10:
         N_TRAIN = 10
+        
     if not args.rounds:
         N_LOC_EPOCHS = 1
     else:
         N_LOC_EPOCHS = args.rounds
     if N_LOC_EPOCHS < 1:
         N_LOC_EPOCHS = 1
+        
     if not args.noise:
         R_NOISE = 0.2
     else:
         R_NOISE = args.noise
+        
+    if not args.is_rotated:
+        IS_ROT = False
+    else:
+        IS_ROT = args.is_rotated
+        
+    if not args.is_traslated:
+        IS_TR = False
+    else:
+        IS_TR = args.is_traslated
+        
     if not args.plot:
         PLOT = False
     else:
         PLOT = args.plot
-    if not args.plot:
+        
+    if not args.l_curve:
         DUMP = True
     else:
-        DUMP = args.plot
+        DUMP = args.l_curve
+        
     if not args.test:
-        TEST = True
+        TEST = False
     else:
         TEST = args.test
+        
     random.seed(51550)
     # TODO: control if these random states are equal and manage it
     TEST_RAND_STATE = random.randint(0, 100000)
@@ -137,6 +166,16 @@ if __name__ == "__main__":
                                              shuffle=True,
                                              noise=R_NOISE,
                                              random_state=TRAIN_RAND_STATE)
+    
+    if IS_ROT: 
+        theta = (-1 + 2*random.random)*(math.pi/10)
+        x_train = my_fn.rotate_moons(theta, x_train)
+    if IS_TR: 
+        dx = 0.2*(-1 + 2*random.random)
+        dy = 0.2*(-1 + 2*random.random)
+        x_train = my_fn.traslate_moons(dx, dy, x_train)
+        
+    
     if TEST :
         (x_test, y_test) = datasets.make_moons(n_samples=1000,
                                             shuffle=True,
@@ -177,7 +216,7 @@ if __name__ == "__main__":
             model.set_weights(parameters)
             if self.f_round%100 == 0 and PLOT:
                 loss, accuracy = model.evaluate(x_test, y_test, verbose=1)
-                my_fn.plot_decision_boundary(model, self.f_round, x_test, y_test)
+                my_fn.plot_decision_boundary(model, x_test, y_test, self.f_round)
             else :
                 loss, accuracy = model.evaluate(x_test, y_test, verbose=0)
             if DUMP: my_fn.dump_learning_curve("l_curve_"+str(args.client_id), self.f_round, loss, accuracy)
