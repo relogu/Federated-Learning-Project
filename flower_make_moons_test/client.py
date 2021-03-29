@@ -7,7 +7,7 @@ Created on Wed Mar 13 14:25:15 2021
 """
 import argparse
 import os
-import flwr as fl
+import flower as fl
 import tensorflow as tf
 from sklearn import datasets
 from sklearn.model_selection import KFold

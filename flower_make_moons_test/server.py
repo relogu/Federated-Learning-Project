@@ -8,7 +8,7 @@ Created on Wed Mar 13 14:25:15 2021
 import os
 import argparse
 from argparse import RawTextHelpFormatter
-import flwr as fl
+import flower as fl
 # disable possible gpu devices
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # for debug connection
