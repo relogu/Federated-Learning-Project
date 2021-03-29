@@ -21,9 +21,10 @@ import sys
 import math
 import random
 sys.path.append('../')
-import flower_make_moons_test.common_fn as my_fn
+import common_fn as my_fn
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+#%%
 
 def parse_args():
     """Parse the arguments passed."""
@@ -78,12 +79,12 @@ def parse_args():
 def build_dataset(n_clients, total_samples, noise,
                   is_translated=False, is_rotated=False):
     N_SAMPLES = total_samples/n_clients
-    x = []
-    y = []
+    x=np.array(0)
+    y=np.array(0)
     for i in range(n_clients):
         random.seed(i)
         train_rand_state = random.randint(0, 100000)
-        (x_client, y_client) = datasets.make_moons(n_samples=N_SAMPLES, noise=noise,
+        (x_client, y_client) = datasets.make_moons(n_samples=int(N_SAMPLES), noise=noise,
                                 shuffle=True, random_state=train_rand_state)
         if is_rotated: 
             theta = (-1 + 2*random.random)*(math.pi/10)
@@ -92,10 +93,16 @@ def build_dataset(n_clients, total_samples, noise,
             dx = 0.2*(-1 + 2*random.random)
             dy = 0.2*(-1 + 2*random.random)
             x_client = my_fn.traslate_moons(dx, dy, x_client)
-        x.append(x_client)
-        y.append(y_client)
+            
+        if i == 0:
+            x = x_client
+            y = y_client
+        else :
+            x = np.concatenate((x, x_client), axis=0)
+            y = np.concatenate((y, y_client), axis=0)       
     return x, y
 
+#%%
 if __name__ == "__main__":
     
     #parsing arguments
@@ -129,10 +136,10 @@ if __name__ == "__main__":
     # Define the K-fold Cross Validator
     kfold = KFold(n_splits=5)
     train, test = next(kfold.split(x, y))
-    x_test = x_train[test]
-    y_test = y_train[test]
-    x_train = x_train[train]
-    y_train = y_train[train]
+    x_test = x[test]
+    y_test = y[test]
+    x_train = x[train]
+    y_train = y[train]
 
     my_fn.plot_client_dataset('nofedtr', x_train, y_train, x_test, y_test)
 
@@ -141,8 +148,8 @@ if __name__ == "__main__":
                     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                     metrics=['accuracy'])
     for i in range(N_EPOCHS):
-        model.fit(x_train, y_test, epochs=1, verbose=0)
-        loss, acc = model.evaluate(x_test, y_test, verbose=2)
+        model.fit(x_train, y_train, epochs=1, verbose=0)
+        loss, acc = model.evaluate(x_test, y_test, verbose=0)
         my_fn.dump_learning_curve('nofed', i, loss, acc)
-        if PLOT and i%10==0: my_fn.plot_decision_boundary(model, x_test, y_test)
+        if PLOT and i%100==0: my_fn.plot_decision_boundary(model, x_test, y_test)
         
