@@ -38,9 +38,10 @@ def dump_learning_curve(filename, round, loss, accuracy):
 
 def plot_client_dataset(client_id, x_train, y_train, x_test, y_test):
     """Plot the data samples given the specified client id and dataset."""
-    plt.figure(figsize=(18, 9))
-    ax = plt.subplot(1, 1, 1)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(18,9))
     ax.set_title("Data samples for the client " + str(client_id))
+    ax.set_xlabel('x')
+    ax.set_ylabel('Y')
     '''
     # Set min and max values and give it some padding
     x_min, x_max = x[:, 0].min() - .5, x[:, 0].max() + .5
@@ -53,21 +54,25 @@ def plot_client_dataset(client_id, x_train, y_train, x_test, y_test):
     Z = Z.reshape(xx.shape)
     '''
     # Plot the samples
-    plt.scatter(x_train[:, 0], x_train[:, 1], c=y_train)
-    plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test)
+    plt.scatter(x_train[:, 0], x_train[:, 1],
+                c=y_train, cmap=plt.cm.Spectral)
+    y_test = y_test+2
+    plt.scatter(x_test[:, 0], x_test[:, 1],
+                c=y_test, cmap=plt.cm.Spectral)
     plt.draw()
     #plt.show(block=False)
     plt.savefig('output/data_client_'+str(client_id)+'.png')
     plt.close()
 
-def plot_decision_boundary(model, X_test, y_test):
+def plot_decision_boundary(model, x_test, y_test, fed_iter=None):
     """Plot the decision boundary given the predictions of the model."""
     plt.figure(figsize=(18, 9))
     ax = plt.subplot(1, 1, 1)
-    ax.set_title("Fianl decision boundary for the test set")
+    if fed_iter is None: ax.set_title("Fianl decision boundary for the test set")
+    else: ax.set_title("Decision boundary for the test set at the federated round: " + str(fed_iter))
     # Set min and max values and give it some padding
-    x_min, x_max = X_test[:, 0].min() - .5, X_test[:, 0].max() + .5
-    y_min, y_max = X_test[:, 1].min() - .5, X_test[:, 1].max() + .5
+    x_min, x_max = x_test[:, 0].min() - .5, x_test[:, 0].max() + .5
+    y_min, y_max = x_test[:, 1].min() - .5, x_test[:, 1].max() + .5
     h = 0.01
     # Generate a grid of points with distance h between them
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
@@ -76,23 +81,27 @@ def plot_decision_boundary(model, X_test, y_test):
     Z = Z.reshape(xx.shape)
     # Plot the contour and training examples
     plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)
-    plt.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=plt.cm.Spectral)
-    plt.show(block=False)
+    plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap=plt.cm.Spectral)
+    plt.draw()
+    #plt.show(block=False)
+    plt.savefig('output/dec_bound_F'+str(fed_iter)+'.png')
+    plt.close()
     
-def translate_moons(dx, dy, X):
-    """Translate using the vector (dx, dy) the make_moons dataset X."""
-    if X.shape == (1,1):
-        X[:, 0] = X[:, 0] + dx
-        X[:, 1] = X[:, 1] + dy
+def traslate_moons(dx, dy, x):
+    """Translate using the vector (dx, dy) the make_moons dataset x."""
+    if x.shape[1] == 2:
+        x[:, 0] = x[:, 0] + dx
+        x[:, 1] = x[:, 1] + dy
     else :
-        print("X has not the correct shape")
-    return X
+        print("x has not the correct shape")
+    return x
     
-def rotate_moons(theta, X):
-    """Rotate using the angle theta the make_moons dataset X."""
-    if X.shape == (1,1):
-        X[:, 0] = X[:, 0] + math.cos(theta)
-        X[:, 1] = X[:, 1] + math.sin(theta)
+def rotate_moons(theta, x):
+    """Rotate using the angle theta the make_moons dataset x."""
+    xc = x.copy()
+    if x.shape[1] == 2:
+        xc[:, 0] = x[:, 0]*math.cos(theta) - x[:, 1]*math.sin(theta)
+        xc[:, 1] = x[:, 0]*math.sin(theta) + x[:, 1]*math.cos(theta)
     else :
-        print("X has not the correct shape")
-    return X
+        print("x has not the correct shape")
+    return xc
