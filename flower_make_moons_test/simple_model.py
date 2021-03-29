@@ -87,11 +87,11 @@ def build_dataset(n_clients, total_samples, noise,
         (x_client, y_client) = datasets.make_moons(n_samples=int(N_SAMPLES), noise=noise,
                                 shuffle=True, random_state=train_rand_state)
         if is_rotated: 
-            theta = (-1 + 2*random.random)*(math.pi/10)
+            theta = (-1 + 2*random.random())*(math.pi/10)
             x_client = my_fn.rotate_moons(theta, x_client)
         if is_translated: 
-            dx = 0.2*(-1 + 2*random.random)
-            dy = 0.2*(-1 + 2*random.random)
+            dx = 0.2*(-1 + 2*random.random())
+            dy = 0.2*(-1 + 2*random.random())
             x_client = my_fn.traslate_moons(dx, dy, x_client)
             
         if i == 0:
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     x_train = x[train]
     y_train = y[train]
 
-    my_fn.plot_client_dataset('nofedtr', x_train, y_train, x_test, y_test)
+    my_fn.plot_client_dataset('nofed', x_train, y_train, x_test, y_test)
 
     model = my_fn.create_keras_model()
     model.compile(optimizer='adam',
