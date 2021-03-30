@@ -1,0 +1,235 @@
+\documentclass{article} % Especially this!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper, total={6in, 8.5in}]{geometry}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{graphicx}
+%\usepackage[siunitx]{circuitikz}
+\usepackage{tikz}
+\usepackage[colorinlistoftodos, color=orange!50]{todonotes}
+\usepackage{hyperref}
+\usepackage[numbers, square]{natbib}
+\usepackage{fancybox}
+\usepackage{epsfig}
+\usepackage{soul}
+\usepackage{listings}
+\usepackage[framemethod=tikz]{mdframed}
+\usepackage[shortlabels]{enumitem}
+\usepackage[version=4]{mhchem}
+\usepackage{multicol}
+\usepackage{pgfplots}
+\usepackage{version}
+\pgfplotsset{compat=1.14}
+\usepackage{graphicx}
+\usepackage{subfig}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% SYNTAX FOR NEW COMMANDS:
+%\newcommand{\new}{Old command or text}
+
+% EXAMPLE:
+
+\newcommand{\blah}{blah blah blah \dots}
+
+\setlength{\marginparwidth}{3.4cm}
+
+
+% NEW COUNTERS
+\newcounter{points}
+\setcounter{points}{100}
+\newcounter{spelling}
+\newcounter{english}
+\newcounter{units}
+\newcounter{other}
+\newcounter{source}
+\newcounter{concept}
+\newcounter{missing}
+\newcounter{math}
+\newcounter{terms}
+\newcounter{clarity}
+\newcounter{late}
+
+% COMMANDS
+\newtheorem{theorem}{Theorem}
+
+\newcommand{\late}{\todo{late submittal (-5)}
+\addtocounter{late}{-5}
+\addtocounter{points}{-5}}
+
+\definecolor{pink}{RGB}{255,182,193}
+\newcommand{\hlp}[2][pink]{ {\sethlcolor{#1} \hl{#2}} }
+
+\definecolor{myblue}{rgb}{0.668, 0.805, 0.929}
+\newcommand{\hlb}[2][myblue]{ {\sethlcolor{#1} \hl{#2}} }
+
+\newcommand{\clarity}[2]{\todo[color=CornflowerBlue!50]{CLARITY of WRITING(#1) #2}\addtocounter{points}{#1}
+\addtocounter{clarity}{#1}}
+
+\newcommand{\other}[2]{\todo{OTHER(#1) #2} \addtocounter{points}{#1} \addtocounter{other}{#1}}
+
+\newcommand{\spelling}{\todo[color=CornflowerBlue!50]{SPELLING (-1)} \addtocounter{points}{-1}
+\addtocounter{spelling}{-1}}
+\newcommand{\units}{\todo{UNITS (-1)} \addtocounter{points}{-1}
+\addtocounter{units}{-1}}
+
+\newcommand{\english}{\todo[color=CornflowerBlue!50]{SYNTAX and GRAMMAR (-1)} \addtocounter{points}{-1}
+\addtocounter{english}{-1}}
+
+\newcommand{\source}{\todo{SOURCE(S) (-2)} \addtocounter{points}{-2}
+\addtocounter{source}{-2}}
+\newcommand{\concept}{\todo{CONCEPT (-2)} \addtocounter{points}{-2}
+\addtocounter{concept}{-2}}
+
+\newcommand{\missing}[2]{\todo{MISSING CONTENT (#1) #2} \addtocounter{points}{#1}
+\addtocounter{missing}{#1}}
+
+\newcommand{\maths}{\todo{MATH (-1)} \addtocounter{points}{-1}
+\addtocounter{math}{-1}}
+\newcommand{\terms}{\todo[color=CornflowerBlue!50]{SCIENCE TERMS (-1)} \addtocounter{points}{-1}
+\addtocounter{terms}{-1}}
+
+
+\newcommand{\summary}[1]{
+\begin{mdframed}[nobreak=true]
+\begin{minipage}{\textwidth}
+\vspace{0.5cm}
+\begin{center}
+\Large{Grade Summary} \hrule 
+\end{center} \vspace{0.5cm}
+General Comments: #1
+
+\vspace{0.5cm}
+Possible Points \dotfill 100 \\
+Points Lost (Late Submittal) \dotfill \thelate \\
+Points Lost (Science Terms) \dotfill \theterms \\
+Points Lost (Syntax and Grammar) \dotfill \theenglish \\
+Points Lost (Spelling) \dotfill \thespelling \\
+Points Lost (Units) \dotfill \theunits \\
+Points Lost (Math) \dotfill \themath \\
+Points Lost (Sources) \dotfill \thesource \\
+Points Lost (Concept) \dotfill \theconcept \\
+Points Lost (Missing Content) \dotfill \themissing \\
+Points Lost (Clarity of Writing) \dotfill \theclarity \\
+Other \dotfill \theother \\[0.5cm]
+\begin{center}
+\large{\textbf{Grade:} \fbox{\thepoints}}
+\end{center}
+\end{minipage}
+\end{mdframed}}
+
+%#########################################################
+
+%To use symbols for footnotes
+\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
+%To change footnotes back to numbers uncomment the following line
+%\renewcommand*{\thefootnote}{\arabic{footnote}}
+
+% Enable this command to adjust line spacing for inline math equations.
+% \everymath{\displaystyle}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{
+\normalfont \normalsize 
+\textsc{Pattern Recognition, 2021} \\ 
+[10pt] 
+\rule{\linewidth}{0.5pt} \\[6pt] 
+\huge 
+TODO
+\rule{\linewidth}{2pt}  \\[10pt]
+}
+\author{Lorenzo Sani}
+\date{\normalsize \today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+%###############################################
+\section{Abstract}
+
+%###############################################
+\section{Introduction}
+Federated Learnign (FL) is a newly introduced approach to collaborative machine 
+learning. There are nowadays many traditional machine learning algorithms which 
+require huge quantities of data raining examples to learn. The rising problem is 
+that is often very difficult to collect a sufficient amount of data to reach a 
+reasonable reliability. This problem is very common in settings in which data 
+access is restricted by righteous privacy regulations, e.g. personal healthcare, 
+or customization of personal devices. The implementation of a FL setting allows 
+to avoid the necessity to collect data in a single place. 
+
+A typical FL setting 
+is built by taking into account a set of clients and a centralized server. The 
+main steps of a FL iterative algorithm are the following:
+\begin{enumerate}
+    \item global model initialization;
+    \item global model distribution;
+    \item local models training;
+    \item local models aggregation;
+    \item repeat from 2.
+\end{enumerate}
+Firstly, step (1), the server, usually, initialize a unique global model to be 
+passed to the clients and keep the consistency of the procedure, i.e. ensuring 
+that every client runs the same learning algorithm.
+Then, step (2), the server is in charge to distribute the initialized model to 
+all the available clients. FL algorithms allow to check how many clients are 
+available and train the same even if they are a low number. The distribution 
+procedure could take into account the numerosity of the single clients' datasets 
+(the only one information on the dataset coming from the clients).
+After having received the global model, all the available clients train locally
+the global model with their data, step (3), producing a new local model.
+The weights of all the local models are then aggregated, step (4), at the server 
+place to be reduced to a new global model. The aggregation procedure, as the 
+distribution prevoiusly, could take into account the numerosity of the clients' 
+datasets.
+Moreover the evaluation step, always performed locally by the clients, could be
+aggregated to the server in an analogous procedure than local models. This allows
+the server to have global perception of the performance of the learning step by 
+step. This action usually is inserted between step (2) and step (3).
+The iterative procedure is finally repeated until the number of fixed federated 
+iterations is reached, usually.
+
+Before presnting the methods used, it is necessary to spend some words on the 
+aggregation method used. Despite FL is a newly introduced approch, many 
+aggregation procedures have been proposed. It is important to say that FL is 
+not widely understood by now and because of this not any aggregation procedure, 
+or more generally FL algorithm, is reliable for any specific problem. The 
+aggregation method used in this analysis is, probably, the most general: 
+\verb|FedAvg|.
+
+%###############################################
+\section {Methods}
+
+%###############################################
+\section {Results}
+
+%###############################################
+\section {Conclusions}
+
+%###############################################
+\section {Figures}
+
+%###############################################
+
+\section{Bibliography}
+\begin{thebibliography}{90}
+\bibitem{CuckerSmale}F. Cucker, S. Smale. "On the mathematics of emergence", The Mathematical Society of Japan and Springer 2007, Published online: 28 March 2007.
+\bibitem{CuckerSmale1}F. Cucker, S. Smale. "Emergent Behaviour in Flocks", IEEE Transaction on Automatic Control, Vol. 52, No. 5, May 2007.
+\bibitem{repo}\verb|https://github.com/relogu/PofCS_project|.
+\end{thebibliography}
+
+\newpage
+\appendix
+\renewcommand\thefigure{\thesection.\arabic{figure}}
+\end{document} % NOTHING AFTER THIS LINE IS PART OF THE DOCUMENT
