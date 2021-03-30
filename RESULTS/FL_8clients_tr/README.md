@@ -15,3 +15,17 @@ the same datasets (properly merged).
 The data_*.png files show the drawings of the dataset for a visual comparison.
 
 The *.dat files show the numbers from which the learning curves are plotted.
+### LEARNING CURVES
+![](loss.png?raw=true)
+![](accuracy.png?raw=true)
+
+### DATASETS
+![](data_client_nofed.png?raw=true)
+![](data_client_0.png?raw=true)
+![](data_client_1.png?raw=true)
+![](data_client_2.png?raw=true)
+![](data_client_3.png?raw=true)
+![](data_client_4.png?raw=true)
+![](data_client_5.png?raw=true)
+![](data_client_6.png?raw=true)
+![](data_client_7.png?raw=true)
