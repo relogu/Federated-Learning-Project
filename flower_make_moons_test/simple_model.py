@@ -22,7 +22,7 @@ import math
 import random
 sys.path.append('../')
 import common_fn as my_fn
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # w/o GPU
 
 #%%
 
@@ -77,7 +77,7 @@ def parse_args():
     return _args
 
 def build_dataset(n_clients, total_samples, noise,
-                  is_translated=False, is_rotated=False):
+                  is_translated, is_rotated):
     N_SAMPLES = total_samples/n_clients
     x=np.array(0)
     y=np.array(0)
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     else:
         NOISE = args.noise
     
-    x, y = build_dataset(n_clients=N_CLIENTS, noise=NOISE, total_samples=N_SAMPLES)
+    x, y = build_dataset(n_clients=N_CLIENTS, noise=NOISE, total_samples=N_SAMPLES, is_rotated=IS_ROT, is_translated=IS_TR)
     # Define the K-fold Cross Validator
     kfold = KFold(n_splits=5)
     train, test = next(kfold.split(x, y))
