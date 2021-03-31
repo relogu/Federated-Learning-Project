@@ -74,35 +74,50 @@ if __name__ == "__main__":
         conv = process_df(conv)
         
         title = 'Simulation with '+str(n_clients)+' clients '+feature+' dataset'
-            
+        filename = folder+'/accuracy.png'
         sns.set_style('whitegrid')
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,5))
         plt.title(title)
         ax.set_ylabel('accuracy')
         plt.xlabel("round")
         sns.lineplot(x='round', y='accuracy', hue='client', data=conv)#, style='client')#, markers=['.', '.'])
-        plt.show()
+        plt.draw()
+        #plt.show(block=False)
+        plt.savefig(filename)
+        plt.close()
     
+        filename = folder+'/loss.png'
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,5))
         plt.title(title)
         ax.set_ylabel('loss')
         plt.xlabel("round")
         sns.lineplot(x='round', y='loss', hue='client', data=conv, style='client')#, markers=['.', '.'])
-        plt.show()
+        plt.draw()
+        #plt.show(block=False)
+        plt.savefig(filename)
+        plt.close()
         
         conv = conv[conv['client']!='clients\' mean']
         conv = process_df1(conv)
-        
+    
+        filename = folder+'/accuracy_red.png'
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,5))
         plt.title(title)
         ax.set_ylabel('accuracy')
         plt.xlabel("round")
         sns.lineplot(x='round', y='accuracy', hue='client', data=conv, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
-        plt.show()
+        plt.draw()
+        #plt.show(block=False)
+        plt.savefig(filename)
+        plt.close()
     
+        filename = folder+'/loss_red.png'
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,5))
         plt.title(title)
         ax.set_ylabel('loss')
         plt.xlabel("round")
         sns.lineplot(x='round', y='loss', hue='client', data=conv, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
-        plt.show()
+        plt.draw()
+        #plt.show(block=False)
+        plt.savefig(filename)
+        plt.close()
