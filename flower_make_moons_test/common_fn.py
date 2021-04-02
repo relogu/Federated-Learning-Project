@@ -64,12 +64,16 @@ def plot_client_dataset(client_id, x_train, y_train, x_test, y_test):
     plt.savefig('output/data_client_'+str(client_id)+'.png')
     plt.close()
 
-def plot_decision_boundary(model, x_test, y_test, fed_iter=None):
+def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None):
     """Plot the decision boundary given the predictions of the model."""
     plt.figure(figsize=(18, 9))
     ax = plt.subplot(1, 1, 1)
-    if fed_iter is None: ax.set_title("Fianl decision boundary for the test set")
+    if fed_iter is None and client_id is None: ax.set_title("Final decision boundary for the test set")
     else: ax.set_title("Decision boundary for the test set at the federated round: " + str(fed_iter))
+    if client_id is None: title = 'Decison boundary for aggregated model'
+    else: title = 'Decison boundary for client-'+str(client_id)+' model'
+    if fed_iter is not None: title += ' at iteration '+str(fed_iter)  
+    ax.set_title(title)
     # Set min and max values and give it some padding
     x_min, x_max = x_test[:, 0].min() - .5, x_test[:, 0].max() + .5
     y_min, y_max = x_test[:, 1].min() - .5, x_test[:, 1].max() + .5
@@ -84,7 +88,11 @@ def plot_decision_boundary(model, x_test, y_test, fed_iter=None):
     plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap=plt.cm.Spectral)
     plt.draw()
     #plt.show(block=False)
-    plt.savefig('output/dec_bound_F'+str(fed_iter)+'.png')
+    if client_id is None: filename = 'output/dec_bound_nofed'
+    else: filename = 'output/dec_bound_c'+str(client_id)
+    if fed_iter is None: filename += '.png'
+    else: filename += '_e'+str(fed_iter)+'.png'    
+    plt.savefig(filename)
     plt.close()
     
 def traslate_moons(dx, dy, x):

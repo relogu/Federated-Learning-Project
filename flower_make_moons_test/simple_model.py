@@ -21,7 +21,7 @@ import sys
 import math
 import random
 sys.path.append('../')
-import common_fn as my_fn
+import flower_make_moons_test.common_fn as my_fn
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # w/o GPU
 
 #%%
@@ -73,6 +73,12 @@ def parse_args():
                         type=bool,
                         action='store',
                         help='tells the program whether to plot decision boundary or not')
+    parser.add_argument('--dump_folder',
+                        dest='folder',
+                        required=False,
+                        type=str,
+                        action='store',
+                        help='tells the program where to dump results')
     _args = parser.parse_args()
     return _args
 
@@ -131,6 +137,11 @@ if __name__ == "__main__":
         NOISE = 0.1
     else:
         NOISE = args.noise
+        
+    if not args.folder:
+        FOLDER = ''
+    else:
+        FOLDER = args.folder
     
     x, y = build_dataset(n_clients=N_CLIENTS, noise=NOISE, total_samples=N_SAMPLES, is_rotated=IS_ROT, is_translated=IS_TR)
     # Define the K-fold Cross Validator
@@ -150,6 +161,11 @@ if __name__ == "__main__":
     for i in range(N_EPOCHS):
         model.fit(x_train, y_train, epochs=1, verbose=0)
         loss, acc = model.evaluate(x_test, y_test, verbose=0)
-        my_fn.dump_learning_curve('nofed', i, loss, acc)
+        my_fn.dump_learning_curve('l_curve_nofed', i, loss, acc)
         if PLOT and i%100==0: my_fn.plot_decision_boundary(model, x_test, y_test)
+
+    command0 = 'mv output/l_curve_nofed.dat ../RESULTS/'+FOLDER+'l_curve_nofed.dat'
+    command1 = 'mv output/output/dec_bound_nofed.png ../RESULTS/'+FOLDER+'dec_bound_nofed.png'
+    os.system(command0)
+    os.system(command1)
         
