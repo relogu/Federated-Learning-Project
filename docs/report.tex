@@ -13,6 +13,7 @@
 \usepackage{graphicx}
 %\usepackage[siunitx]{circuitikz}
 \usepackage{tikz}
+\usepackage[ruled,vlined]{algorithm2e}
 \usepackage[colorinlistoftodos, color=orange!50]{todonotes}
 \usepackage{hyperref}
 \usepackage[numbers, square]{natbib}
@@ -160,15 +161,16 @@ TODO
 
 %###############################################
 \section{Introduction}
-Federated Learnign (FL) is a newly introduced approach to collaborative machine 
-learning. There are nowadays many traditional machine learning algorithms which 
+Federated Learning (FL) is a newly introduced approach to collaborative machine 
+learning \cite{9153560}. There are nowadays many traditional machine learning algorithms which 
 require huge quantities of data raining examples to learn. The rising problem is 
 that is often very difficult to collect a sufficient amount of data to reach a 
 reasonable reliability. This problem is very common in settings in which data 
 access is restricted by righteous privacy regulations, e.g. personal healthcare, 
 or customization of personal devices. The implementation of a FL setting allows 
-to avoid the necessity to collect data in a single place. 
+to avoid the necessity to collect data in a single place.
 
+\subsection{Federated Learning}
 A typical FL setting 
 is built by taking into account a set of clients and a centralized server. The 
 main steps of a FL iterative algorithm are the following:
@@ -200,20 +202,140 @@ step. This action usually is inserted between step (2) and step (3).
 The iterative procedure is finally repeated until the number of fixed federated 
 iterations is reached, usually.
 
-Before presnting the methods used, it is necessary to spend some words on the 
+\subsection{Federated Average (FedAvg)}
+Before presenting the methods used, it is necessary to spend some words on the 
 aggregation method used. Despite FL is a newly introduced approch, many 
 aggregation procedures have been proposed. It is important to say that FL is 
 not widely understood by now and because of this not any aggregation procedure, 
 or more generally FL algorithm, is reliable for any specific problem. The 
 aggregation method used in this analysis is, probably, the most general: 
-\verb|FedAvg|.
+\verb|FedAvg|. This algorithm, firstly prosed in \cite{mcmahan2017communicationefficient}, relies on Stochastic 
+Gradient Descent (SGD) optimization method, since the majority of the most succeful deep 
+learning works were based on this. The available clients locally compute (step 3) their 
+average gradient on their local data at the current model $w_t$, where $t$ 
+identifies the federated round, and the central server aggregates these 
+gradients and applies the update $w_{t+1}\leftarrow w_t - \eta\sum_{k=1}^K\frac{n_k}{n}g_k$.
+Above, $g_k=\nabla F_k(w_t)$ is the average gradient of the client $k$, $\eta$ is 
+the learning rate, $n_k$ is the number of samples at the client $k$, $n$ is the total 
+number of samples (sum over all the available clients). Equivalently, the update 
+can be given by $w_{t+1}\leftarrow w_t - \eta\sum_{k=1}^K\frac{n_k}{n}w_{t+1}^k$, where 
+$w_{t+1}^k\leftarrow w_t - \eta g_k$ $\forall k$. In the last, every client takes 
+a complete step of gradient descent, while the server only takes the weighted average 
+of the resulting models. The following pseudo-code summarizes the procedure.
+\begin{algorithm}[H]
+    \SetAlgoLined
+    \SetKwBlock{Ser}{Server executes:}{}
+    \SetKwBlock{ClUp}{ClientUpdate($k$, $w_t$):}{}
+    \SetKwFor{ParFor}{for}{do in parallel}{end}
+    \Ser{
+        initialize $w_0$\\
+        \For(){each federated round $t=1,2,...$}{
+            $S_t\leftarrow$ (select available clients)\\
+            \ParFor{each client $k$ in $S_t$}{
+                $w_{t+1}^k\leftarrow$ ClientUpdate($k$, $w_t$)
+            }
+            $w_{t+1}\leftarrow\sum_{k=1}^K\frac{n_k}{n}w_{t+1}^k$
+        }
+    }
+
+    \ClUp{
+        $\mathcal{B}\leftarrow$(split $k$-th client's dataset into batches of size $B$)\\
+        \For(){each local epoch $i$ from $1$ to $E$}{
+            \For{batch $b\in\mathcal{B}$}{
+                $w\leftarrow w - \eta\nabla l(w;b)$
+            }
+        }
+        return $w$ to server
+    }
+    \caption{$FedAvg$. The $K$ clients are indexed by $k$; $E$ is the number of local 
+     epochs; $\eta$ is the learning rate; $B$ is the size of the local batches.}
+\end{algorithm}
 
 %###############################################
 \section {Methods}
 
+\subsection{Dataset}
+A simple toy dataset was chosen to set up a classification toy model to perform some 
+simulations in FL setting.
+From the \verb|scikit-learn| Python package, which provides a wide set of generators 
+for toy datsets, the \verb|datasets.make_moons| generator was picked up.
+This function produces the requested number of points in a 2-D space drawing two 
+interleaving circles, as Fig.\ref{} shows. 
+The same function returns also the classification array, that relates every point to 
+its corresponding circle.
+One can make the request to add some noise to the generated points, and ask for the 
+points to be shuffled, once generated.
+The noise value was fixed to 0.1 along every simulation.
+It is also possible to set the random state that seeds the noise and shuffling, if 
+requested.
+Two more functions, in addition to this settings, were built to trasform a little 
+such generated dataset.
+The first simply traslates the dataset by a given vector $(dx, dy)$, i.e. every 
+point $(x, y)$ in the dataset undergoes the transformation $x'=x+dx$ and $y'=y+dy$.
+The second applies a simple rotation by an angle $\theta$ with a standard transformation,
+i.e. $x'=x\cos(\theta)-y\sin(\theta)$ and $y'=x\sin(\theta)-y\cos(\theta)$ following 
+the above notation.
+Examples of traslated and rotated datasets are shown in Fig.\ref{}.
+
+\subsection{Model}
+Every simulation was build on a simple two layers sequential model.
+Both the layers are standard regular densely-connected Neural Network layers, the first 
+with 4 output, the second with 2, since the model is expected to classify the points 
+w.r.t. their circle of belonging.
+
+\subsection{Simulation setting}
+The framework adopted to make the necessary simulation is Flower: A Friendly Federated 
+Learning Framework \cite{beutel2021flower}.
+The federated framework is set up by running  a program for every client and one for 
+the server.
+These will communicate using a RPC (Remote Procedure Call) framework exchanging the 
+weights of the model.
+The ML framework used is \verb|tensorflow| with a \verb|keras.Sequential| model.
+The client program accepts many parameters to build properly the client's dataset, and 
+to set up the outputs also.
+The server program has a minimal configuration, receiving the number of clients in the 
+federated network and the number of the federated epochs to run.
+Another program is used to simulate the same situation in a non-federated setting. 
+In fact, since the seeds for the datasets' generations are fixed, it is able to build the 
+equivalent aggregated dataset and train on a single, equivalently initialized, model.
+
 %###############################################
 \section {Results}
-
+There were made many comparison between a FL setting and its equivalent aggregated one.
+In every comparison the total number of samples was kept constant to 320, to be easily 
+distributed over the three subdivision chosen (2, 4, and 8 clients).
+The comparisons are intended to highlight the influence that the number of clients have 
+on the performance of the learning model.
+The expectation is that more the dataset is distributed lesser is the performance of 
+the FL setting, i.e. more are the rounds needed to reach some values of accuracy and loss.
+Whenever traslated or rotated datsets are used, the comparison is indended to extent 
+studying the Trasfer Learning (TL) capacity of the FL setting, since every clients differs 
+from the others also for the traslation vector $(dx, dy)$ or the rotation angle $\theta$.
+There is no guess about the TL ability of these FL settings.
+Every client's datset, as the aggregated one, are divided randomly in train set and test 
+set usig the standard proportion 80-20, for train and test respectively.
+In order to have consistent comparisons, the FL setting and the aggregated both are trained 
+for a total of 2000 epochs.
+The for every epoch an evaluation step is performed at every client's place as at the 
+aggregated model.
+The performance of the model at every step, represented by the loss and the accuracy, 
+is retrieved and saved to be consulted later.
+The loss function chosen is the Sparse Categorical Cross-Entropy \ref{?}, implemented by the
+function \verb|tensorflow.keras.losses.SparseCategoricalCrossentropy|.
+The accuracy is simply computed as the ratio between the number of well classified points 
+and the total number of points in the test set.
+The values of the losses and the accuracies are then plotted against the epoch at which they 
+are computed.
+Since the single client performance only does not give so much information about the 
+performance of the whole FL model, the mean value of the losses and the mean value of the 
+accuracies are then computed.
+A confidence interval, that reach a confidence level of $95\%$, is then associated to 
+these mean values, in order to give a more complete representation.
+The distance between the curve of mean values of loss and accuracy between clients and the 
+relative curve of the aggregated model gives a quantitative representation of far the two 
+performances.
+The wideness of the confidence intervals at the same time quantify the TL ability of the 
+FL model.
 %###############################################
 \section {Conclusions}
 
@@ -222,14 +344,10 @@ aggregation method used in this analysis is, probably, the most general:
 
 %###############################################
 
-\section{Bibliography}
-\begin{thebibliography}{90}
-\bibitem{CuckerSmale}F. Cucker, S. Smale. "On the mathematics of emergence", The Mathematical Society of Japan and Springer 2007, Published online: 28 March 2007.
-\bibitem{CuckerSmale1}F. Cucker, S. Smale. "Emergent Behaviour in Flocks", IEEE Transaction on Automatic Control, Vol. 52, No. 5, May 2007.
-\bibitem{repo}\verb|https://github.com/relogu/PofCS_project|.
-\end{thebibliography}
+
+\bibliographystyle{unsrt}
+\bibliography{bibliography}
 
 \newpage
-\appendix
 \renewcommand\thefigure{\thesection.\arabic{figure}}
 \end{document} % NOTHING AFTER THIS LINE IS PART OF THE DOCUMENT
