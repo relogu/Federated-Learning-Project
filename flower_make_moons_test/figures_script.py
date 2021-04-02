@@ -17,7 +17,7 @@ import math
 sys.path.append('../')
 import flower_make_moons_test.common_fn as my_fn
 
-(x, y) = datasets.make_moons(n_samples=320, shuffle=True, noise=0.1, random_state=42)
+(x, y) = datasets.make_moons(n_samples=840, shuffle=True, noise=0.1, random_state=42)
 x_tr = my_fn.traslate_moons(0.5,0.5, x.copy())
 x_rot = my_fn.rotate_moons(math.pi/5, x_tr.copy())
 y = y*0+20
