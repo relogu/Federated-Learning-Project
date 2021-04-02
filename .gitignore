@@ -4,9 +4,6 @@
 *.pdf
 TODO
 *.dat
-flower_cross_mk_moons_test/output*
-flower_make_moons_test/output*
-flower&cross_mk_moons_test/output*
 *.aux
 *.fdb_latexmk
 *.fls
