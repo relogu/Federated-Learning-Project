@@ -27,20 +27,22 @@ def process_df(df):
     """Compute the mean from all cients and add it to the dataframe."""
     n_clients = len(df['client'].unique())-1
     for client in df['client'].unique():
-        if client == 'nofed':
+        if client == 'l_curve_nofed':
             s = 'single model'
         else:
             s = 'client '+str(client[-1:])
         df.loc[df['client']==client, 'client']=s
     
-    mean = df[df['client']=='single model'].copy()
+    mean = df[df['client']=='single model'].reset_index().copy()
     mean['client']='clients\' mean'
     mean['loss']=0.0
     mean['accuracy']=0.0
-    clients = df[df['client']!='single model']
+    clients = df[df['client']!='single model'].reset_index().copy()
     for client in clients['client'].unique():
         mean['loss']=mean['loss']+clients[clients['client']==client].reset_index()['loss']/n_clients
         mean['accuracy']=mean['accuracy']+clients[clients['client']==client].reset_index()['accuracy']/n_clients
+    df = df[df['client']='single model'].reset_index()
+    df = df.append(clients, ignore_index = True)
     df = df.append(mean, ignore_index = True)
     
     return df
