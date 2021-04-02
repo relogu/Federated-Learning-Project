@@ -113,7 +113,7 @@ if __name__ == "__main__":
     R_NOISE = 0.2 #TODO
     
     if not args.plot:
-        PLOT = False
+        PLOT = True
     else:
         PLOT = args.plot
         
