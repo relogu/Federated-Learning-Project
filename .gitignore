@@ -3,7 +3,6 @@
 
 *.pdf
 TODO
-*.dat
 *.aux
 *.fdb_latexmk
 *.fls
