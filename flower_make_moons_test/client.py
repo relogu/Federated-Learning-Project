@@ -101,12 +101,6 @@ def parse_args():
                         type=bool,
                         action='store',
                         help='tells the program whether to dump the learning curve or not')
-    parser.add_argument('--dump_folder',
-                        dest='folder',
-                        required=False,
-                        type=str,
-                        action='store',
-                        help='tells the program where to dump results')
     _args = parser.parse_args()
     return _args
 
@@ -162,11 +156,6 @@ if __name__ == "__main__":
         TEST = False
     else:
         TEST = args.test
-        
-    if not args.folder:
-        FOLDER = ''
-    else:
-        FOLDER = args.folder
         
     random.seed(51550)
     # TODO: control if these random states are equal and manage it
@@ -242,8 +231,3 @@ if __name__ == "__main__":
     print(SERVER)
     # Start Flower client
     fl.client.start_numpy_client(SERVER, client=MakeMoonsClient())
-
-    command0 = 'mv output/l_curve_'+str(args.client_id)+'.dat ../RESULTS/'+FOLDER+'l_curve_'+str(args.client_id)+'.dat'
-    command1 = 'mv output/output/dec_bound_c'+str(args.client_id)+'.png ../RESULTS/'+FOLDER+'dec_bound_c'+str(args.client_id)+'.png'
-    os.system(command0)
-    os.system(command1)

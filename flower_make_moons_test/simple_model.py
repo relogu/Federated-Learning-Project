@@ -73,12 +73,6 @@ def parse_args():
                         type=bool,
                         action='store',
                         help='tells the program whether to plot decision boundary or not')
-    parser.add_argument('--dump_folder',
-                        dest='folder',
-                        required=False,
-                        type=str,
-                        action='store',
-                        help='tells the program where to dump results')
     _args = parser.parse_args()
     return _args
 
@@ -138,11 +132,6 @@ if __name__ == "__main__":
     else:
         NOISE = args.noise
         
-    if not args.folder:
-        FOLDER = ''
-    else:
-        FOLDER = args.folder
-    
     x, y = build_dataset(n_clients=N_CLIENTS, noise=NOISE, total_samples=N_SAMPLES, is_rotated=IS_ROT, is_translated=IS_TR)
     # Define the K-fold Cross Validator
     kfold = KFold(n_splits=5)
@@ -163,9 +152,4 @@ if __name__ == "__main__":
         loss, acc = model.evaluate(x_test, y_test, verbose=0)
         my_fn.dump_learning_curve('l_curve_nofed', i, loss, acc)
         if PLOT and i%100==0: my_fn.plot_decision_boundary(model, x_test, y_test)
-
-    command0 = 'mv output/l_curve_nofed.dat ../RESULTS/'+FOLDER+'l_curve_nofed.dat'
-    command1 = 'mv output/output/dec_bound_nofed.png ../RESULTS/'+FOLDER+'dec_bound_nofed.png'
-    os.system(command0)
-    os.system(command1)
         
