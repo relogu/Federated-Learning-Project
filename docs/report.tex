@@ -162,18 +162,22 @@ TODO
 %###############################################
 \section{Introduction}
 Federated Learning (FL) is a newly introduced approach to collaborative machine 
-learning \cite{9153560}. There are nowadays many traditional machine learning algorithms which 
-require huge quantities of data raining examples to learn. The rising problem is 
+learning \cite{9153560}.
+There are nowadays many traditional machine learning algorithms which 
+require huge quantities of data raining examples to learn.
+The rising problem is 
 that is often very difficult to collect a sufficient amount of data to reach a 
-reasonable reliability. This problem is very common in settings in which data 
+reasonable reliability.
+This problem is very common in settings in which data 
 access is restricted by righteous privacy regulations, e.g. personal healthcare, 
-or customization of personal devices. The implementation of a FL setting allows 
+or customization of personal devices.
+The implementation of a FL setting allows 
 to avoid the necessity to collect data in a single place.
 
 \subsection{Federated Learning}
 A typical FL setting 
-is built by taking into account a set of clients and a centralized server. The 
-main steps of a FL iterative algorithm are the following:
+is built by taking into account a set of clients and a centralized server.
+The main steps of a FL iterative algorithm are the following:
 \begin{enumerate}
     \item global model initialization;
     \item global model distribution;
@@ -260,7 +264,7 @@ simulations in FL setting.
 From the \verb|scikit-learn| Python package, which provides a wide set of generators 
 for toy datsets, the \verb|datasets.make_moons| generator was picked up.
 This function produces the requested number of points in a 2-D space drawing two 
-interleaving circles, as Fig.\ref{} shows. 
+interleaving circles, as Fig.\ref{fig1} shows. 
 The same function returns also the classification array, that relates every point to 
 its corresponding circle.
 One can make the request to add some noise to the generated points, and ask for the 
@@ -275,7 +279,7 @@ point $(x, y)$ in the dataset undergoes the transformation $x'=x+dx$ and $y'=y+d
 The second applies a simple rotation by an angle $\theta$ with a standard transformation,
 i.e. $x'=x\cos(\theta)-y\sin(\theta)$ and $y'=x\sin(\theta)-y\cos(\theta)$ following 
 the above notation.
-Examples of traslated and rotated datasets are shown in Fig.\ref{}.
+Examples of traslated and rotated datasets are shown in Fig.\ref{fig2}.
 
 \subsection{Model}
 Every simulation was build on a simple two layers sequential model.
@@ -286,7 +290,7 @@ w.r.t. their circle of belonging.
 \subsection{Simulation setting}
 The framework adopted to make the necessary simulation is Flower: A Friendly Federated 
 Learning Framework \cite{beutel2021flower}.
-The federated framework is set up by running  a program for every client and one for 
+The federated framework is set up by running a program for every client and one for 
 the server.
 These will communicate using a RPC (Remote Procedure Call) framework exchanging the 
 weights of the model.
@@ -320,7 +324,7 @@ The for every epoch an evaluation step is performed at every client's place as a
 aggregated model.
 The performance of the model at every step, represented by the loss and the accuracy, 
 is retrieved and saved to be consulted later.
-The loss function chosen is the Sparse Categorical Cross-Entropy \ref{?}, implemented by the
+The loss function chosen is the Sparse Categorical Cross-Entropy, implemented by the
 function \verb|tensorflow.keras.losses.SparseCategoricalCrossentropy|.
 The accuracy is simply computed as the ratio between the number of well classified points 
 and the total number of points in the test set.
@@ -329,7 +333,7 @@ are computed.
 Since the single client performance only does not give so much information about the 
 performance of the whole FL model, the mean value of the losses and the mean value of the 
 accuracies are then computed.
-A confidence interval, that reach a confidence level of $95\%$, is then associated to 
+A confidence interval, that covers a confidence level of $95\%$, is then associated to 
 these mean values, in order to give a more complete representation.
 The distance between the curve of mean values of loss and accuracy between clients and the 
 relative curve of the aggregated model gives a quantitative representation of far the two 
@@ -341,6 +345,22 @@ FL model.
 
 %###############################################
 \section {Figures}
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=0.95\textwidth, keepaspectratio]{images/make_moons_example.png}
+    \caption{Here are represent an example of a set of 320 points of the toy dataset, i.e.
+        two interleaving circles. These points are taken by setting noise to zero}
+    \label{fig1}
+\end{figure}
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=0.95\textwidth, keepaspectratio]{images/datasets_examples.png}
+    \caption{Here are shown three examples of the toy datasets. Are taken 840 points for 
+        every dataset, with noise fixed at 0.1. The red dots represent the standard toy 
+        dataset. The blue dots represent the rotated dataset by an angle of $\theta=\pi/5$.
+        The yellow dots represent the traslated dataset using $dx=0.5$ and $dy=0.5$}
+    \label{fig2}
+\end{figure}
 
 %###############################################
 
