@@ -84,10 +84,10 @@ if __name__ == "__main__":
     for folder in folders:
         if folder[-3:] == 'png': continue
         if folder[11:13] != 'FL': continue
-        #if folder[-2:] != 'tr': continue
-        #flavor = folder[-2:]
-        if folder[-4:] != 'same': continue
-        flavor = folder[-4:]
+        if folder[-2:] != 'tr': continue
+        flavor = folder[-2:]
+        #if folder[-4:] != 'same': continue
+        #flavor = folder[-4:]
         #if folder[-3:] != 'rot': continue
         #flavor = folder[-3:]
         files = glob.glob(folder+'/*.dat')
