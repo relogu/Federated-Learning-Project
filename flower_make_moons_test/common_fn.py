@@ -11,6 +11,8 @@ import pathlib
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import random
+from sklearn import datasets
 
 def create_keras_model():
     """Define the model."""
@@ -113,3 +115,47 @@ def rotate_moons(theta, x):
     else :
         print("x has not the correct shape")
     return xc
+
+def build_dataset(n_clients, total_samples, noise,
+                  is_translated=False, is_rotated=False):
+    N_SAMPLES = int(total_samples/n_clients)
+    x=np.array(0)
+    y=np.array(0)
+    for i in range(n_clients):
+        random.seed(i) # maybe random.seed(51550)
+        train_rand_state = random.randint(0, 100000)
+        (x_client, y_client) = datasets.make_moons(n_samples=int(N_SAMPLES),
+                                                   noise=noise,
+                                                   shuffle=True,
+                                                   random_state=train_rand_state)
+        if is_rotated: 
+            theta = (-1 + 2*random.random())*(math.pi/10)
+            x_client = rotate_moons(theta, x_client)
+        if is_translated: 
+            dx = 0.2*(-1 + 2*random.random())
+            dy = 0.2*(-1 + 2*random.random())
+            x_client = traslate_moons(dx, dy, x_client)
+            
+        if i == 0:
+            x = x_client
+            y = y_client
+        else :
+            x = np.concatenate((x, x_client), axis=0)
+            y = np.concatenate((y, y_client), axis=0)       
+    return x, y
+
+def get_client_dataset(client_id, n_clients, x_tot, y_tot):
+    
+    if len(x_tot.shape) == 2 and x_tot.shape[1] == 2 \
+        and len(y_tot.shape) == 1 and y_tot.shape[0] == x_tot.shape[0]:
+        n_samples = x_tot.shape[0]
+        n_sam_client = int(n_samples/n_clients)
+        for i in range(n_clients):
+            if i != client_id:
+                continue
+            else:
+                return x_tot[i*n_sam_client:(i+1)*n_sam_client], y_tot[i*n_sam_client:(i+1)*n_sam_client]
+    else:
+        print("parameters have not the correct shape")
+        return [], []
+

@@ -76,32 +76,6 @@ def parse_args():
     _args = parser.parse_args()
     return _args
 
-def build_dataset(n_clients, total_samples, noise,
-                  is_translated, is_rotated):
-    N_SAMPLES = total_samples/n_clients
-    x=np.array(0)
-    y=np.array(0)
-    for i in range(n_clients):
-        random.seed(i)
-        train_rand_state = random.randint(0, 100000)
-        (x_client, y_client) = datasets.make_moons(n_samples=int(N_SAMPLES), noise=noise,
-                                shuffle=True, random_state=train_rand_state)
-        if is_rotated: 
-            theta = (-1 + 2*random.random())*(math.pi/10)
-            x_client = my_fn.rotate_moons(theta, x_client)
-        if is_translated: 
-            dx = 0.2*(-1 + 2*random.random())
-            dy = 0.2*(-1 + 2*random.random())
-            x_client = my_fn.traslate_moons(dx, dy, x_client)
-            
-        if i == 0:
-            x = x_client
-            y = y_client
-        else :
-            x = np.concatenate((x, x_client), axis=0)
-            y = np.concatenate((y, y_client), axis=0)       
-    return x, y
-
 #%%
 if __name__ == "__main__":
     
@@ -132,7 +106,7 @@ if __name__ == "__main__":
     else:
         NOISE = args.noise
         
-    x, y = build_dataset(n_clients=N_CLIENTS, noise=NOISE, total_samples=N_SAMPLES, is_rotated=IS_ROT, is_translated=IS_TR)
+    x, y = my_fn.build_dataset(n_clients=N_CLIENTS, noise=NOISE, total_samples=N_SAMPLES, is_rotated=IS_ROT, is_translated=IS_TR)
     # Define the K-fold Cross Validator
     kfold = KFold(n_splits=5)
     train, test = next(kfold.split(x, y))

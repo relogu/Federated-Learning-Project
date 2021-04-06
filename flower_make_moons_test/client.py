@@ -47,12 +47,18 @@ def parse_args():
                         type=int,
                         action='store',
                         help='client id, set also the seed for the dataset')
-    parser.add_argument('--n_train',
-                        dest='n_train',
+    parser.add_argument('--n_samples',
+                        dest='n_samples',
                         required=True,
                         type=int,
                         action='store',
-                        help='number of samples in training set')
+                        help='number of total samples in whole training set')
+    parser.add_argument('--n_clients',
+                        dest='n_clients',
+                        required=True,
+                        type=int,
+                        action='store',
+                        help='number of total clients in the FL setting')
     parser.add_argument('--server',
                         dest='server',
                         required=False,
@@ -116,9 +122,13 @@ if __name__ == "__main__":
                   metrics=["accuracy"])
 
     # parameters
-    N_TRAIN = args.n_train
-    if N_TRAIN < 10:
-        N_TRAIN = 10
+    N_SAMPLES = args.n_samples
+    if N_SAMPLES < 10:
+        N_SAMPLES = 10
+        
+    N_CLIENTS = args.n_clients
+    if N_CLIENTS < 2:
+        N_CLIENTS = 2
         
     if not args.rounds:
         N_LOC_EPOCHS = 1
@@ -163,12 +173,10 @@ if __name__ == "__main__":
     random.seed(args.client_id)
     TRAIN_RAND_STATE = random.randint(0, 100000)
 
-    # datasets
-    (x_train, y_train) = datasets.make_moons(n_samples=N_TRAIN,
-                                             shuffle=True,
-                                             noise=R_NOISE,
-                                             random_state=TRAIN_RAND_STATE)
-    
+    # datasets    
+    x_tot, y_tot = my_fn.build_dataset(8, N_SAMPLES, R_NOISE)  
+    x_train, y_train = my_fn.get_client_dataset(args.client_id, N_CLIENTS, x_tot, y_tot) 
+     
     if IS_ROT: 
         theta = (-1 + 2*random.random())*(math.pi/10)
         x_train = my_fn.rotate_moons(theta, x_train)
@@ -176,7 +184,6 @@ if __name__ == "__main__":
         dx = 0.2*(-1 + 2*random.random())
         dy = 0.2*(-1 + 2*random.random())
         x_train = my_fn.traslate_moons(dx, dy, x_train)
-        
     
     if TEST :
         (x_test, y_test) = datasets.make_moons(n_samples=1000,
