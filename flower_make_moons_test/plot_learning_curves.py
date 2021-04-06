@@ -139,12 +139,13 @@ if __name__ == "__main__":
         plt.close()
     
 
+    title = 'Comparison between set ups with different # clients'
     filename = path+'/accuracy_red.png'
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,5))
     plt.title(title)
     ax.set_ylabel('accuracy')
     plt.xlabel("round")
-    sns.lineplot(x='round', y='accuracy', hue='client', data=mean)#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
+    sns.lineplot(x='round', y='accuracy', hue='client', data=mean, ci=0)#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
     plt.draw()
     #plt.show(block=False)
     plt.savefig(filename)
@@ -155,7 +156,7 @@ if __name__ == "__main__":
     plt.title(title)
     ax.set_ylabel('loss')
     plt.xlabel("round")
-    sns.lineplot(x='round', y='loss', hue='client', data=mean)#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
+    sns.lineplot(x='round', y='loss', hue='client', data=mean, ci=0)#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
     plt.draw()
     #plt.show(block=False)
     plt.savefig(filename)
