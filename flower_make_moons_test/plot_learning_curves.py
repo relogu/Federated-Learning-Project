@@ -115,7 +115,7 @@ if __name__ == "__main__":
         plt.xlabel("round")
         sns.lineplot(x='round', y='accuracy', hue='client', data=conv)#, style='client')#, markers=['.', '.'])
         plt.draw()
-        plt.show(block=False)
+        #plt.show(block=False)
         plt.savefig(filename)
         plt.close()
     
