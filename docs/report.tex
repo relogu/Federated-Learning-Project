@@ -287,7 +287,7 @@ Both the layers are standard regular densely-connected Neural Network layers, th
 with 4 output, the second with 2, since the model is expected to classify the points 
 w.r.t. their circle of belonging.
 
-\subsection{Simulation setting}
+\subsection{FL framework}
 The framework adopted to make the necessary simulation is Flower: A Friendly Federated 
 Learning Framework \cite{beutel2021flower}.
 The federated framework is set up by running a program for every client and one for 
@@ -299,26 +299,10 @@ The client program accepts many parameters to build properly the client's datase
 to set up the outputs also.
 The server program has a minimal configuration, receiving the number of clients in the 
 federated network and the number of the federated epochs to run.
-Another program is used to simulate the same situation in a non-federated setting. 
-In fact, since the seeds for the datasets' generations are fixed, it is able to build the 
-equivalent aggregated dataset and train on a single, equivalently initialized, model.
-
-\subsection {Simulations details}
-There were made many comparison between a FL setting and its equivalent aggregated one.
-In every comparison the total number of samples was kept constant to 320, to be easily 
-distributed over the three subdivision chosen (2, 4, and 8 clients).
-The comparisons are intended to highlight the influence that the number of clients have 
-on the performance of the learning model.
-The expectation is that more the dataset is distributed lesser is the performance of 
-the FL setting, i.e. more are the rounds needed to reach some values of accuracy and loss.
-Whenever traslated or rotated datsets are used, the comparison is indended to extent 
-studying the Trasfer Learning (TL) capacity of the FL setting, since every clients differs 
-from the others also for the traslation vector $(dx, dy)$ or the rotation angle $\theta$.
-There is no guess about the TL ability of these FL settings.
-Every client's datset, as the aggregated one, are divided randomly in train set and test 
+Another simple program runs an aggregated model by building an equivalent aggregated 
+dataset.
+Every client's dataset, as the aggregated one, is divided randomly in train set and test 
 set usig the standard proportion 80-20, for train and test respectively.
-In order to have consistent comparisons, the FL setting and the aggregated both are trained 
-for a total of 2000 epochs.
 The for every epoch an evaluation step is performed at every client's place as at the 
 aggregated model.
 The performance of the model at every step, represented by the loss and the accuracy, 
@@ -327,24 +311,51 @@ The loss function chosen is the Sparse Categorical Cross-Entropy, implemented by
 function \verb|tensorflow.keras.losses.SparseCategoricalCrossentropy|.
 The accuracy is simply computed as the ratio between the number of well classified points 
 and the total number of points in the test set.
-The values of the losses and the accuracies are then plotted against the epoch at which they 
-are computed.
-Since the single client performance only does not give so much information about the 
-performance of the whole FL model, the mean value of the losses and the mean value of the 
-accuracies are then computed.
-A confidence interval, that covers a confidence level of $95\%$, is then associated to 
-these mean values, in order to give a more complete representation.
-The distance between the curve of mean values of loss and accuracy between clients and the 
-relative curve of the aggregated model gives a quantitative representation of far the two 
-performances.
-The wideness of the confidence intervals at the same time quantify the TL ability of the 
-FL model.
+
+\subsection {Simulations details}
+In the very first simulation, different FL settset ups are compared with the aggregated one.
+The number of epochs (federated epochs for FL set ups, "standard" epochs for the aggregated 
+model) is fixed to 1000 for every set up, in order to compare easily the performances 
+against the epochs.
+The number of total samples is fixed to 840 points, which are equally distributed between the 
+chosen number of clients.
+A number of 6 different FL settings are chosen, with 2,3,4,5,6,7,8 clients respectively.
+The performance, keeping fixed the number of epochs, is expected to be worst as the number 
+of clients increases.
+
+The subsequent simulation is intended to compare the performance of 6 different FL set ups, 
+with 2,3,4,5,6,7,8 clients respectively, between each other.
+This time the number of federated epochs is again fixed to 1000, but the number of local epochs,
+performed at clients' places, are chosen to increase as the number of clients does, i.e. 1,2,2,3,3,4,5 
+local epochs respectively.
+The number of total samples is again fixed to 840 points, which are distributed as before.
+This choice allows the FL models to reach faster their best performances as higher is the number of 
+clients in FL set up.
+The final result should show how much the best performance of a FL set up depends on the 
+number of clients chosen to distribute the dataset.
+
+The last simulation attemps to better understand the TL ability of such a FL setting.
+In order to do this, different 8 clients FL set ups are compared.
+This time different FL set ups carry very different clients, in fact a portion of the clients 
+is transformed using the rotation or the traslation transformation defined above.
+The wideness of the confidence interval in the mean losses and mean accuracies 
+plots of these FL set ups should give information on the TL ability, at least in 
+comparison w.r.t. the other FL set ups.
+
 %###############################################
 \section {Results}
+The easiest mehod to compare the performances of such models is to plot 
+the losses and the accuracies angainsta the number of epochs(federated epochs for FL set 
+ups, "standard" epochs for the aggregated model).
+Moreover, to have a general, and more informative, idea of the performnce of the whole FL 
+set ups, the mean values of the losses and the accuracies of all the clients in every FL 
+set up are computed.
+A confidence interval, that covers a confidence level of $95\%$, is then associated to 
+these mean values, in order to give a more complete representation.
+
 The very first result to notice is that the aggregated model has a preatty faster convergence,
 for the loss and the accuracy, w.r.t. any other FL set up.
-More is the FL set up distributed, slower in the convergence.
-Fig.\ref{} shows this aspect
+More the FL set up is distributed, slower is the convergence, as Fig.\ref{} shows.
 
 %###############################################
 \section {Figures}
