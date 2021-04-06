@@ -303,8 +303,7 @@ Another program is used to simulate the same situation in a non-federated settin
 In fact, since the seeds for the datasets' generations are fixed, it is able to build the 
 equivalent aggregated dataset and train on a single, equivalently initialized, model.
 
-%###############################################
-\section {Results}
+\subsection {Simulations details}
 There were made many comparison between a FL setting and its equivalent aggregated one.
 In every comparison the total number of samples was kept constant to 320, to be easily 
 distributed over the three subdivision chosen (2, 4, and 8 clients).
@@ -341,7 +340,11 @@ performances.
 The wideness of the confidence intervals at the same time quantify the TL ability of the 
 FL model.
 %###############################################
-\section {Conclusions}
+\section {Results}
+The very first result to notice is that the aggregated model has a preatty faster convergence,
+for the loss and the accuracy, w.r.t. any other FL set up.
+More is the FL set up distributed, slower in the convergence.
+Fig.\ref{} shows this aspect
 
 %###############################################
 \section {Figures}
