@@ -1,6 +1,8 @@
 *.txt
 *.pyc
 
+*output/*
+
 *.pdf
 TODO
 *.aux
