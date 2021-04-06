@@ -36,7 +36,7 @@ def parse_args():
                         required=True,
                         type=int,
                         action='store',
-                        help='number of different clients to simulate')
+                        help='maximum number of different clients to simulate, used to create the dataset')
     parser.add_argument('--n_samples',
                         dest='n_samples',
                         required=True,
