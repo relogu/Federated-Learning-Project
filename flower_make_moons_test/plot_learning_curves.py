@@ -71,6 +71,8 @@ def read_simulation_from_folder(folderpath):
         feature = 'rotated'
     elif feature == 'tr':
         feature = 'traslated'
+    elif feature == 'plus_same':
+        feature = 'advanced FL'
     return n_clients, feature
 
 #%% main
@@ -113,7 +115,7 @@ if __name__ == "__main__":
         plt.xlabel("round")
         sns.lineplot(x='round', y='accuracy', hue='client', data=conv)#, style='client')#, markers=['.', '.'])
         plt.draw()
-        #plt.show(block=False)
+        plt.show(block=False)
         plt.savefig(filename)
         plt.close()
     
