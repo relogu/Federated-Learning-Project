@@ -1,7 +1,7 @@
 # SIMULATION
-These are the results of simulating 6 clients, 140 samples each, in a federated setting. 
+These are the results of simulating 3 clients, 280 samples each, in a federated setting. 
 The datasets are generated using the make_moons method in the scikit-learn package, with a fixed noise to 0.1. 
-In addition every dataset is randomly traslated horizontally by a value dx&isin;[-0.1 ; 0.1] and vertically by a value dy&isin;[-0.1 ; 0.1]. 
+In addition every dataset is randomly rotated with an angle &theta;&isin;[-&pi;/10 ; &pi;/10].
 After being shuffled, the dataset are divided 80-20 in train-test sets. 
 No cross validation has been used.
 
@@ -22,14 +22,8 @@ The *.dat files show the numbers from which the learning curves are plotted.
 ![](data_client_0.png?raw=true)
 ![](data_client_1.png?raw=true)
 ![](data_client_2.png?raw=true)
-![](data_client_3.png?raw=true)
-![](data_client_4.png?raw=true)
-![](data_client_5.png?raw=true)
 
 ### DECISION BOUNDARIES
 ![](dec_bound_c0.png?raw=true)
 ![](dec_bound_c1.png?raw=true)
 ![](dec_bound_c2.png?raw=true)
-![](dec_bound_c3.png?raw=true)
-![](dec_bound_c4.png?raw=true)
-![](dec_bound_c5.png?raw=true)

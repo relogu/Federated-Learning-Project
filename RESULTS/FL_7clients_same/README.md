@@ -1,29 +1,36 @@
-## SIMULATION
-These are the results of simulating 4 clients, 80 samples each, in a federated setting.
-The datasets are generated using the make_moons method in the scikit-learn package, with
-a fixed noise to 0.1. 
+# SIMULATION
+These are the results of simulating 7 clients, 120 samples each, in a federated setting. 
+The datasets are generated using the make_moons method in the scikit-learn package, with a fixed noise to 0.1.
 After being shuffled, the dataset are divided 80-20 in train-test sets. 
 No cross validation has been used.
 
-accuracy.png and loss.png contains the plot of the learning curves. In the legend of 
-these graphs there is the reference to the client to which they refer, the mean value is 
-also plotted. With single model it is referred the analogous non federated simulation, 
-performed using the same model and the same datasets (properly merged).
-There are also the "reduced plots", under accuracy_red.png and loss_red.png with the 
-single model in comparison w.r.t. the average of the clients with the 95% C.I.
+The files accuracy.png and loss.png contains the plot of the learning curves.
+In the legend of these graphs is written the client to which they refer, the mean value is also plotted usign a confidence interval estimated by the standard deviation.
 
 The data_*.png files show the drawings of the dataset for a visual comparison.
 
+The dec_bound_*.png files show the drawings of the final decision boundaries obtained by the model on the train set of the client.
+
 The *.dat files show the numbers from which the learning curves are plotted.
+
 ### LEARNING CURVES
 ![](loss.png?raw=true)
 ![](accuracy.png?raw=true)
-![](loss_red.png?raw=true)
-![](accuracy_red.png?raw=true)
 
 ### DATASETS
-![](data_client_nofed.png?raw=true)
 ![](data_client_0.png?raw=true)
 ![](data_client_1.png?raw=true)
 ![](data_client_2.png?raw=true)
 ![](data_client_3.png?raw=true)
+![](data_client_4.png?raw=true)
+![](data_client_5.png?raw=true)
+![](data_client_6.png?raw=true)
+
+### DECISION BOUNDARIES
+![](dec_bound_c0.png?raw=true)
+![](dec_bound_c1.png?raw=true)
+![](dec_bound_c2.png?raw=true)
+![](dec_bound_c3.png?raw=true)
+![](dec_bound_c4.png?raw=true)
+![](dec_bound_c5.png?raw=true)
+![](dec_bound_c6.png?raw=true)
