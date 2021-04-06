@@ -11,6 +11,7 @@
 		"python.venvPath": "~/anaconda3/envs",
 		"python.venvFolders": [
 			"~/anaconda3/envs"
-		]
+		],
+		"jupyter.jupyterServerType": "local"
 	}
 }
