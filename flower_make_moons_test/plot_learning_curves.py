@@ -66,7 +66,7 @@ def read_simulation_from_folder(folderpath):
 
 if __name__ == "__main__":
 
-    path = '/home/relogu/Desktop/OneDrive/UNIBO/Magistrale/Federated Learning Project/RESULTS/'
+    path = '../RESULTS/'
     folders =  glob.glob(path+'*')
     print('Listed folders')
     mean = None
