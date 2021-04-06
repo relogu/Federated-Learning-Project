@@ -3,6 +3,8 @@
 
 *output/*
 
+*.ipynb*
+
 *.pdf
 TODO
 *.aux
