@@ -70,7 +70,7 @@ if __name__ == "__main__":
     folders =  glob.glob(path+'*')
     print('Listed folders')
     mean = None
-    for folder in folders[folders[:-3]]:
+    for folder in folders:
         if folder[-3:] == 'png': continue
         files = glob.glob(folder+'/*.dat')
         print('Listed files in '+str(folder))
