@@ -73,6 +73,8 @@ def read_simulation_from_folder(folderpath):
         feature = 'traslated'
     elif feature == 'plus_same':
         feature = 'advanced FL'
+    elif feature[2:] == 'transf_same':
+        feature = 'FL&TL'
     return n_clients, feature
 
 #%% main
@@ -92,8 +94,10 @@ if __name__ == "__main__":
         #flavor = folder[-4:]
         #if folder[-3:] != 'rot': continue
         #flavor = folder[-3:]
-        if folder[-9:] != 'plus_same': continue
-        flavor = folder[-9:]
+        if folder[-11:] != 'transf_same': continue
+        flavor = folder[-11:]
+        #if folder[-9:] != 'plus_same': continue
+        #flavor = folder[-9:]
         files = glob.glob(folder+'/*.dat')
         #print('Listed files in '+str(folder))
         conv = pd.read_csv(files[0], index_col=False)
