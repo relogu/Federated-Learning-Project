@@ -240,7 +240,7 @@ if __name__ == "__main__":
             
             print('Extracting mean values')
             m = conv[conv['client']==clients_mean].copy()
-            m['client'] = folder[14]+'/'+str(n_clients)+' '+m['client']
+            m['client'] = folder[23]+'/'+str(n_clients)+' '+m['client']
             if mean is None: mean = m
             else: mean = mean.append(m)
 
