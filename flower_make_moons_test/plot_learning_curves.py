@@ -142,6 +142,7 @@ if __name__ == "__main__":
     print('Listed folders')
     mean = None
     flavors = ['standard', 'rotated', 'traslated']
+    flavors = ['rotated', 'traslated']
     for flavor in flavors:
         for folder in folders:
             if select_filter_from_flavor(flavor, folder): continue
