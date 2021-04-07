@@ -77,7 +77,7 @@ def select_filter_from_flavor(flavor, folder):
     if flavor == 'rotated' and folder[-3:] != 'rot': return True
     if flavor == 'traslated' and folder[-2:] != 'tr': return True
     if flavor == 'advanced FL' and folder[-9:] != 'plus_same': return True
-    if flavor == 'FL&TL traslated' and folder[-19:] != 'transf_tr': return True
+    if flavor == 'FL&TL traslated' and folder[-9:] != 'transf_tr': return True
     if flavor == 'FL&TL rotated' and folder[-10:] != 'transf_rot': return True
 
 def plot_learning_curves(df, title, folder, only_red=False):
@@ -237,7 +237,7 @@ if __name__ == "__main__":
             
             print('Extracting mean values')
             m = conv[conv['client']==clients_mean].copy()
-            m['client'] = str(n_clients)+' '+m['client']
+            m['client'] = folder[14]+'/'+str(n_clients)+' '+m['client']
             if mean is None: mean = m
             else: mean = mean.append(m)
 
