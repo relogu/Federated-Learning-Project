@@ -18,15 +18,6 @@ import pathlib
 single_model = 'single model'
 clients_mean = 'clients\' mean'
 
-def process_df1(df):
-    """Aggregate all clients to be store as a mean for seaborn."""
-    for client in df['client'].unique():
-        if client != single_model:
-            s = clients_mean
-            df.loc[df['client']==client, 'client']=s
-    
-    return df
-
 def process_df(df):
     """Compute the mean from all cients and add it to the dataframe."""
     n_clients = len(df['client'].unique())-1
@@ -73,9 +64,71 @@ def read_simulation_from_folder(folderpath):
         feature = 'traslated'
     elif feature == 'plus_same':
         feature = 'advanced FL'
-    elif feature[2:] == 'transf_same':
-        feature = 'FL&TL'
+    elif feature[2:] == 'transf_tr':
+        feature = 'FL&TL traslated'
+    elif feature[2:] == 'transf_rot':
+        feature = 'FL&TL rotated'
     return n_clients, feature
+
+def select_filter_from_flavor(flavor, folder):
+    if folder[-3:] == 'png': return True
+    if folder[11:13] != 'FL': return True
+    if flavor == 'standard' and folder[-12:] != 'clients_same': return True
+    if flavor == 'rotated' and folder[-3:] != 'rot': return True
+    if flavor == 'traslated' and folder[-2:] != 'tr': return True
+    if flavor == 'advanced FL' and folder[-9:] != 'plus_same': return True
+    if flavor == 'FL&TL traslated' and folder[-19:] != 'transf_tr': return True
+    if flavor == 'FL&TL rotated' and folder[-10:] != 'transf_rot': return True
+
+def plot_learning_curves(df, title, folder, only_red=False):
+    
+    if not only_red:
+        filename = folder+'/accuracy.png'
+        sns.set_style('whitegrid')
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
+        plt.title(title)
+        ax.set_ylabel('accuracy')
+        plt.xlabel("round")
+        sns.lineplot(x='round', y='accuracy', hue='client', data=df)#, style='client')#, markers=['.', '.'])
+        plt.draw()
+        #plt.show(block=False)
+        plt.savefig(filename)
+        plt.close()
+
+        filename = folder+'/loss.png'
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
+        plt.title(title)
+        ax.set_ylabel('loss')
+        plt.xlabel("round")
+        sns.lineplot(x='round', y='loss', hue='client', data=df, style='client')#, markers=['.', '.'])
+        plt.draw()
+        #plt.show(block=False)
+        plt.savefig(filename)
+        plt.close()
+
+    filename = folder+'/accuracy_red.png'
+    tmp = df[df['client']==clients_mean].reset_index().copy()
+    tmp = tmp.append(df[df['client']==single_model].reset_index().copy(), ignore_index = True)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
+    plt.title(title)
+    ax.set_ylabel('accuracy')
+    plt.xlabel("round")
+    sns.lineplot(x='round', y='accuracy', hue='client', data=tmp, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
+    plt.draw()
+    #plt.show(block=False)
+    plt.savefig(filename)
+    plt.close()
+
+    filename = folder+'/loss_red.png'
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
+    plt.title(title)
+    ax.set_ylabel('loss')
+    plt.xlabel("round")
+    sns.lineplot(x='round', y='loss', hue='client', data=tmp, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
+    plt.draw()
+    #plt.show(block=False)
+    plt.savefig(filename)
+    plt.close()
 
 #%% main
 if __name__ == "__main__":
@@ -113,62 +166,17 @@ if __name__ == "__main__":
             conv = conv[conv['client']!=single_model].reset_index().copy()
         print('Plotting learning curves')
         title = 'Simulation with '+str(n_clients)+' clients '+feature+' dataset'
-        filename = folder+'/accuracy.png'
-        sns.set_style('whitegrid')
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
-        plt.title(title)
-        ax.set_ylabel('accuracy')
-        plt.xlabel("round")
-        sns.lineplot(x='round', y='accuracy', hue='client', data=conv)#, style='client')#, markers=['.', '.'])
-        plt.draw()
-        #plt.show(block=False)
-        plt.savefig(filename)
-        plt.close()
-    
-        filename = folder+'/loss.png'
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
-        plt.title(title)
-        ax.set_ylabel('loss')
-        plt.xlabel("round")
-        sns.lineplot(x='round', y='loss', hue='client', data=conv, style='client')#, markers=['.', '.'])
-        plt.draw()
-        #plt.show(block=False)
-        plt.savefig(filename)
-        plt.close()
+        plot_learning_curves(conv, title, folder)
         
-        print('Processing dataframe again')
-        conv = conv[conv['client']!=clients_mean].reset_index().copy()
-        conv = process_df1(conv)
-        m = conv[conv['client']=='clients\' mean'].copy()
+        print('Extracting mean values')
+        m = conv[conv['client']==clients_mean].copy()
         m['client'] = str(n_clients)+' '+m['client']
         if mean is None: mean = m
         else: mean = mean.append(m)
-        '''
-        print('Plotting reduced learning curves')
-        filename = folder+'/accuracy_red.png'
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
-        plt.title(title)
-        ax.set_ylabel('accuracy')
-        plt.xlabel("round")
-        sns.lineplot(x='round', y='accuracy', hue='client', data=conv, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
-        plt.draw()
-        #plt.show(block=False)
-        plt.savefig(filename)
-        plt.close()
     
-        filename = folder+'/loss_red.png'
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
-        plt.title(title)
-        ax.set_ylabel('loss')
-        plt.xlabel("round")
-        sns.lineplot(x='round', y='loss', hue='client', data=conv, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
-        plt.draw()
-        #plt.show(block=False)
-        plt.savefig(filename)
-        plt.close()
-        '''
     
-    mean = mean.append(conv[conv['client']==single_model].copy(), ignore_index = True)
+    if flavor == 'FL&TL':
+        mean = mean.append(conv[conv['client']==single_model].copy(), ignore_index = True)
     mean = mean.sort_values('client')
     title = 'Comparison between set ups with different # clients'
     filename = path+'single_model_'+flavor+'/accuracy_red.png'
@@ -193,4 +201,114 @@ if __name__ == "__main__":
     plt.savefig(filename)
     plt.close()
 
-# %%
+#%% FL vs aggregated
+
+    path = '../RESULTS/'
+    folders =  glob.glob(path+'*')
+    print('Listed folders')
+    mean = None
+    flavors = ['standard', 'rotated', 'traslated']
+    for flavor in flavors:
+        for folder in folders:
+            if select_filter_from_flavor(flavor, folder): continue
+            files = glob.glob(folder+'/*.dat')
+            print('Listed files in '+str(folder))
+            print('Reading '+str(files[0]))
+            conv = pd.read_csv(files[0], index_col=False)
+            for file in files[1:]:
+                print('Reading '+str(file))
+                conv = conv.append(pd.read_csv(file, index_col=False), ignore_index = True)
+            conv = conv.append(pd.read_csv(path+'single_model_'+flavor+'/l_curve_nofed.dat', index_col=False), ignore_index = True)
+            n_clients, feature = read_simulation_from_folder(folder)
+            
+            print('Processing dataframe')
+            conv = process_df(conv)
+            print('Plotting learning curves')
+            title = 'Simulation with '+str(n_clients)+' clients '+feature+' dataset'
+            plot_learning_curves(conv, title, folder)
+            
+            print('Extracting mean values')
+            m = conv[conv['client']==clients_mean].copy()
+            m['client'] = str(n_clients)+' '+m['client']
+            if mean is None: mean = m
+            else: mean = mean.append(m)
+        
+        mean = mean.append(conv[conv['client']==single_model].copy(), ignore_index = True)
+        mean = mean.sort_values('client')
+        title = 'Comparison between set ups with different # clients'
+        folder = path+'single_model_'+flavor
+        plot_learning_curves(mean, title, folder, True)
+
+#%% FL advanced
+
+    path = '../RESULTS/'
+    folders =  glob.glob(path+'*')
+    print('Listed folders')
+    mean = None
+    flavor = 'advanced FL'
+    for folder in folders:
+        if select_filter_from_flavor(flavor, folder): continue
+        files = glob.glob(folder+'/*.dat')
+        print('Listed files in '+str(folder))
+        print('Reading '+str(files[0]))
+        conv = pd.read_csv(files[0], index_col=False)
+        for file in files[1:]:
+            print('Reading '+str(file))
+            conv = conv.append(pd.read_csv(file, index_col=False), ignore_index = True)
+
+        n_clients, feature = read_simulation_from_folder(folder)
+        
+        print('Processing dataframe')
+        conv = process_df(conv)
+        print('Plotting learning curves')
+        title = 'Simulation with '+str(n_clients)+' clients '+feature+' dataset'
+        plot_learning_curves(conv, title, folder)
+        
+        print('Extracting mean values')
+        m = conv[conv['client']==clients_mean].copy()
+        m['client'] = str(n_clients)+' '+m['client']
+        if mean is None: mean = m
+        else: mean = mean.append(m)
+        
+    mean = mean.sort_values('client')
+    title = 'Comparison between set ups with different # clients'
+    folder = path+'advanced_FL'
+    plot_learning_curves(mean, title, folder, True)
+
+#%% FL&TL
+
+    path = '../RESULTS/'
+    folders =  glob.glob(path+'*')
+    print('Listed folders')
+    mean = None
+    flavors = ['FL&TL traslated', 'FL&TL rotated']
+    for flavor in flavors:
+        for folder in folders:
+            if select_filter_from_flavor(flavor, folder): continue
+            files = glob.glob(folder+'/*.dat')
+            print('Listed files in '+str(folder))
+            print('Reading '+str(files[0]))
+            conv = pd.read_csv(files[0], index_col=False)
+            for file in files[1:]:
+                print('Reading '+str(file))
+                conv = conv.append(pd.read_csv(file, index_col=False), ignore_index = True)
+
+            n_clients, feature = read_simulation_from_folder(folder)
+            
+            print('Processing dataframe')
+            conv = process_df(conv)
+            print('Plotting learning curves')
+            title = 'Simulation with '+str(n_clients)+' clients '+feature+' dataset'
+            plot_learning_curves(conv, title, folder)
+            
+            print('Extracting mean values')
+            m = conv[conv['client']==clients_mean].copy()
+            m['client'] = str(n_clients)+' '+m['client']
+            if mean is None: mean = m
+            else: mean = mean.append(m)
+
+        mean = mean.sort_values('client')
+        title = 'Comparison between set ups with different # clients'
+        folder = path+flavor
+        plot_learning_curves(mean, title, folder, True)
+            
