@@ -178,7 +178,7 @@ if __name__ == "__main__":
     x_train, y_train = my_fn.get_client_dataset(args.client_id, N_CLIENTS, x_tot, y_tot) 
      
     if IS_ROT: 
-        theta = (-1 + 2*random.random())*(math.pi/10)
+        theta = math.pi/5 # (-1 + 2*random.random())*(math.pi/10)
         x_train = my_fn.rotate_moons(theta, x_train)
     if IS_TR: 
         dx = 0.2#*(-1 + 2*random.random())
