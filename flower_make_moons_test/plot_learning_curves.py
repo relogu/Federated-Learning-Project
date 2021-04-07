@@ -109,6 +109,8 @@ if __name__ == "__main__":
         
         print('Processing dataframe')
         conv = process_df(conv)
+        if flavor == 'FL&TL':
+            conv = conv[conv['client']!=single_model].reset_index().copy()
         print('Plotting learning curves')
         title = 'Simulation with '+str(n_clients)+' clients '+feature+' dataset'
         filename = folder+'/accuracy.png'
