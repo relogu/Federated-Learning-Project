@@ -169,7 +169,7 @@ if __name__ == "__main__":
         
         mean = mean.append(conv[conv['client']==single_model].copy(), ignore_index = True)
         mean = mean.sort_values('client').reset_index()
-        title = 'Comparison between set ups with different # clients'
+        title = 'Comparison between set ups with different # clients and the aggregated model'
         folder = path+'single_model_'+flavor
         plot_learning_curves(mean, title, folder, True)
 
@@ -205,7 +205,7 @@ if __name__ == "__main__":
         else: mean = mean.append(m)
         
     mean = mean.sort_values('client')
-    title = 'Comparison between set ups with different # clients'
+    title = 'Comparison between set ups with different # clients using the advanced set up'
     folder = path+'advanced_FL'
     plot_learning_curves(mean, title, folder, True)
 
@@ -242,7 +242,7 @@ if __name__ == "__main__":
             else: mean = mean.append(m)
 
         mean = mean.sort_values('client')
-        title = 'Comparison between set ups with different # clients'
+        title = 'Comparison between set ups with different proportions of transformed clients'
         folder = path+flavor
         plot_learning_curves(mean, title, folder, True)
             
