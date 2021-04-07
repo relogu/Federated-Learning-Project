@@ -143,6 +143,7 @@ if __name__ == "__main__":
     mean = None
     flavors = ['standard', 'rotated', 'traslated']
     flavors = ['rotated', 'traslated']
+    flavors = ['traslated']
     for flavor in flavors:
         for folder in folders:
             if select_filter_from_flavor(flavor, folder): continue
@@ -169,7 +170,7 @@ if __name__ == "__main__":
             else: mean = mean.append(m)
         
         mean = mean.append(conv[conv['client']==single_model].copy(), ignore_index = True)
-        mean = mean.sort_values('client').reset_index()
+        mean = mean.sort_values('client')
         title = 'Comparison between set ups with different # clients and the aggregated model'
         folder = path+'single_model_'+flavor
         plot_learning_curves(mean, title, folder, True)
