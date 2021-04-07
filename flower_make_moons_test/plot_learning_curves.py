@@ -77,8 +77,8 @@ def select_filter_from_flavor(flavor, folder):
     if flavor == 'rotated' and folder[-11:] != 'clients_rot': return True
     if flavor == 'traslated' and folder[-10:] != 'clients_tr': return True
     if flavor == 'advanced FL' and folder[-9:] != 'plus_same': return True
-    if flavor == 'FL&TL traslated' and folder[-9:] != 'transf_tr': return True
-    if flavor == 'FL&TL rotated' and folder[-10:] != 'transf_rot': return True
+    if flavor == 'FL&TL1' and folder[-9:] != 'transf_tr': return True
+    if flavor == 'FL&TL2' and folder[-10:] != 'transf_rot': return True
 
 def plot_learning_curves(df, title, folder, only_red=False):
     
@@ -144,6 +144,7 @@ if __name__ == "__main__":
     flavors = ['standard', 'rotated', 'traslated']
     flavors = ['rotated', 'traslated']
     flavors = ['traslated']
+    flavors = []
     for flavor in flavors:
         for folder in folders:
             if select_filter_from_flavor(flavor, folder): continue
@@ -176,7 +177,7 @@ if __name__ == "__main__":
         plot_learning_curves(mean, title, folder, True)
 
 #%% FL advanced
-
+'''
     path = '../RESULTS/'
     folders =  glob.glob(path+'*')
     print('Listed folders')
@@ -210,14 +211,14 @@ if __name__ == "__main__":
     title = 'Comparison between set ups with different # clients using the advanced set up'
     folder = path+'advanced_FL'
     plot_learning_curves(mean, title, folder, True)
-
+'''
 #%% FL&TL
 
     path = '../RESULTS/'
     folders =  glob.glob(path+'*')
     print('Listed folders')
     mean = None
-    flavors = ['FL&TL traslated', 'FL&TL rotated']
+    flavors = ['FL&TL1', 'FL&TL2']
     for flavor in flavors:
         for folder in folders:
             if select_filter_from_flavor(flavor, folder): continue
@@ -245,6 +246,7 @@ if __name__ == "__main__":
 
         mean = mean.sort_values('client')
         title = 'Comparison between set ups with different proportions of transformed clients'
+        flavor = flavor.replace(' ', '_')
         folder = path+flavor
         plot_learning_curves(mean, title, folder, True)
             
