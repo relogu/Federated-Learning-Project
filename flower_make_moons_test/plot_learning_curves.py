@@ -105,15 +105,17 @@ def plot_learning_curves(df, title, folder, only_red=False):
         #plt.show(block=False)
         plt.savefig(filename)
         plt.close()
+        tmp = df[df['client']==clients_mean].reset_index().copy()
+        tmp = tmp.append(df[df['client']==single_model].reset_index().copy(), ignore_index = True)
+        
+    else: tmp = df.copy()
 
     filename = folder+'/accuracy_red.png'
-    tmp = df[df['client']==clients_mean].reset_index().copy()
-    tmp = tmp.append(df[df['client']==single_model].reset_index().copy(), ignore_index = True)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
     plt.title(title)
     ax.set_ylabel('accuracy')
     plt.xlabel("round")
-    sns.lineplot(x='round', y='accuracy', hue='client', data=tmp, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
+    sns.lineplot(x='round', y='accuracy', hue='client', data=tmp)#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
     plt.draw()
     #plt.show(block=False)
     plt.savefig(filename)
@@ -124,7 +126,7 @@ def plot_learning_curves(df, title, folder, only_red=False):
     plt.title(title)
     ax.set_ylabel('loss')
     plt.xlabel("round")
-    sns.lineplot(x='round', y='loss', hue='client', data=tmp, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
+    sns.lineplot(x='round', y='loss', hue='client', data=tmp)#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
     plt.draw()
     #plt.show(block=False)
     plt.savefig(filename)
@@ -132,74 +134,6 @@ def plot_learning_curves(df, title, folder, only_red=False):
 
 #%% main
 if __name__ == "__main__":
-
-    path = '../RESULTS/'
-    folders =  glob.glob(path+'*')
-    print('Listed folders')
-    mean = None
-    # _same folders 
-    for folder in folders:
-        if folder[-3:] == 'png': continue
-        if folder[11:13] != 'FL': continue
-        #if folder[-2:] != 'tr': continue
-        #flavor = folder[-2:]
-        #if folder[-4:] != 'same': continue
-        #flavor = folder[-4:]
-        #if folder[-3:] != 'rot': continue
-        #flavor = folder[-3:]
-        if folder[-11:] != 'transf_same': continue
-        flavor = folder[-11:]
-        #if folder[-9:] != 'plus_same': continue
-        #flavor = folder[-9:]
-        files = glob.glob(folder+'/*.dat')
-        #print('Listed files in '+str(folder))
-        conv = pd.read_csv(files[0], index_col=False)
-        for file in files[1:]:
-            #print('Reading '+str(file))
-            conv = conv.append(pd.read_csv(file, index_col=False), ignore_index = True)
-        conv = conv.append(pd.read_csv(path+'single_model_'+flavor+'/l_curve_nofed.dat', index_col=False), ignore_index = True)
-        n_clients, feature = read_simulation_from_folder(folder)
-        
-        print('Processing dataframe')
-        conv = process_df(conv)
-        if flavor == 'FL&TL':
-            conv = conv[conv['client']!=single_model].reset_index().copy()
-        print('Plotting learning curves')
-        title = 'Simulation with '+str(n_clients)+' clients '+feature+' dataset'
-        plot_learning_curves(conv, title, folder)
-        
-        print('Extracting mean values')
-        m = conv[conv['client']==clients_mean].copy()
-        m['client'] = str(n_clients)+' '+m['client']
-        if mean is None: mean = m
-        else: mean = mean.append(m)
-    
-    
-    if flavor == 'FL&TL':
-        mean = mean.append(conv[conv['client']==single_model].copy(), ignore_index = True)
-    mean = mean.sort_values('client')
-    title = 'Comparison between set ups with different # clients'
-    filename = path+'single_model_'+flavor+'/accuracy_red.png'
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
-    plt.title(title)
-    ax.set_ylabel('accuracy')
-    plt.xlabel("round")
-    sns.lineplot(x='round', y='accuracy', hue='client', data=mean, ci='sd')#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
-    plt.draw()
-    #plt.show(block=False)
-    plt.savefig(filename)
-    plt.close()
-
-    filename = path+'single_model_'+flavor+'/loss_red.png'
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
-    plt.title(title)
-    ax.set_ylabel('loss')
-    plt.xlabel("round")
-    sns.lineplot(x='round', y='loss', hue='client', data=mean, ci='sd')#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
-    plt.draw()
-    #plt.show(block=False)
-    plt.savefig(filename)
-    plt.close()
 
 #%% FL vs aggregated
 
@@ -234,7 +168,7 @@ if __name__ == "__main__":
             else: mean = mean.append(m)
         
         mean = mean.append(conv[conv['client']==single_model].copy(), ignore_index = True)
-        mean = mean.sort_values('client')
+        mean = mean.sort_values('client').reset_index()
         title = 'Comparison between set ups with different # clients'
         folder = path+'single_model_'+flavor
         plot_learning_curves(mean, title, folder, True)
