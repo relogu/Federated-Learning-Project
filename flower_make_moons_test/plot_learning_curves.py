@@ -74,8 +74,8 @@ def select_filter_from_flavor(flavor, folder):
     if folder[-3:] == 'png': return True
     if folder[11:13] != 'FL': return True
     if flavor == 'standard' and folder[-12:] != 'clients_same': return True
-    if flavor == 'rotated' and folder[-3:] != 'rot': return True
-    if flavor == 'traslated' and folder[-2:] != 'tr': return True
+    if flavor == 'rotated' and folder[-11:] != 'clients_rot': return True
+    if flavor == 'traslated' and folder[-10:] != 'clients_tr': return True
     if flavor == 'advanced FL' and folder[-9:] != 'plus_same': return True
     if flavor == 'FL&TL traslated' and folder[-9:] != 'transf_tr': return True
     if flavor == 'FL&TL rotated' and folder[-10:] != 'transf_rot': return True
