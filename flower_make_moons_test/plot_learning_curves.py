@@ -177,7 +177,7 @@ if __name__ == "__main__":
         plot_learning_curves(mean, title, folder, True)
 
 #%% FL advanced
-'''
+    '''
     path = '../RESULTS/'
     folders =  glob.glob(path+'*')
     print('Listed folders')
@@ -211,7 +211,7 @@ if __name__ == "__main__":
     title = 'Comparison between set ups with different # clients using the advanced set up'
     folder = path+'advanced_FL'
     plot_learning_curves(mean, title, folder, True)
-'''
+    '''
 #%% FL&TL
 
     path = '../RESULTS/'
