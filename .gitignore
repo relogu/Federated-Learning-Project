@@ -5,7 +5,7 @@
 
 *.ipynb*
 
-*.pdf
+papers
 TODO
 *.aux
 *.fdb_latexmk
