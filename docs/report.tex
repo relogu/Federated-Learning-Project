@@ -313,7 +313,7 @@ The accuracy is simply computed as the ratio between the number of well classifi
 and the total number of points in the test set.
 
 \subsection {Simulations details}
-In the very first simulation, different FL settset ups are compared with the aggregated one.
+In the very first simulation, different FL set ups are compared with the aggregated one.
 The number of epochs (federated epochs for FL set ups, "standard" epochs for the aggregated 
 model) is fixed to 1000 for every set up, in order to compare easily the performances 
 against the epochs.
@@ -337,7 +337,10 @@ number of clients chosen to distribute the dataset.
 The last simulation attemps to better understand the TL ability of such a FL setting.
 In order to do this, different 8 clients FL set ups are compared.
 This time different FL set ups carry very different clients, in fact a portion of the clients 
-is transformed using the rotation or the traslation transformation defined above.
+is transformed using the traslation transformation defined above with $(dx, dy)=(0.2, 0.2)$.
+There were taken 8 simulation with the 8 different proportion between traslated and standard 
+dataset, from $1/8$ to $8/8$.
+An equivalent simulation was done using the rotation transformation with $\theta=\pi/5$.
 The wideness of the confidence interval in the mean losses and mean accuracies 
 plots of these FL set ups should give information on the TL ability, at least in 
 comparison w.r.t. the other FL set ups.
@@ -350,12 +353,35 @@ ups, "standard" epochs for the aggregated model).
 Moreover, to have a general, and more informative, idea of the performnce of the whole FL 
 set ups, the mean values of the losses and the accuracies of all the clients in every FL 
 set up are computed.
-A confidence interval, that covers a confidence level of $95\%$, is then associated to 
-these mean values, in order to give a more complete representation.
+A confidence interval, that covers a confidence level of $68\%$, i.e. standard deviation
+was taken, is then associated to these mean values, in order to give a more complete 
+representation.
 
 The very first result to notice is that the aggregated model has a preatty faster convergence,
-for the loss and the accuracy, w.r.t. any other FL set up.
-More the FL set up is distributed, slower is the convergence, as Fig.\ref{} shows.
+for both the loss and the accuracy, w.r.t. any other FL set up.
+More the FL set up is distributed, slower is the convergence, as Fig.\ref{fig3}-\ref{fig4} show, and 
+higher is the standard deviation between the clients.
+The standard deviations are expected to tend to zero as the number of epochs increses.
+A useful comparison is shown by Fig.\ref{fig5}, underlining, using the final decision 
+boundaries, the fact that with only 1000 federated epochs, the FL setting distributed 
+between 8 clients is far from the aggregated one.
+
+As Fig.\ref{fig6}-\ref{fig7} show, the general setting changes, in fact increasing the number of local epochs 
+at clients' place make the learning curves faster than before.
+One can notice that somewhere in the plot, FL settings with an higher number of clients 
+outperforms others with a lower number of clients.
+
+The last analysis, which tries to seek the TL ability of FL setting, shows that the 
+set ups which perform better are those which are more mixed up.
+The simulation that used the rotation transformation is almost inconclusive, since the 
+convergence is not reach in many set ups, as shown by Fig.\ref{fig8}-\ref{fig9}.
+However Fig.\ref{fig9} shows the general behaviour mentioned previously.
+The simulation that used the traslation transformation has many set ups, which nearly reach 
+the convergence, describe better the general behavoiur noticed.
+As Fig.\ref{fig10}-\ref{fig11} show, the worst performances are those of the FL settings with 
+7 and 8 clients with trasformed datasets, then set ups with 1 and 2 clients with trasformed 
+datasets follow.
+
 
 %###############################################
 \section {Figures}
@@ -375,6 +401,67 @@ More the FL set up is distributed, slower is the convergence, as Fig.\ref{} show
         The yellow dots represent the traslated dataset using $dx=0.5$ and $dy=0.5$}
     \label{fig2}
 \end{figure}
+\begin{figure}[!ht]
+    \centering
+        \includegraphics[width=0.95\textwidth, keepaspectratio]{images/loss_red_same.png}
+    \caption{}
+    \label{fig3}
+\end{figure}
+\begin{figure}[!ht]
+    \centering
+        \includegraphics[width=0.95\textwidth, keepaspectratio]{images/accuracy_red_same.png}
+    \caption{}
+    \label{fig4}
+\end{figure}
+\begin{figure}[!ht]
+    \centering
+    \subfloat[]{
+        \includegraphics[width=0.45\textwidth, keepaspectratio]{images/db_single.png}
+    }
+    \subfloat[]{
+        \includegraphics[width=0.45\textwidth, keepaspectratio]{images/db_distributed.png}
+    }
+    \caption{client8}
+    \label{fig5}
+\end{figure}
+\begin{figure}[!ht]
+    \centering
+        \includegraphics[width=0.95\textwidth, keepaspectratio]{images/loss_red_adv.png}
+    \caption{}
+    \label{fig6}
+\end{figure}
+\begin{figure}[!ht]
+    \centering
+        \includegraphics[width=0.95\textwidth, keepaspectratio]{images/accuracy_red_adv.png}
+    \caption{}
+    \label{fig7}
+\end{figure}
+\begin{figure}[!ht]
+    \centering
+        \includegraphics[width=0.95\textwidth, keepaspectratio]{images/loss_red_TL2.png}
+    \caption{}
+    \label{fig8}
+\end{figure}
+\begin{figure}[!ht]
+    \centering
+        \includegraphics[width=0.95\textwidth, keepaspectratio]{images/accuracy_red_TL2.png}
+    \caption{}
+    \label{fig9}
+\end{figure}
+\begin{figure}[!ht]
+    \centering
+        \includegraphics[width=0.95\textwidth, keepaspectratio]{images/loss_red_TL1.png}
+    \caption{}
+    \label{fig10}
+\end{figure}
+\begin{figure}[!ht]
+    \centering
+        \includegraphics[width=0.95\textwidth, keepaspectratio]{images/accuracy_red_TL1.png}
+    \caption{}
+    \label{fig11}
+\end{figure}
+
+
 
 %###############################################
 
