@@ -27,6 +27,7 @@ def create_keras_model():
                               bias_initializer='ones',)])
 
 def dump_learning_curve(filename, round, loss, accuracy):
+    """Dump the learning curve."""
     path_to_file = pathlib.Path(__file__).parent.absolute()
     path_to_file = str(path_to_file)+"/output/"+filename+".dat"
     
@@ -118,6 +119,7 @@ def rotate_moons(theta, x):
 
 def build_dataset(n_clients, total_samples, noise,
                   is_translated=False, is_rotated=False):
+    """Build the dataset with the specified features."""
     N_SAMPLES = int(total_samples/n_clients)
     x=np.array(0)
     y=np.array(0)
@@ -145,7 +147,7 @@ def build_dataset(n_clients, total_samples, noise,
     return x, y
 
 def get_client_dataset(client_id, n_clients, x_tot, y_tot):
-    
+    """Get the single client dataset given the whole dataset."""
     if len(x_tot.shape) == 2 and x_tot.shape[1] == 2 \
         and len(y_tot.shape) == 1 and y_tot.shape[0] == x_tot.shape[0]:
         n_samples = x_tot.shape[0]
