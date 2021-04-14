@@ -267,7 +267,14 @@ simulations in FL setting.
 From the \verb|scikit-learn| Python package, which provides a wide set of generators 
 for toy datsets, the \verb|datasets.make_moons| generator was picked up.
 This function produces the requested number of points in a 2-D space drawing two 
-interleaving circles, as Fig.\ref{fig1} shows. 
+interleaving circles, as Fig.\ref{fig1} shows.
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.95\textwidth, keepaspectratio]{images/make_moons_example.png}
+    \caption{Here are represent an example of a set of 320 points of the toy dataset, i.e.
+        two interleaving circles. These points are taken by setting noise to zero}
+    \label{fig1}
+\end{figure}
 The same function returns also the classification array, that relates every point to 
 its corresponding circle.
 One can make the request to add some noise to the generated points, and ask for the 
@@ -283,6 +290,15 @@ The second applies a simple rotation by an angle $\theta$ with a standard transf
 i.e. $x'=x\cos(\theta)-y\sin(\theta)$ and $y'=x\sin(\theta)-y\cos(\theta)$ following 
 the above notation.
 Examples of translated and rotated datasets are shown in Fig.\ref{fig2}.
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=0.95\textwidth, keepaspectratio]{images/datasets_examples.png}
+    \caption{Here are shown three examples of the toy datasets. Are taken 840 points for 
+        every dataset, with noise fixed at 0.1. The red dots represent the standard toy 
+        dataset. The blue dots represent the rotated dataset by an angle of $\theta=\pi/5$.
+        The yellow dots represent the translated dataset using $dx=0.5$ and $dy=0.5$}
+    \label{fig2}
+\end{figure}
 
 \subsection{Model}
 Every simulation was build on a simple two layers sequential model.
@@ -337,7 +353,7 @@ clients in FL set up.
 The final result should show how much the best performance of a FL set up depends on the 
 number of clients chosen to distribute the dataset.
 
-The last simulation attempts to better understand the TL ability of such a FL setting.
+The last simulation attempts to better understand the Transfer Learning (TL) ability of such a FL setting.
 In order to do this, different 8 clients FL set ups are compared.
 This time different FL set ups carry very different clients, in fact a portion of the clients 
 is transformed using the translation transformation defined above with $(dx, dy)=(0.2, 0.2)$.
@@ -364,48 +380,7 @@ The very first result to notice is that the aggregated model has a definitely fa
 for both the loss and the accuracy, w.r.t. any other FL set up.
 More the FL set up is distributed, slower is the convergence, as Fig.\ref{fig3}-\ref{fig4} show, and 
 higher is the standard deviation between the clients.
-The standard deviations are expected to tend to zero as the number of epochs increases.
-A useful comparison is shown by Fig.\ref{fig5}, underlining, using the final decision 
-boundaries, the fact that with only 1000 federated epochs, the FL setting distributed 
-between 8 clients is far from the aggregated one.
-
-As Fig.\ref{fig6}-\ref{fig7} show, the general setting changes, in fact increasing the number of local epochs 
-at clients' place make the learning curves faster than before.
-One can notice that somewhere in the plot, FL settings with an higher number of clients 
-outperforms others with a lower number of clients.
-
-The last analysis, which tries to seek the TL ability of FL setting, shows that the 
-set ups which perform better are those which are more mixed up.
-The simulation that used the rotation transformation is almost inconclusive, since the 
-convergence is not reach in many set ups, as shown by Fig.\ref{fig8}-\ref{fig9}.
-However Fig.\ref{fig9} shows the general behavior mentioned previously.
-The simulation that used the translation transformation has many set ups, which nearly reach 
-the convergence, describe better the general behavior noticed.
-As Fig.\ref{fig10}-\ref{fig11} show, the worst performances are those of the FL settings with 
-7 and 8 clients with transformed datasets, then set ups with 1 and 2 clients with transformed 
-datasets follow.
-
-
-%###############################################
-\section {Figures}
-\begin{figure}[!ht]
-    \centering
-    \includegraphics[width=0.95\textwidth, keepaspectratio]{images/make_moons_example.png}
-    \caption{Here are represent an example of a set of 320 points of the toy dataset, i.e.
-        two interleaving circles. These points are taken by setting noise to zero}
-    \label{fig1}
-\end{figure}
-\newpage
-\begin{figure}[!ht]
-    \centering
-    \includegraphics[width=0.95\textwidth, keepaspectratio]{images/datasets_examples.png}
-    \caption{Here are shown three examples of the toy datasets. Are taken 840 points for 
-        every dataset, with noise fixed at 0.1. The red dots represent the standard toy 
-        dataset. The blue dots represent the rotated dataset by an angle of $\theta=\pi/5$.
-        The yellow dots represent the translated dataset using $dx=0.5$ and $dy=0.5$}
-    \label{fig2}
-\end{figure}
-\begin{figure}[!hb]
+\begin{figure}[!h]
     \centering
         \includegraphics[width=0.95\textwidth, keepaspectratio]{images/loss_red_same.png}
     \caption{Here is represented the evolution of the loss function for different set ups, 
@@ -414,8 +389,7 @@ datasets follow.
         95\% of the true value.}
     \label{fig3}
 \end{figure}
-\newpage
-\begin{figure}[!ht]
+\begin{figure}[!h]
     \centering
         \includegraphics[width=0.95\textwidth, keepaspectratio]{images/accuracy_red_same.png}
     \caption{Here is represented the evolution of the accuracy function for different set ups, 
@@ -424,7 +398,12 @@ datasets follow.
         95\% of the true value.}
     \label{fig4}
 \end{figure}
-\begin{figure}[!hb]
+\newpage
+The standard deviations are expected to tend to zero as the number of epochs increases.
+A useful comparison is shown by Fig.\ref{fig5}, underlining, using the final decision 
+boundaries, the fact that with only 1000 federated epochs, the FL setting distributed 
+between 8 clients is far from the aggregated one.
+\begin{figure}[!h]
     \centering
     \subfloat[]{
         \includegraphics[width=0.45\textwidth, keepaspectratio]{images/db_single.png}
@@ -437,8 +416,12 @@ datasets follow.
         the FL set up.}
     \label{fig5}
 \end{figure}
-\newpage
-\begin{figure}[!ht]
+
+As Fig.\ref{fig6}-\ref{fig7} show, the general setting changes, in fact increasing the number of local epochs 
+at clients' place make the learning curves faster than before.
+One can notice that somewhere in the plot, FL settings with an higher number of clients 
+outperforms others with a lower number of clients.
+\begin{figure}[!hb]
     \centering
         \includegraphics[width=0.95\textwidth, keepaspectratio]{images/loss_red_adv.png}
     \caption{Here is represented the evolution of the loss function for different set ups, 
@@ -446,7 +429,7 @@ datasets follow.
         interval covering the 95\% of the true value.}
     \label{fig6}
 \end{figure}
-\begin{figure}[!hb]
+\begin{figure}[!ht]
     \centering
         \includegraphics[width=0.95\textwidth, keepaspectratio]{images/accuracy_red_adv.png}
     \caption{Here is represented the evolution of the accuracy function for different set ups, 
@@ -455,7 +438,13 @@ datasets follow.
     \label{fig7}
 \end{figure}
 \newpage
-\begin{figure}[!ht]
+
+The last analysis, which tries to seek the TL ability of FL setting, shows that the 
+set ups which perform better are those which are more mixed up.
+The simulation that used the rotation transformation is almost inconclusive, since the 
+convergence is not reach in many set ups, as shown by Fig.\ref{fig8}-\ref{fig9}.
+However Fig.\ref{fig9} shows the general behavior mentioned previously.
+\begin{figure}[!hb]
     \centering
         \includegraphics[width=0.95\textwidth, keepaspectratio]{images/loss_red_TL2.png}
     \caption{Here is represented the evolution of the loss function for different set ups, 
@@ -464,7 +453,7 @@ datasets follow.
     legend refer to the fraction of clients in the set up having a rotated dataset.}
     \label{fig8}
 \end{figure}
-\begin{figure}[!hb]
+\begin{figure}[!ht]
     \centering
         \includegraphics[width=0.95\textwidth, keepaspectratio]{images/accuracy_red_TL2.png}
     \caption{Here is represented the evolution of the accuracy function for different set ups, 
@@ -474,7 +463,12 @@ datasets follow.
     \label{fig9}
 \end{figure}
 \newpage
-\begin{figure}[!ht]
+The simulation that used the translation transformation has many set ups, which nearly reach 
+the convergence, describe better the general behavior noticed.
+As Fig.\ref{fig10}-\ref{fig11} show, the worst performances are those of the FL settings with 
+7 and 8 clients with transformed datasets, then set ups with 1 and 2 clients with transformed 
+datasets follow.
+\begin{figure}[!h]
     \centering
         \includegraphics[width=0.95\textwidth, keepaspectratio]{images/loss_red_TL1.png}    
     \caption{Here is represented the evolution of the loss function for different set ups, 
@@ -483,7 +477,7 @@ datasets follow.
     legend refer to the fraction of clients in the set up having a translated dataset.}
     \label{fig10}
 \end{figure}
-\begin{figure}[!hb]
+\begin{figure}[!h]
     \centering
         \includegraphics[width=0.95\textwidth, keepaspectratio]{images/accuracy_red_TL1.png}
     \caption{Here is represented the evolution of the accuracy function for different set ups, 
@@ -492,8 +486,6 @@ datasets follow.
     legend refer to the fraction of clients in the set up having a translated dataset.}
     \label{fig11}
 \end{figure}
-
-
 
 %###############################################
 
