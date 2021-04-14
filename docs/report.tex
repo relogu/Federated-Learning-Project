@@ -200,7 +200,7 @@ After having received the global model, all the available clients train locally
 the global model with their data, step (3), producing a new local model.
 The weights of all the local models are then aggregated, step (4), at the server 
 place to be reduced to a new global model. The aggregation procedure, as the 
-distribution prevoiusly, could take into account the numerosity of the clients' 
+distribution previously, could take into account the numerosity of the clients' 
 datasets.
 Moreover the evaluation step, always performed locally by the clients, could be
 aggregated to the server in an analogous procedure than local models. This allows
@@ -211,13 +211,13 @@ iterations is reached, usually.
 
 \subsection{Federated Average (FedAvg)}
 Before presenting the methods used, it is necessary to spend some words on the 
-aggregation method used. Despite FL is a newly introduced approch, many 
+aggregation method used. Despite FL is a newly introduced approach, many 
 aggregation procedures have been proposed. It is important to say that FL is 
 not widely understood by now and because of this not any aggregation procedure, 
 or more generally FL algorithm, is reliable for any specific problem. The 
 aggregation method used in this analysis is, probably, the most general: 
-\verb|FedAvg|. This algorithm, firstly prosed in \cite{mcmahan2017communicationefficient}, relies on Stochastic 
-Gradient Descent (SGD) optimization method, since the majority of the most succeful deep 
+\verb|FedAvg|. This algorithm, firstly proposed in \cite{mcmahan2017communicationefficient}, relies on Stochastic 
+Gradient Descent (SGD) optimization method, since the majority of the most successful deep 
 learning works were based on this. The available clients locally compute (step 3) their 
 average gradient on their local data at the current model $w_t$, where $t$ 
 identifies the federated round, and the central server aggregates these 
@@ -275,14 +275,14 @@ points to be shuffled, once generated.
 The noise value was fixed to 0.1 along every simulation.
 It is also possible to set the random state that seeds the noise and shuffling, if 
 requested.
-Two more functions, in addition to this settings, were built to trasform a little 
+Two more functions, in addition to this settings, were built to transform a little 
 such generated dataset.
-The first simply traslates the dataset by a given vector $(dx, dy)$, i.e. every 
+The first simply translates the dataset by a given vector $(dx, dy)$, i.e. every 
 point $(x, y)$ in the dataset undergoes the transformation $x'=x+dx$ and $y'=y+dy$.
 The second applies a simple rotation by an angle $\theta$ with a standard transformation,
 i.e. $x'=x\cos(\theta)-y\sin(\theta)$ and $y'=x\sin(\theta)-y\cos(\theta)$ following 
 the above notation.
-Examples of traslated and rotated datasets are shown in Fig.\ref{fig2}.
+Examples of translated and rotated datasets are shown in Fig.\ref{fig2}.
 
 \subsection{Model}
 Every simulation was build on a simple two layers sequential model.
@@ -305,7 +305,7 @@ federated network and the number of the federated epochs to run.
 Another simple program runs an aggregated model by building an equivalent aggregated 
 dataset.
 Every client's dataset, as the aggregated one, is divided randomly in train set and test 
-set usig the standard proportion 80-20, for train and test respectively.
+set using the standard proportion 80-20, for train and test respectively.
 The for every epoch an evaluation step is performed at every client's place as at the 
 aggregated model.
 The performance of the model at every step, represented by the loss and the accuracy, 
@@ -337,11 +337,11 @@ clients in FL set up.
 The final result should show how much the best performance of a FL set up depends on the 
 number of clients chosen to distribute the dataset.
 
-The last simulation attemps to better understand the TL ability of such a FL setting.
+The last simulation attempts to better understand the TL ability of such a FL setting.
 In order to do this, different 8 clients FL set ups are compared.
 This time different FL set ups carry very different clients, in fact a portion of the clients 
-is transformed using the traslation transformation defined above with $(dx, dy)=(0.2, 0.2)$.
-There were taken 8 simulation with the 8 different proportion between traslated and standard 
+is transformed using the translation transformation defined above with $(dx, dy)=(0.2, 0.2)$.
+There were taken 8 simulation with the 8 different proportion between translated and standard 
 dataset, from $1/8$ to $8/8$.
 An equivalent simulation was done using the rotation transformation with $\theta=\pi/5$.
 The wideness of the confidence interval in the mean losses and mean accuracies 
@@ -350,21 +350,21 @@ comparison w.r.t. the other FL set ups.
 
 %###############################################
 \section {Results}
-The easiest mehod to compare the performances of such models is to plot 
-the losses and the accuracies angainsta the number of epochs(federated epochs for FL set 
+The easiest method to compare the performances of such models is to plot 
+the losses and the accuracies against the number of epochs(federated epochs for FL set 
 ups, "standard" epochs for the aggregated model).
-Moreover, to have a general, and more informative, idea of the performnce of the whole FL 
+Moreover, to have a general, and more informative, idea of the performance of the whole FL 
 set ups, the mean values of the losses and the accuracies of all the clients in every FL 
 set up are computed.
 A confidence interval, that covers a confidence level of $68\%$, i.e. standard deviation
 was taken, is then associated to these mean values, in order to give a more complete 
 representation.
 
-The very first result to notice is that the aggregated model has a preatty faster convergence,
+The very first result to notice is that the aggregated model has a definitely faster convergence,
 for both the loss and the accuracy, w.r.t. any other FL set up.
 More the FL set up is distributed, slower is the convergence, as Fig.\ref{fig3}-\ref{fig4} show, and 
 higher is the standard deviation between the clients.
-The standard deviations are expected to tend to zero as the number of epochs increses.
+The standard deviations are expected to tend to zero as the number of epochs increases.
 A useful comparison is shown by Fig.\ref{fig5}, underlining, using the final decision 
 boundaries, the fact that with only 1000 federated epochs, the FL setting distributed 
 between 8 clients is far from the aggregated one.
@@ -378,11 +378,11 @@ The last analysis, which tries to seek the TL ability of FL setting, shows that 
 set ups which perform better are those which are more mixed up.
 The simulation that used the rotation transformation is almost inconclusive, since the 
 convergence is not reach in many set ups, as shown by Fig.\ref{fig8}-\ref{fig9}.
-However Fig.\ref{fig9} shows the general behaviour mentioned previously.
-The simulation that used the traslation transformation has many set ups, which nearly reach 
-the convergence, describe better the general behavoiur noticed.
+However Fig.\ref{fig9} shows the general behavior mentioned previously.
+The simulation that used the translation transformation has many set ups, which nearly reach 
+the convergence, describe better the general behavior noticed.
 As Fig.\ref{fig10}-\ref{fig11} show, the worst performances are those of the FL settings with 
-7 and 8 clients with trasformed datasets, then set ups with 1 and 2 clients with trasformed 
+7 and 8 clients with transformed datasets, then set ups with 1 and 2 clients with transformed 
 datasets follow.
 
 
@@ -402,7 +402,7 @@ datasets follow.
     \caption{Here are shown three examples of the toy datasets. Are taken 840 points for 
         every dataset, with noise fixed at 0.1. The red dots represent the standard toy 
         dataset. The blue dots represent the rotated dataset by an angle of $\theta=\pi/5$.
-        The yellow dots represent the traslated dataset using $dx=0.5$ and $dy=0.5$}
+        The yellow dots represent the translated dataset using $dx=0.5$ and $dy=0.5$}
     \label{fig2}
 \end{figure}
 \begin{figure}[!hb]
@@ -461,7 +461,7 @@ datasets follow.
     \caption{Here is represented the evolution of the loss function for different set ups, 
     summarized in the legend, in the number of epochs. For every curve, is provided a confidence 
     interval covering the 95\% of the true value. The fractions that define the set ups in the 
-    legend refer to the fraction of clients in tht set up having a rotated dataset.}
+    legend refer to the fraction of clients in the set up having a rotated dataset.}
     \label{fig8}
 \end{figure}
 \begin{figure}[!hb]
@@ -470,7 +470,7 @@ datasets follow.
     \caption{Here is represented the evolution of the accuracy function for different set ups, 
     summarized in the legend, in the number of epochs. For every curve, is provided a confidence 
     interval covering the 95\% of the true value. The fractions that define the set ups in the 
-    legend refer to the fraction of clients in tht set up having a rotated dataset.}
+    legend refer to the fraction of clients in the set up having a rotated dataset.}
     \label{fig9}
 \end{figure}
 \newpage
@@ -480,7 +480,7 @@ datasets follow.
     \caption{Here is represented the evolution of the loss function for different set ups, 
     summarized in the legend, in the number of epochs. For every curve, is provided a confidence 
     interval covering the 95\% of the true value. The fractions that define the set ups in the 
-    legend refer to the fraction of clients in tht set up having a traslated dataset.}
+    legend refer to the fraction of clients in the set up having a translated dataset.}
     \label{fig10}
 \end{figure}
 \begin{figure}[!hb]
@@ -489,7 +489,7 @@ datasets follow.
     \caption{Here is represented the evolution of the accuracy function for different set ups, 
     summarized in the legend, in the number of epochs. For every curve, is provided a confidence 
     interval covering the 95\% of the true value. The fractions that define the set ups in the 
-    legend refer to the fraction of clients in tht set up having a traslated dataset.}
+    legend refer to the fraction of clients in the set up having a translated dataset.}
     \label{fig11}
 \end{figure}
 
