@@ -1,7 +1,8 @@
 # SIMULATION
-These are the results of simulating 2 clients, 420 samples each, in a federated setting. 
+
+These are the results of simulating 2 clients, 420 samples each, in a federated setting.
 The datasets are generated using the make_moons method in the scikit-learn package, with a fixed noise to 0.1.
-After being shuffled, the dataset are divided 80-20 in train-test sets. 
+After being shuffled, the dataset are divided 80-20 in train-test sets.
 No cross validation has been used.
 
 The files accuracy.png and loss.png contains the plot of the learning curves.
@@ -13,14 +14,17 @@ The dec_bound_*.png files show the drawings of the final decision boundaries obt
 
 The *.dat files show the numbers from which the learning curves are plotted.
 
-### LEARNING CURVES
-![](loss.png?raw=true)
-![](accuracy.png?raw=true)
+## LEARNING CURVES
 
-### DATASETS
-![](data_client_0.png?raw=true)
-![](data_client_1.png?raw=true)
+![loss evolution](loss.png?raw=true)
+![accuracy evolution](accuracy.png?raw=true)
 
-### DECISION BOUNDARIES
-![](dec_bound_c0.png?raw=true)
-![](dec_bound_c1.png?raw=true)
+## DATASETS
+
+![client dataset](data_client_0.png?raw=true)
+![client dataset](data_client_1.png?raw=true)
+
+## DECISION BOUNDARIES
+
+![final decision boundaries for client](dec_bound_c0.png?raw=true)
+![final decision boundaries for client](dec_bound_c1.png?raw=true)
