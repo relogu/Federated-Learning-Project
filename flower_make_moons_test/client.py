@@ -183,7 +183,7 @@ if __name__ == "__main__":
     if IS_TR: 
         dx = 0.2#*(-1 + 2*random.random())
         dy = 0.2#*(-1 + 2*random.random())
-        x_train = my_fn.traslate_moons(dx, dy, x_train)
+        x_train = my_fn.translate_moons(dx, dy, x_train)
     
     if TEST :
         (x_test, y_test) = datasets.make_moons(n_samples=1000,

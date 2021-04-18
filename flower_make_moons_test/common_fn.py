@@ -43,13 +43,11 @@ def dump_learning_curve(filename: str, round: int, loss: float, accuracy: float)
         round ([int]): current round of the learning
         loss ([float]): current loss of the learning
         accuracy ([float]): current accuracy of the learning
-    """    
-    
-    """Dump the learning curve."""
+    """
     path_to_file = pathlib.Path(__file__).parent.absolute()
     path_to_file = str(path_to_file)+"/output/"+filename+".dat"
     
-    if round == 1: # first call, opening a new file
+    if round == 1:
         file = open(path_to_file, "w")
         file.write("client,round,loss,accuracy\n")
     else :
@@ -57,7 +55,7 @@ def dump_learning_curve(filename: str, round: int, loss: float, accuracy: float)
     file.write(filename+","+str(round)+","+str(loss)+","+str(accuracy)+"\n")
     file.close()
 
-def traslate_moons(dx: float, dy: float, x):
+def translate_moons(dx: float, dy: float, x):
     """Translate using the vector (dx, dy) the make_moons dataset x.
 
     Args:
@@ -160,7 +158,7 @@ def build_dataset(n_clients, total_samples, noise,
         if is_translated: 
             dx = 0.2*(-1 + 2*random.random())
             dy = 0.2*(-1 + 2*random.random())
-            x_client = traslate_moons(dx, dy, x_client)
+            x_client = translate_moons(dx, dy, x_client)
             
         if i == 0:
             x = x_client
