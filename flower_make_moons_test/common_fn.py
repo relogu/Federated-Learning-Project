@@ -126,7 +126,7 @@ def plot_dec_bound(model, x):
     # Plot the contour and training examples
     return plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)    
 
-def plot_client_dataset(client_id, x_train, y_train, x_test, y_test):
+def plot_client_dataset(client_id, x_train, y_train, x_test, y_test, path=None):
     """Plot and dump to a file the data samples given the specified client id and dataset.
 
     Args:
@@ -136,6 +136,8 @@ def plot_client_dataset(client_id, x_train, y_train, x_test, y_test):
         x_test (ndarray of shape (n_samples, 2)): vector of 2-D points to plot for the test set
         y_test (ndarray of shape (n_samples)): vector of numerical labels for the test set
     """
+    if path is None:
+        path = 'output'
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(18,9))
     ax.set_title("Data samples for the client " + str(client_id))
     ax.set_xlabel('x')
@@ -146,10 +148,10 @@ def plot_client_dataset(client_id, x_train, y_train, x_test, y_test):
     plot_points(x_test, y_test)
     plt.draw()
     #plt.show(block=False)
-    plt.savefig('output/data_client_'+str(client_id)+'.png')
+    plt.savefig(path+'/data_client_'+str(client_id)+'.png')
     plt.close()
 
-def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None):
+def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None, path=None):
     """Plot the decision boundary given the predictions of the model.
 
     Args:
@@ -158,7 +160,10 @@ def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None)
         y_test (ndarray of shape (n_samples)): vector of numerical labels for the train set
         client_id (str or int or cast to str, optional): identifier for the client. Defaults to None.
         fed_iter (int, optional): current federated step of building title. Defaults to None.
+        path (str, optional): complete or relative path to output folder. Defaults to None.
     """
+    if path is None:
+        path = 'output'
     plt.figure(figsize=(18, 9))
     ax = plt.subplot(1, 1, 1)
     if fed_iter is None and client_id is None: ax.set_title("Final decision boundary for the test set")
@@ -171,8 +176,8 @@ def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None)
     plot_points(x_test, y_test)
     plt.draw()
     #plt.show(block=False)
-    if client_id is None: filename = 'output/dec_bound_nofed'
-    else: filename = 'output/dec_bound_c'+str(client_id)
+    if client_id is None: filename = path+'/dec_bound_nofed'
+    else: filename = path+'/dec_bound_c'+str(client_id)
     if fed_iter is None: filename += '.png'
     else: filename += '_e'+str(fed_iter)+'.png'    
     plt.savefig(filename)
