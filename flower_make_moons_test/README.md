@@ -20,7 +20,7 @@ personal devices.
 The implementation of a FL setting allows to avoid the necessity to collect
 data in a single place.
 
-A typical FL setting is built by taking into account a set of clients and a 
+A typical FL setting is built by taking into account a set of clients and a
 centralized server.
 The main steps of a FL iterative algorithm are the following:
 
