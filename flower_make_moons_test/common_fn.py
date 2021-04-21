@@ -91,25 +91,74 @@ def rotate_moons(theta: float, x):
         print("x has not the correct shape")
     return xc
 
+def plot_points(x, y):
+    """Plot the points x coloring them by the labels in vector y
+
+    Args:
+        x (ndarray of shape (n_samples, 2)): vector of 2-D points to plot
+        y (ndarray of shape (n_samples)): vector of numerical labels
+    
+    Returns:
+        (matplotlib.pyplot.PathCollection)
+    """
+    return plt.scatter(x[:, 0], x[:, 1], c=y, cmap=plt.cm.Spectral)
+
+def plot_dec_bound(model, x):
+    """Plot the decision boundaries given by model.
+    The vector x is used only to set the range of the axis.
+
+    Args:
+        model (tensorflow.keras.Model): model from which get the predictions
+        x (ndarray of shape (n_samples, 2)): vector of 2-D points to plot
+    
+    Returns:
+        (matplotlib.pyplot.QuadContourSet)
+    """
+    # Set min and max values and give it some padding
+    x_min, x_max = x[:, 0].min() - .5, x[:, 0].max() + .5
+    y_min, y_max = x[:, 1].min() - .5, x[:, 1].max() + .5
+    h = 0.01
+    # Generate a grid of points with distance h between them
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+    # Predict the function value for the whole gid
+    Z = np.argmax(model.predict(np.c_[xx.ravel(), yy.ravel()]), axis=-1)
+    Z = Z.reshape(xx.shape)
+    # Plot the contour and training examples
+    return plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)    
+
 def plot_client_dataset(client_id, x_train, y_train, x_test, y_test):
-    """Plot and dump to a file the data samples given the specified client id and dataset."""
+    """Plot and dump to a file the data samples given the specified client id and dataset.
+
+    Args:
+        client_id (str or int or cast to str): identifier for the client
+        x_train (ndarray of shape (n_samples, 2)): vector of 2-D points to plot for the train set
+        y_train (ndarray of shape (n_samples)): vector of numerical labels for the train set
+        x_test (ndarray of shape (n_samples, 2)): vector of 2-D points to plot for the test set
+        y_test (ndarray of shape (n_samples)): vector of numerical labels for the test set
+    """
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(18,9))
     ax.set_title("Data samples for the client " + str(client_id))
     ax.set_xlabel('x')
     ax.set_ylabel('Y')
     # Plot the samples
-    plt.scatter(x_train[:, 0], x_train[:, 1],
-                c=y_train, cmap=plt.cm.Spectral)
+    plot_points(x_train, y_train)
     y_test = y_test+2
-    plt.scatter(x_test[:, 0], x_test[:, 1],
-                c=y_test, cmap=plt.cm.Spectral)
+    plot_points(x_test, y_test)
     plt.draw()
     #plt.show(block=False)
     plt.savefig('output/data_client_'+str(client_id)+'.png')
     plt.close()
 
 def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None):
-    """Plot the decision boundary given the predictions of the model."""
+    """Plot the decision boundary given the predictions of the model.
+
+    Args:
+        model (tensorflow.keras.Model): model from which get the predictions
+        x_test (ndarray of shape (n_samples, 2)): vector of 2-D points to plot for the train set
+        y_test (ndarray of shape (n_samples)): vector of numerical labels for the train set
+        client_id (str or int or cast to str, optional): identifier for the client. Defaults to None.
+        fed_iter (int, optional): current federated step of building title. Defaults to None.
+    """
     plt.figure(figsize=(18, 9))
     ax = plt.subplot(1, 1, 1)
     if fed_iter is None and client_id is None: ax.set_title("Final decision boundary for the test set")
@@ -118,18 +167,8 @@ def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None)
     else: title = 'Decison boundary for client-'+str(client_id)+' model'
     if fed_iter is not None: title += ' at iteration '+str(fed_iter)  
     ax.set_title(title)
-    # Set min and max values and give it some padding
-    x_min, x_max = x_test[:, 0].min() - .5, x_test[:, 0].max() + .5
-    y_min, y_max = x_test[:, 1].min() - .5, x_test[:, 1].max() + .5
-    h = 0.01
-    # Generate a grid of points with distance h between them
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
-    # Predict the function value for the whole gid
-    Z = np.argmax(model.predict(np.c_[xx.ravel(), yy.ravel()]), axis=-1)
-    Z = Z.reshape(xx.shape)
-    # Plot the contour and training examples
-    plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)
-    plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test, cmap=plt.cm.Spectral)
+    plot_dec_bound(model, x_test)
+    plot_points(x_test, y_test)
     plt.draw()
     #plt.show(block=False)
     if client_id is None: filename = 'output/dec_bound_nofed'
