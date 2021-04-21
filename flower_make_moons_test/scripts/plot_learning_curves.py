@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
 #%% FL vs aggregated
 
-    path = '../RESULTS/'
+    path = '../../RESULTS/'
     folders =  glob.glob(path+'*')
     print('Listed folders')
     mean = None
@@ -178,7 +178,7 @@ if __name__ == "__main__":
 
 #%% FL advanced
     '''
-    path = '../RESULTS/'
+    path = '../../RESULTS/'
     folders =  glob.glob(path+'*')
     print('Listed folders')
     mean = None
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     '''
 #%% FL&TL
 
-    path = '../RESULTS/'
+    path = '../../RESULTS/'
     folders =  glob.glob(path+'*')
     print('Listed folders')
     mean = None

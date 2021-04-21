@@ -69,7 +69,7 @@ class TestMethods(unittest.TestCase):
         os.remove(filename[1:])
         self.assertMultiLineEqual( test_file, file_to_test, "not equal files")
         
-    def test_plot_points(self):
+    def test_plotters(self):
         x_train = np.array([[0.0,0.0],[2.0,2.0]])
         y_train = np.array([0, 1])
         x_test = np.array([[-1.0,-1.0],[1.0,1.0]])

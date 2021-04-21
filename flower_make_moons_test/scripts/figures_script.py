@@ -15,7 +15,7 @@ import glob
 import sys
 import math
 sys.path.append('../')
-import flower_make_moons_test.common_fn as my_fn
+import common_fn as my_fn
 #%%
 (x, y) = datasets.make_moons(n_samples=840, shuffle=True, noise=0.1, random_state=42)
 x_tr = my_fn.translate_moons(0.5,0.5, x.copy())
@@ -36,7 +36,7 @@ ax.set_ylabel('Y')
 # Plot the samples
 plt.scatter(x[:, 0], x[:, 1], c=y, cmap=cm, marker=".")
 plt.draw()
-plt.savefig('../docs/images/datasets_examples.png')
+plt.savefig('../../docs/images/datasets_examples.png')
 plt.show()
 plt.close()
 
@@ -49,7 +49,7 @@ ax.set_ylabel('Y')
 # Plot the samples
 plt.scatter(x[:, 0], x[:, 1], marker=".")
 plt.draw()
-plt.savefig('../docs/images/make_moons_example.png')
+plt.savefig('../../docs/images/make_moons_example.png')
 plt.show()
 plt.close()
 
