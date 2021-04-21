@@ -8,7 +8,8 @@ for future use on real problem.
 ## Federated Learning (FL)
 
 Federated Learning is a newly introduced approach to collaborative machine
-learning \cite{9153560}.
+learning
+\cite{9153560}.
 There are nowadays many traditional machine learning algorithms which require
 huge quantities of data raining examples to learn.
 The rising problem is that is often very difficult to collect a sufficient
@@ -51,18 +52,20 @@ The iterative procedure is finally repeated until the number of fixed federated
 iterations is reached, usually.
 
 ### Federated Average (FedAvg)
+
 Despite FL is a newly introduced approach, many aggregation procedures have been
 proposed.
 It is important to say that FL is not widely understood by now and because of this
 not any aggregation procedure, or more generally FL algorithm, is reliable for any
 specific problem.
 The aggregation method used in this analysis is, probably, the most general: FedAvg.
-This algorithm, firstly proposed in \cite{mcmahan2017communicationefficient}, relies
-on Stochastic Gradient Descent (SGD) optimization method, since the majority of the
-most successful deep learning works were based on this. The available clients locally
-compute (step 3) their average gradient on their local data at the current model
-$w_t$, where $t$ identifies the federated round, and the central server aggregates
-these gradients and applies the update
+This algorithm, firstly proposed in
+\cite{mcmahan2017communicationefficient},
+relies on Stochastic Gradient Descent (SGD) optimization method, since the majority
+of the most successful deep learning works were based on this.
+The available clients locally compute (step 3) their average gradient on their local
+data at the current model $w_t$, where $t$ identifies the federated round, and the
+central server aggregates these gradients and applies the update
 $w_{t+1}\leftarrow w_t - \eta\sum_{k=1}^K\frac{n_k}{n}g_k$.
 Above, $g_k=\nabla F_k(w_t)$ is the average gradient of the client $k$, $\eta$ is
 the learning rate, $n_k$ is the number of samples at the client $k$, $n$ is the total
@@ -77,8 +80,8 @@ of the resulting models. The following pseudo-code summarizes the procedure.
 
 A simple toy dataset was chosen to set up a classification toy model to perform some
 simulations in FL setting.
-From the \verb|scikit-learn| Python package, which provides a wide set of generators
-for toy datsets, the \verb|datasets.make_moons| generator was picked up.
+From the `scikit-learn` Python package, which provides a wide set of generators
+for toy datsets, the `datasets.make_moons` generator was picked up.
 This function produces the requested number of points in a 2-D space drawing two
 interleaving circles, as the following figure shows.
 ![interleaving circles](images/make_moons_example.png?raw=true)
@@ -102,19 +105,20 @@ Examples of translated and rotated datasets are shown in the following figure.
 ## Model
 
 Every simulation was build on a simple two layers sequential model.
-Both the layers are standard regular densely-connected Neural Network layers, the first 
-with 4 output, the second with 2, since the model is expected to classify the points 
+Both the layers are standard regular densely-connected Neural Network layers, the first
+with 4 output, the second with 2, since the model is expected to classify the points
 w.r.t. their circle of belonging.
+![model grah](images/model_graph.png?raw=true)
 
 ## FL Framework
 
-The framework adopted to make the necessary simulation is Flower: A Friendly Federated
-Learning Framework \cite{beutel2021flower}.
+The framework adopted to make the necessary simulation is
+[Flower: A Friendly Federated Learning Framework](https://flower.dev/).
 The federated framework is set up by running a program for every client and one for
 the server.
 These will communicate using a RPC (Remote Procedure Call) framework exchanging the
 weights of the model.
-The ML framework used is \verb|tensorflow| with a \verb|keras.Sequential| model.
+The ML framework used is `tensorflow` with a `keras.Sequential` model.
 The client program accepts many parameters to build properly the client's dataset, and
 to set up the outputs also.
 The server program has a minimal configuration, receiving the number of clients in the
@@ -128,12 +132,9 @@ aggregated model.
 The performance of the model at every step, represented by the loss and the accuracy,
 is retrieved and saved to be consulted later.
 The loss function chosen is the Sparse Categorical Cross-Entropy, implemented by the
-function \verb|tensorflow.keras.losses.SparseCategoricalCrossentropy|.
+function `tensorflow.keras.losses.SparseCategoricalCrossentropy`.
 The accuracy is simply computed as the ratio between the number of well classified points
 and the total number of points in the test set.
-
-
-This test provides a client and a server program with minimal configuration
 
 ## Usage
 
@@ -143,6 +144,7 @@ Firstly set the server machine and launch the server program.
 python3 server.py
 ```
 
+The server starts waiting the handshake from clients to begin the federated iteration.
 Parameters to pass are explain at
 
 ```bash
@@ -160,7 +162,8 @@ optional arguments:
   --address ADDRESS     complete address to launch server, e.g. 127.0.0.1:8081
 ```
 
-Firstly set a series of client machines and launch the client program for each machine.
+Then set a series of client machines and launch the client program for each machine.
+The setting must be consistent following the parameters given.
 
 ```bash
 python3 client.py
@@ -194,20 +197,65 @@ optional arguments:
   --plot PLOT           tells the program whether to plot decision boundary or not
 ```
 
-## Results
+When the sufficient number of clients are connected an iteration step is performed.
+After the number of iterations given is completed, server and clients return the final
+performance.
 
-4 client (13,10,10,20)train_samples (1,1,1,1)local_rounds 5000fed_rounds 1000test_samples(shared)\
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> (picking 2 out of 4 per federated round)  reached accuracy = 1 before end\
-4 client (13,10,10,20)train_samples (3,2,2,5)local_rounds 5000fed_rounds 1000test_samples(shared)\
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> (picking 2 out of 4 per federated round)  reached accuracy = 0.9670000076293945\
-4 client (13,10,10,20)train_samples (1,1,1,1)local_rounds 5000fed_rounds 1000test_samples(shared)\
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> loss: 0.1043 - accuracy: 1.0000\
-4 client (13,10,10,20)train_samples (5,5,5,5)local_rounds 5000fed_rounds 1000test_samples(shared)\
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> loss: 0.0505 - accuracy: 0.9820\
-4 client (13,10,10,20)train_samples (3,2,2,5)local_rounds 5000fed_rounds 1000test_samples(shared)\
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--> loss: 0.0937 - accuracy: 0.9670  
+## Analysis and results
 
+The easiest method to compare the performances of such models is to plot the losses and
+the accuracies against the number of epochs (federated epochs for FL set ups, "standard"
+epochs for the aggregated model).
+Moreover, to have a general, and more informative, idea of the performance of the whole FL
+set ups, the mean values of the losses and the accuracies of all the clients in every FL
+set up are computed.
+A confidence interval, that covers a confidence level of $68\%$, i.e. standard deviation
+was taken, is then associated to these mean values, in order to give a more complete
+representation.
+
+The very first result to notice is that the aggregated model has a definitely faster convergence,
+for both the loss and the accuracy, w.r.t. any other FL set up.
+More the FL set up is distributed, slower is the convergence and higher is the standard
+deviation between the clients.
+
+![loss](images/loss_red_same.png?raw=true)
+![accuracy](images/accuracy_red_same.png?raw=true)
+
+The standard deviations are expected to tend to zero as the number of epochs increases.
+Another useful comparison, using the final decision boundaries, underlines the fact that
+with only 1000 federated epochs, the FL setting distributed between 8 clients is far from
+the aggregated one.
+
+![loss](images/db_single.png?raw=true)
+![accuracy](images/db_distributed.png?raw=true)
+
+The general setting changes when increasing the number of local epochs at clients' place.
+The learning curves are here faster than before.
+One can notice that somewhere in the plot, FL settings with an higher number of clients
+outperforms others with a lower number of clients.
+
+![loss](images/loss_red_adv.png?raw=true)
+![accuracy](images/accuracy_red_adv.png?raw=true)
+
+The last analysis, which tries to seek the TL ability of FL setting, shows that the set
+ups which perform better are those which are more mixed up.
+The simulation that used the rotation transformation is almost inconclusive, since the
+convergence is not reach in many set ups.
+However Fit is found the general behavior mentioned previously.
+
+![loss](images/loss_red_TL2.png?raw=true)
+![accuracy](images/accuracy_red_TL2.png?raw=true)
+
+The simulation that used the translation transformation has many set ups, which nearly
+reach the convergence, describe better the general behavior noticed.
+The worst performances are those of the FL settings with 7 and 8 clients with transformed
+datasets, then set ups with 1 and 2 clients with transformed datasets follow.
+
+![loss](images/loss_red_TL1.png?raw=true)
+![accuracy](images/accuracy_red_TL1.png?raw=true)
 
 ## References
 
-<blockquote>1- Beutel, Daniel J and Topal, Taner and Mathur, Akhil and Qiu, Xinchi and Parcollet, Titouan and Lane, Nicholas D Flower: A Friendly Federated Learning Research Framework. arXiv preprint arXiv:2007.14390, 2020. </blockquote>
+1. Beutel, Daniel J and Topal, Taner and Mathur, Akhil and Qiu, Xinchi and Parcollet, Titouan and Lane, Nicholas D Flower: A Friendly Federated Learning Research Framework. arXiv preprint arXiv:2007.14390, 2020
+2. M. Aledhari, R. Razzak, R. M. Parizi, and F. Saeed.  Federated learning:  A survey on enablingtechnologies, protocols, and applications.IEEE Access, 8:140699–140725, 2020
+3. H. Brendan McMahan, Eider Moore, Daniel Ramage, Seth Hampson, and Blaise Aguera y Arcas.Communication-efficient learning of deep networks from decentralized data, 2017

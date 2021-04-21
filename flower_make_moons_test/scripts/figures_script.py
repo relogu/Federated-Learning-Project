@@ -16,6 +16,7 @@ import sys
 import math
 sys.path.append('../')
 import common_fn as my_fn
+import tensorflow as tf
 #%%
 (x, y) = datasets.make_moons(n_samples=840, shuffle=True, noise=0.1, random_state=42)
 x_tr = my_fn.translate_moons(0.5,0.5, x.copy())
@@ -52,6 +53,13 @@ plt.draw()
 plt.savefig('../../docs/images/make_moons_example.png')
 plt.show()
 plt.close()
+
+# %%
+
+model = my_fn.create_keras_model()
+tf.keras.utils.plot_model(model, to_file='../images/model_graph.png', show_shapes=True)
+
+
 
 
 
