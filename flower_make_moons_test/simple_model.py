@@ -106,7 +106,7 @@ if __name__ == "__main__":
     else:
         NOISE = args.noise
         
-    x, y = my_fn.build_dataset(n_clients=N_CLIENTS, noise=NOISE, total_samples=N_SAMPLES, is_rotated=IS_ROT, is_translated=IS_TR)
+    x, y = my_fn.build_dataset(n_clients=N_CLIENTS, noise=NOISE, total_samples=N_SAMPLES)#OLD, is_rotated=IS_ROT, is_translated=IS_TR)
     # Define the K-fold Cross Validator
     kfold = KFold(n_splits=5)
     train, test = next(kfold.split(x, y))
