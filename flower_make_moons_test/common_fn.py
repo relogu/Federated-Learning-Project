@@ -183,8 +183,7 @@ def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None,
     plt.savefig(filename)
     plt.close()
 
-def build_dataset(n_clients, total_samples, noise,
-                  is_translated=False, is_rotated=False):
+def build_dataset(n_clients: int, total_samples: int, noise: float):#OLD, is_translated=False, is_rotated=False):
     """Build the whole dataset, to be distributed, with the specified features."""
     N_SAMPLES = int(total_samples/n_clients)
     x=np.array(0)
@@ -196,6 +195,7 @@ def build_dataset(n_clients, total_samples, noise,
                                                    noise=noise,
                                                    shuffle=True,
                                                    random_state=train_rand_state)
+        ''' OLD
         if is_rotated: 
             theta = (-1 + 2*random.random())*(math.pi/10)
             x_client = rotate_moons(theta, x_client)
@@ -203,7 +203,7 @@ def build_dataset(n_clients, total_samples, noise,
             dx = 0.2*(-1 + 2*random.random())
             dy = 0.2*(-1 + 2*random.random())
             x_client = translate_moons(dx, dy, x_client)
-            
+            '''
         if i == 0:
             x = x_client
             y = y_client
@@ -212,7 +212,7 @@ def build_dataset(n_clients, total_samples, noise,
             y = np.concatenate((y, y_client), axis=0)       
     return x, y
 
-def get_client_dataset(client_id, n_clients, x_tot, y_tot):
+def get_client_dataset(client_id, n_clients: int, x_tot, y_tot):
     """Get the single client dataset given the whole dataset."""
     if len(x_tot.shape) == 2 and x_tot.shape[1] == 2 \
         and len(y_tot.shape) == 1 and y_tot.shape[0] == x_tot.shape[0]:
