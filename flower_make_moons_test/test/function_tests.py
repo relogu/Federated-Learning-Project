@@ -11,6 +11,7 @@ import sys
 import unittest
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 sys.path.append('../')
 import flower_make_moons_test.common_fn as my_fn
 
@@ -19,21 +20,32 @@ class TestMethods(unittest.TestCase):
     def test_rotate_moons(self):
         x = np.array([[0.0,0.0],[0.0,0.0]])
         theta = math.pi/10
+        theta1 = math.pi/12
         x_f = my_fn.rotate_moons(theta, x)
         self.assertAlmostEqual(x_f.all(), x.all())
         x = np.array([[1.0,1.0],[1.0,1.0]])
         x_f = my_fn.rotate_moons(-theta, my_fn.rotate_moons(theta, x))
         self.assertAlmostEqual(x_f.all(), x.all())
+        x = np.array([[1.0,1.0],[1.0,1.0]])
+        x = my_fn.rotate_moons(theta1, my_fn.rotate_moons(theta, x))
+        x_f = my_fn.rotate_moons(theta, my_fn.rotate_moons(theta1, x))
+        self.assertAlmostEqual(x_f.all(), x.all())
+        x = np.array([[1.0,1.0],[1.0,1.0]])
+        x = my_fn.rotate_moons(2*math.pi, x)
+        self.assertAlmostEqual(x_f.all(), x.all())
 
     def test_translate_moons(self):
         x = np.array([[0.0,0.0],[0.0,0.0]])
-        dx = 0.0
-        dy = 0.0
-        x_f = my_fn.translate_moons(dx, dy, x)
+        x_f = my_fn.translate_moons(0.0, 0.0, x)
         self.assertAlmostEqual(x_f.all(), x.all())
-        dx = 1.0
-        dy = 1.0
-        x_f = my_fn.translate_moons(-dx, -dy, my_fn.translate_moons(dx, dy, x))
+        x_f = my_fn.translate_moons(-1.0, -1.0, my_fn.translate_moons(1.0, 1.0, x))
+        self.assertAlmostEqual(x_f.all(), x.all())
+        x_f = my_fn.translate_moons(2.0, 2.0, my_fn.translate_moons(1.0, 1.0, x))
+        x = my_fn.translate_moons(3.0, 3.0, x)
+        self.assertAlmostEqual(x_f.all(), x.all())
+        x = np.array([[0.0,0.0],[0.0,0.0]])
+        x_f = my_fn.translate_moons(2.0, 2.0, my_fn.translate_moons(1.0, 1.0, x))
+        x = my_fn.translate_moons(1.0, 1.0, my_fn.translate_moons(2.0, 2.0, x))
         self.assertAlmostEqual(x_f.all(), x.all())
 
     def test_dump_learning_curve(self):
@@ -54,6 +66,14 @@ class TestMethods(unittest.TestCase):
         file_to_test = open(file_to_test).read()
         os.remove(str(path_to_file)+filename)
         self.assertMultiLineEqual( test_file, file_to_test, "not equal files")
+        
+    def test_plot_points(self):
+        x = np.array([[0.0,0.0],[2.0,2.0]])
+        y = np.array([0, 1])
+        f, ax = plt.subplots()
+        line = my_fn.plot_points(x, y)
+        x_plot = line.get_xydata().T
+        np.testing.assert_array_equal(x, x_plot)
 
 if __name__ == '__main__':
     unittest.main()
