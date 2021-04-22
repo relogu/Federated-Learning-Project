@@ -61,17 +61,22 @@ The aggregation method used in this analysis is, probably, the most general: Fed
 This algorithm relies on Stochastic Gradient Descent (SGD) optimization method,
 since the majority of the most successful deep learning works were based on this.
 The available clients locally compute (step 3) their average gradient on their local
-data at the current model $w_t$, where $t$ identifies the federated round, and the
-central server aggregates these gradients and applies the update
-$w_{t+1}\leftarrow w_t - \eta\sum_{k=1}^K\frac{n_k}{n}g_k$.
-Above, $g_k=\nabla F_k(w_t)$ is the average gradient of the client $k$, $\eta$ is
-the learning rate, $n_k$ is the number of samples at the client $k$, $n$ is the total
+data at the current model ![$w_t$](https://latex.codecogs.com/svg.image?w_t),
+where ![$t$](https://latex.codecogs.com/svg.image?t) identifies the federated round,
+and the central server aggregates these gradients and applies the update
+
+![\Large w_{t+1}\leftarrow w_t - \eta\sum_{k=1}^K\frac{n_k}{n}g_k](https://latex.codecogs.com/svg.image?w_%7Bt+1%7D%5Cleftarrow&space;w_t-%5Ceta%5Csum_%7Bk=1%7D%5EK%5Cfrac%7Bn_k%7D%7Bn%7Dg_k)
+
+Above, ![$g_k=\nabla F_k(w_t)$](https://latex.codecogs.com/svg.image?g_k=\nabla&space;F_k(w_t)) is the average gradient of the client ![$k$](https://latex.codecogs.com/svg.image?k), ![$\eta$](https://latex.codecogs.com/svg.image?\eta) is
+the learning rate, ![$n_k$](https://latex.codecogs.com/svg.image?n_k) is the number of samples at the client ![$k$](https://latex.codecogs.com/svg.image?k), ![$n$](https://latex.codecogs.com/svg.image?n) is the total
 number of samples (sum over all the available clients).
 Equivalently, the update can be given by
-$w_{t+1}\leftarrow w_t - \eta\sum_{k=1}^K\frac{n_k}{n}w_{t+1}^k$,
-where $w_{t+1}^k\leftarrow w_t - \eta g_k$ $\forall k$. In the last, every client takes
-a complete step of gradient descent, while the server only takes the weighted average
-of the resulting models.
+
+![$w_{t+1}\leftarrow w_t - \eta\sum_{k=1}^K\frac{n_k}{n}w_{t+1}^k$](https://latex.codecogs.com/svg.image?w_{t&plus;1}\leftarrow&space;w_t&space;-&space;\eta\sum_{k=1}^K\frac{n_k}{n}w_{t&plus;1}^k),
+
+where ![$w_{t+1}^k\leftarrow w_t - \eta g_k$ $\forall k$](https://latex.codecogs.com/svg.image?w_{t&plus;1}^k\leftarrow&space;w_t&space;-&space;\eta&space;g_k$&space;$\forall&space;k).
+In the last, every client takes a complete step of gradient descent, while the server
+only takes the weighted average of the resulting models.
 
 ## Dataset
 
@@ -91,12 +96,20 @@ It is also possible to set the random state that seeds the noise and shuffling, 
 requested.
 Two more functions, in addition to this settings, were built to transform a little
 such generated dataset.
-The first simply translates the dataset by a given vector $(dx, dy)$, i.e. every
-point $(x, y)$ in the dataset undergoes the transformation $x'=x+dx$ and $y'=y+dy$.
-The second applies a simple rotation by an angle $\theta$ with a standard transformation,
-i.e. $x'=x\cos(\theta)-y\sin(\theta)$ and $y'=x\sin(\theta)-y\cos(\theta)$ following
-the above notation.
+The first simply translates the dataset by a given vector
+![$(dx, dy)$](https://latex.codecogs.com/svg.image?(dx,&space;dy)), i.e. every
+point ![$(x, y)$](https://latex.codecogs.com/svg.image?(x,&space;y))
+in the dataset undergoes the transformation
+![$x'=x+dx$](https://latex.codecogs.com/svg.image?x%27=x+dx) and
+![$y'=y+dy$](https://latex.codecogs.com/svg.image?y%27=y+dy).
+The second applies a simple rotation by an angle
+![$\theta$](https://latex.codecogs.com/svg.image?\theta) with a standard
+transformation, i.e.
+![$x'=x\cos(\theta)-y\sin(\theta)$](https://latex.codecogs.com/svg.image?x%27=x\cos(\theta)-y\sin(\theta))
+and ![$y'=x\sin(\theta)-y\cos(\theta)$](https://latex.codecogs.com/svg.image?y%27=x\sin(\theta)+y\cos(\theta))
+following the above notation.
 Examples of translated and rotated datasets are shown in the following figure.
+
 ![dataset examples](images/datasets_examples.png?raw=true)
 
 ## Model
@@ -105,6 +118,7 @@ Every simulation was build on a simple two layers sequential model.
 Both the layers are standard regular densely-connected Neural Network layers, the first
 with 4 output, the second with 2, since the model is expected to classify the points
 w.r.t. their circle of belonging.
+
 ![model grah](images/model_graph.png?raw=true)
 
 ## FL Framework
