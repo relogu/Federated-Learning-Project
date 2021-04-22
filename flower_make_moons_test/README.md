@@ -8,8 +8,8 @@ for future use on real problem.
 ## Federated Learning (FL)
 
 Federated Learning is a newly introduced approach to collaborative machine
-learning
-\cite{9153560}.
+learning[^1]
+ \cite{9153560}.
 There are nowadays many traditional machine learning algorithms which require
 huge quantities of data raining examples to learn.
 The rising problem is that is often very difficult to collect a sufficient
@@ -256,6 +256,6 @@ datasets, then set ups with 1 and 2 clients with transformed datasets follow.
 
 ## References
 
-1. Beutel, Daniel J and Topal, Taner and Mathur, Akhil and Qiu, Xinchi and Parcollet, Titouan and Lane, Nicholas D Flower: A Friendly Federated Learning Research Framework. arXiv preprint arXiv:2007.14390, 2020
+[^1]: Beutel, Daniel J and Topal, Taner and Mathur, Akhil and Qiu, Xinchi and Parcollet, Titouan and Lane, Nicholas D Flower: A Friendly Federated Learning Research Framework. arXiv preprint arXiv:2007.14390, 2020
 2. M. Aledhari, R. Razzak, R. M. Parizi, and F. Saeed.  Federated learning:  A survey on enablingtechnologies, protocols, and applications.IEEE Access, 8:140699–140725, 2020
 3. H. Brendan McMahan, Eider Moore, Daniel Ramage, Seth Hampson, and Blaise Aguera y Arcas.Communication-efficient learning of deep networks from decentralized data, 2017
