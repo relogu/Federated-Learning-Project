@@ -28,7 +28,9 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '-1' # w/o GPU
 
 def parse_args():
     """Parse the arguments passed."""
-    description = 'Simple model to compare results of FL approach.'
+    description = 'Simple model to compare results of FL approach.\n' + \
+        'It simulates, once properly set, the same set up of a FL distribution in an aggregated version.\n' + \
+        'The learning curve is dumped at every epoch.'
     parser = argparse.ArgumentParser(description = description,
                                      formatter_class=RawTextHelpFormatter)
     parser.add_argument('--n_clients',
@@ -48,19 +50,19 @@ def parse_args():
                         required=True,
                         type=int,
                         action='store',
-                        help='number of epochs for the training')
+                        help='number of total epochs for the training')
     parser.add_argument('--is_traslated',
                         dest='is_traslated',
                         required=False,
                         type=bool,
                         action='store',
-                        help='in the case of a traslated datset')
+                        help='set true in the case of a traslated datset')
     parser.add_argument('--is_rotated',
                         dest='is_rotated',
                         required=False,
                         type=bool,
                         action='store',
-                        help='in the case of a rotated datset')
+                        help='set true in the case of a rotated datset')
     parser.add_argument('--noise',
                         dest='noise',
                         required=False,
@@ -72,19 +74,19 @@ def parse_args():
                         required=False,
                         type=bool,
                         action='store',
-                        help='tells the program whether to plot decision boundary or not')
+                        help='tells the program whether to plot decision boundary, every 100 epochs, or not')
     _args = parser.parse_args()
     return _args
 
 #%%
 if __name__ == "__main__":
     
-    #parsing arguments
+    # parsing arguments
     args = parse_args()
     N_EPOCHS = args.n_epochs
     N_CLIENTS = args.n_clients
     N_SAMPLES = args.n_samples
-    R_NOISE = 0.2 #TODO
+    R_NOISE = 0.2
     
     if not args.plot:
         PLOT = True
@@ -105,7 +107,8 @@ if __name__ == "__main__":
         NOISE = 0.1
     else:
         NOISE = args.noise
-        
+    
+    # building the dataset
     x, y = my_fn.build_dataset(n_clients=N_CLIENTS, noise=NOISE, total_samples=N_SAMPLES)#OLD, is_rotated=IS_ROT, is_translated=IS_TR)
     # Define the K-fold Cross Validator
     kfold = KFold(n_splits=5)
@@ -114,16 +117,21 @@ if __name__ == "__main__":
     y_test = y[test]
     x_train = x[train]
     y_train = y[train]
-
+    # plotting the dataset and save the figure in the default folder
     my_fn.plot_client_dataset('nofed', x_train, y_train, x_test, y_test)
-
+    # creating and compiling the model
     model = my_fn.create_keras_model()
     model.compile(optimizer='adam',
                     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                     metrics=['accuracy'])
+    # running the training
     for i in range(N_EPOCHS):
+        # fitting step
         model.fit(x_train, y_train, epochs=1, verbose=0)
+        # evaluation step
         loss, acc = model.evaluate(x_test, y_test, verbose=0)
+        # dumping a record of the learning curve to the default folder
         my_fn.dump_learning_curve('l_curve_nofed', i, loss, acc)
+        # plotting, if requested, the decision boundary
         if PLOT and i%100==0: my_fn.plot_decision_boundary(model, x_test, y_test)
         

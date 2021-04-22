@@ -8,8 +8,7 @@ for future use on real problem.
 ## Federated Learning (FL)
 
 Federated Learning is a newly introduced approach to collaborative machine
-learning[^1]
- \cite{9153560}.
+learning.
 There are nowadays many traditional machine learning algorithms which require
 huge quantities of data raining examples to learn.
 The rising problem is that is often very difficult to collect a sufficient
@@ -59,10 +58,8 @@ It is important to say that FL is not widely understood by now and because of th
 not any aggregation procedure, or more generally FL algorithm, is reliable for any
 specific problem.
 The aggregation method used in this analysis is, probably, the most general: FedAvg.
-This algorithm, firstly proposed in
-\cite{mcmahan2017communicationefficient},
-relies on Stochastic Gradient Descent (SGD) optimization method, since the majority
-of the most successful deep learning works were based on this.
+This algorithm relies on Stochastic Gradient Descent (SGD) optimization method,
+since the majority of the most successful deep learning works were based on this.
 The available clients locally compute (step 3) their average gradient on their local
 data at the current model $w_t$, where $t$ identifies the federated round, and the
 central server aggregates these gradients and applies the update
@@ -74,7 +71,7 @@ Equivalently, the update can be given by
 $w_{t+1}\leftarrow w_t - \eta\sum_{k=1}^K\frac{n_k}{n}w_{t+1}^k$,
 where $w_{t+1}^k\leftarrow w_t - \eta g_k$ $\forall k$. In the last, every client takes
 a complete step of gradient descent, while the server only takes the weighted average
-of the resulting models. The following pseudo-code summarizes the procedure.
+of the resulting models.
 
 ## Dataset
 
@@ -138,6 +135,22 @@ and the total number of points in the test set.
 
 ## Usage
 
+In order to perfom simulations using these programs, a virtual environment is preferred.
+Alternatively one can use any OS that is able o run python.
+These programs have been tested on a [conda](https://docs.conda.io/en/latest/) virtual
+environment on Linux.
+
+### Dependencies
+
+There are few dependencies that can be managed with any package manager.
+The mandatory packages can be installed using `pip3` using the command
+
+```bash
+pip3 install flwr tensorflow scikit-learn matplotlib numpy
+```
+
+### General set up
+
 Firstly set the server machine and launch the server program.
 
 ```bash
@@ -148,18 +161,18 @@ The server starts waiting the handshake from clients to begin the federated iter
 Parameters to pass are explain at
 
 ```bash
-python3 server.py --help
-usage: server.py [-h] --rounds ROUNDS --n_clients CLIENTS [--address ADDRES]
+usage: server.py [-h] --rounds ROUNDS --n_clients CLIENTS [--address ADDRESS]
 
-Server for moons test FL network using flower.
-Give the nuber of federated rounds to pass to the strategy builder.
+Server program for moons test FL network using flower.
+Give the number of federated rounds to pass to the strategy builder.
 Give the minimum number of clients to wait for a federated averaging step.
+Give optionally the complete address onto which instantiate the server.
 
 optional arguments:
   -h, --help           show this help message and exit
   --rounds ROUNDS      number of federated rounds to perform
   --n_clients CLIENTS  minimum number of active clients to perform an iteration step
-  --address ADDRESS     complete address to launch server, e.g. 127.0.0.1:8081
+  --address ADDRESS    complete address to launch server, e.g. 127.0.0.1:8081
 ```
 
 Then set a series of client machines and launch the client program for each machine.
@@ -172,34 +185,109 @@ python3 client.py
 Parameters to pass are explain at
 
 ```bash
-usage: client.py [-h] [--server SERVER] --client_id CLIENT_ID
-                 [--rounds ROUNDS] --n_train N_TRAIN
-                 [--noise NOISE] [--plot PLOT]
+usage: client.py [-h] --client_id CLIENT_ID --n_samples N_SAMPLES --n_clients N_CLIENTS [--server SERVER] [--rounds ROUNDS] [--noise NOISE] [--is_rotated IS_ROTATED]
+                 [--is_traslated IS_TRASLATED] [--test TEST] [--plot PLOT] [--dump_curve L_CURVE]
 
 Client for moons test FL network using flower.
 Give the id of the client and the number of local epoch you want to perform.
-Give also the number of data samples you wanto to train for this client.
+Give also the number of data samples you want to train for this client.
+Give also the number of clients in the FL set up to build properly the dataset.
 One can optionally give the server location to pass the client builder.
+One can optionally give the number of local epochs to perform.
 One can optionally give the noise to generate the dataset.
 One can optionally tell the program to plot the decision boundary at the evaluation step.
-The number of test data samples is fixed by the program.
+One can optionally tell the program to use the shared test set (default) or the train set as test also.
 The client id will also initialize the seed for the train dataset.
-The program is built to make all the client use the same test dataset.
 
 optional arguments:
   -h, --help            show this help message and exit
-  --server SERVER       server address to point
   --client_id CLIENT_ID
-                        client id, set also the seed for the dataset
-  --rounds ROUNDS       number of local epochs to perform
-  --n_train N_TRAIN     number of samples in training set
+                        client identifier
+  --n_samples N_SAMPLES
+                        number of total samples in whole training set
+  --n_clients N_CLIENTS
+                        number of total clients in the FL setting
+  --server SERVER       server address to point
+  --rounds ROUNDS       number of local epochs to perform at each federated epoch
   --noise NOISE         noise to put in the train dataset
-  --plot PLOT           tells the program whether to plot decision boundary or not
+  --is_rotated IS_ROTATED
+                        set true for producing a rotated dataset
+  --is_traslated IS_TRASLATED
+                        set true for producing a traslated dataset
+  --test TEST           tells the program whether to use the shared test dataset (True) or the train dataset as test (False)
+  --plot PLOT           tells the program whether to plot decision boundary, every 100 federated epochs, or not
+  --dump_curve L_CURVE  tells the program whether to dump the learning curve, at every federated epoch, or not
 ```
 
 When the sufficient number of clients are connected an iteration step is performed.
 After the number of iterations given is completed, server and clients return the final
 performance.
+
+Another short program is provided to simulate an aggregated version of the model.
+
+```bash
+python3 simple_model.py
+```
+
+Parameters to pass are explain at
+
+```bash
+usage: simple_model.py [-h] --n_clients N_CLIENTS --n_samples N_SAMPLES --n_epochs N_EPOCHS [--is_traslated IS_TRASLATED] [--is_rotated IS_ROTATED] [--noise NOISE] [--plot PLOT]
+
+Simple model to compare results of FL approach.
+It simulates, once properly set, the same set up of a FL distribution in an aggregated version.
+The learning curve is dumped at every epoch.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --n_clients N_CLIENTS
+                        maximum number of different clients to simulate, used to create the dataset
+  --n_samples N_SAMPLES
+                        number of total samples
+  --n_epochs N_EPOCHS   number of total epochs for the training
+  --is_traslated IS_TRASLATED
+                        set true in the case of a traslated datset
+  --is_rotated IS_ROTATED
+                        set true in the case of a rotated datset
+  --noise NOISE         noise to add to dataset
+  --plot PLOT           tells the program whether to plot decision boundary, every 100 epochs, or not
+```
+
+### An example
+
+Imagine you want to simulate in a FL set up 2 clients, with an entire dataset not
+translated nor rotated, of 300 samples, for a number of 1000 federated epochs and
+1 local epoch at each federated step. You want to use the default noise, the default
+server and the you want to plot the decision boundary and get the learning curves.
+Imagine you want to instatiate the server at the port 51550.
+Imagine to have separate machines with different IP addresses.
+The IP address of the server is 0.0.0.0, for example.
+Ensure to have properly set the iptables and port forwarding, for a Linux system,
+you can look at this [guide](https://www.systutorials.com/port-forwarding-using-iptables/)
+
+In the server machine run
+
+```bash
+python3 server.py --rounds=1000 --n_clients=2 --address=0.0.0.0:51550
+```
+
+In the first client's machine run
+
+```bash
+python3 client.py --client_id=0 --n_samples=300 --n_clients=2 --plot=true --dump_curve=true --server=0.0.0.0:51550
+```
+
+In the second client's machine run
+
+```bash
+python3 client.py --client_id=1 --n_samples=300 --n_clients=2 --plot=true --dump_curve=true --server=0.0.0.0:51550
+```
+
+I order to run the aggregated one simply
+
+```bash
+python3 simple_model.py --n_clients=2 --n_samples=300 --n_epochs=1000 --plot=true
+```
 
 ## Analysis and results
 
@@ -256,6 +344,6 @@ datasets, then set ups with 1 and 2 clients with transformed datasets follow.
 
 ## References
 
-[^1]: Beutel, Daniel J and Topal, Taner and Mathur, Akhil and Qiu, Xinchi and Parcollet, Titouan and Lane, Nicholas D Flower: A Friendly Federated Learning Research Framework. arXiv preprint arXiv:2007.14390, 2020
+1. Beutel, Daniel J and Topal, Taner and Mathur, Akhil and Qiu, Xinchi and Parcollet, Titouan and Lane, Nicholas D Flower: A Friendly Federated Learning Research Framework. arXiv preprint arXiv:2007.14390, 2020
 2. M. Aledhari, R. Razzak, R. M. Parizi, and F. Saeed.  Federated learning:  A survey on enablingtechnologies, protocols, and applications.IEEE Access, 8:140699–140725, 2020
 3. H. Brendan McMahan, Eider Moore, Daniel Ramage, Seth Hampson, and Blaise Aguera y Arcas.Communication-efficient learning of deep networks from decentralized data, 2017

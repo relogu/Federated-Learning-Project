@@ -16,9 +16,10 @@ os.environ["GRPC_VERBOSITY"] = "debug"
 
 def parse_args ():
     """Parse the arguments passed."""
-    description = 'Server for moons test FL network using flower.\n' + \
-        'Give the nuber of federated rounds to pass to the strategy builder.\n' + \
-        'Give the minimum number of clients to wait for a federated averaging step.'
+    description = 'Server program for moons test FL network using flower.\n' + \
+        'Give the number of federated rounds to pass to the strategy builder.\n' + \
+        'Give the minimum number of clients to wait for a federated averaging step.\n' + \
+        'Give optionally the complete address onto which instantiate the server.'
 
     parser = argparse.ArgumentParser(description = description,
                                      formatter_class=RawTextHelpFormatter)
@@ -56,7 +57,7 @@ if __name__ == "__main__":
         min_fit_clients=args.clients,
         min_eval_clients=args.clients
     )
-
+    # setting the server complete address
     if not args.address:
         SERVER = "192.168.1.191:5223"
     else:
