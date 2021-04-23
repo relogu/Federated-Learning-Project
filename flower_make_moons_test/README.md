@@ -5,6 +5,22 @@ approach by testing it on a simple toy model.
 Then, by modifying slightly the basic dataset, some more features are exploited
 for future use on real problem.
 
+## Contents
+
+- [Federated Learning, tests of a new approach to distributed learning on a toy model](#federated-learning-tests-of-a-new-approach-to-distributed-learning-on-a-toy-model)
+  - [Contents](#contents)
+  - [Federated Learning (FL)](#federated-learning-fl)
+    - [Federated Average (FedAvg)](#federated-average-fedavg)
+  - [Dataset](#dataset)
+  - [Model](#model)
+  - [FL Framework](#fl-framework)
+  - [Usage](#usage)
+    - [Dependencies](#dependencies)
+    - [General set up](#general-set-up)
+    - [An example](#an-example)
+  - [Analysis and results](#analysis-and-results)
+  - [References](#references)
+
 ## Federated Learning (FL)
 
 Federated Learning is a newly introduced approach to collaborative machine
@@ -273,16 +289,23 @@ optional arguments:
 ```
 
 The code inside
-[common_fn.py](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/simple_model.py)
+[common_fn.py](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/common_fn.py)
 is necessary, because contains some of the functions used by the procedures above.
 
 Additionally, inside the folder
 [test](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/test)
 are provided the necessary files to perform the tests on the functions.
+I fyou want to run test simply go with
+
+```bash
+python3 function_tests.py
+```
+
+in the [test](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/test) folder
 
 The folder
 [scripts](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/scripts)
-provides the scripts used for plotting some of the images inside the [Analysis and results](##analysis-and-results) part
+provides the scripts used for plotting some of the images inside the [Analysis and results](#analysis-and-results) part
 
 ### An example
 
