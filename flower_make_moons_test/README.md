@@ -165,7 +165,8 @@ pip3 install flwr tensorflow scikit-learn matplotlib numpy
 
 ### General set up
 
-Firstly set the server machine and launch the server program.
+Firstly set the server machine and launch the server program:
+[server.py](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/server.py).
 
 ```bash
 python3 server.py
@@ -190,6 +191,8 @@ optional arguments:
 ```
 
 Then set a series of client machines and launch the client program for each machine.
+The client program is given in
+[client.py](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/client.py).
 The setting must be consistent following the parameters given.
 
 ```bash
@@ -237,7 +240,9 @@ When the sufficient number of clients are connected an iteration step is perform
 After the number of iterations given is completed, server and clients return the final
 performance.
 
-Another short program is provided to simulate an aggregated version of the model.
+Another short program is provided,
+[simple_model.py](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/simple_model.py),
+to simulate an aggregated version of the model.
 
 ```bash
 python3 simple_model.py
@@ -266,6 +271,19 @@ optional arguments:
   --noise NOISE         noise to add to dataset
   --plot PLOT           tells the program whether to plot decision boundary, every 100 epochs, or not
 ```
+
+The code inside
+[common_fn.py](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/simple_model.py)
+is necessary, because contains some of the functions used by the procedures above.
+
+Additionally, inside the folder
+[test](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/test)
+are provided the necessary files to perform the tests on the functions.
+
+The folder
+[scripts](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/scripts)
+provides the scripts used for plotting some of the images inside the [Analysis and results](##analysis-and-results) part
+
 
 ### An example
 
