@@ -284,7 +284,6 @@ The folder
 [scripts](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/scripts)
 provides the scripts used for plotting some of the images inside the [Analysis and results](##analysis-and-results) part
 
-
 ### An example
 
 Imagine you want to simulate in a FL set up 2 clients, with an entire dataset not
