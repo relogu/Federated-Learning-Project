@@ -14,7 +14,10 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.testing.compare import compare_images
-sys.path.append('../')
+path = pathlib.Path(__file__).parent.absolute()
+path_to_test = str(path)
+path_parent = str(path.parent)
+sys.path.append(path_parent)
 import common_fn as my_fn
 
 class TestMethods(unittest.TestCase):
@@ -51,53 +54,77 @@ class TestMethods(unittest.TestCase):
         self.assertAlmostEqual(x_f.all(), x.all())
 
     def test_dump_learning_curve(self):
-        path_to_file = pathlib.Path(__file__).parent.absolute()
-        filename = "/../output/abc.dat"
+        file_to_test = path_parent+"/output/abc.dat"
         my_fn.dump_learning_curve("abc", 1, 1, 1)
-        test_file = str(path_to_file)+"/test0.dat"
-        file_to_test = str(path_to_file)+filename
-        test_file = open(test_file).read()
-        file_to_test = open(file_to_test).read()
-        os.remove(str(path_to_file)+filename)
-        self.assertMultiLineEqual( test_file, file_to_test, "not equal files")
+        test_file = path_to_test+"/test0.dat"
+        test_lines = open(test_file).read()
+        lines = open(file_to_test).read()
+        os.remove(file_to_test)
+        self.assertMultiLineEqual(test_lines, lines, "not equal files")
         my_fn.dump_learning_curve("abc", 1, 1, 1)
         my_fn.dump_learning_curve("abc", 2, 2, 2)
-        test_file = str(path_to_file)+"/test1.dat"
-        file_to_test = str(path_to_file)+filename
-        test_file = open(test_file).read()
-        file_to_test = open(file_to_test).read()
-        os.remove(filename[1:])
-        self.assertMultiLineEqual( test_file, file_to_test, "not equal files")
-        
+        test_file = path_to_test+"/test1.dat"
+        test_lines = open(test_file).read()
+        lines = open(file_to_test).read()
+        os.remove(file_to_test)
+        self.assertMultiLineEqual(test_lines, lines, "not equal files")
+
+    def test_dataset_fn(self):
+        x, y = my_fn.build_dataset(2, 8, 0.1)
+        self.assertEqual(len(x.shape), 2, 'wrong dimensions of points')
+        self.assertEqual(len(y.shape), 1, 'wrong dimensions of labels')
+        self.assertEqual(x.shape[0], 8, 'wrong number of points')
+        self.assertEqual(y.shape[0], 8, 'wrong number of labels')
+        for xx in x:
+            self.assertEqual(len(xx), 2, 'wrong number of coordinates')
+        for yy in y:
+            self.assertTrue(yy==1 or yy==0, 'wrong label')
+        for client_id in [0,1]:
+            x_c, y_c = my_fn.get_client_dataset(client_id, 2, x, y)
+            self.assertEqual(len(x_c.shape), 2, 'wrong dimensions of points')
+            self.assertEqual(len(y_c.shape), 1, 'wrong dimensions of labels')
+            self.assertEqual(x_c.shape[0], 4, 'wrong number of points')
+            self.assertEqual(y_c.shape[0], 4, 'wrong number of labels')
+            for xx in x_c:
+                self.assertEqual(len(xx), 2, 'wrong number of coordinates')
+            for yy in y_c:
+                self.assertTrue(yy==1 or yy==0, 'wrong label')
+        x_c, y_c = my_fn.get_client_dataset(-1, 2, x, y)
+        self.assertTrue(x_c==[] and y_c==[], 'wrong output')
+        x_c, y_c = my_fn.get_client_dataset(0, 2, np.array(x_c), np.array(y))
+        self.assertTrue(x_c==[] and y_c==[], 'wrong output')
+        x_c, y_c = my_fn.get_client_dataset(0, 2, np.array(x), np.array(y_c))
+        self.assertTrue(x_c==[] and y_c==[], 'wrong output')
+
     def test_plotters(self):
         x_train = np.array([[0.0,0.0],[2.0,2.0]])
         y_train = np.array([0, 1])
         x_test = np.array([[-1.0,-1.0],[1.0,1.0]])
         y_test = np.array([0, 1])
-        images_path = '../output/*.png'
-        path_to_pass = '../output'
+        images_path = path_parent+'/output/*.png'
+        path_to_pass = path_parent+'/output'
         my_fn.plot_client_dataset(0, x_train, y_train, x_test, y_test, path_to_pass)
-        files =  glob.glob(images_path)
-        compare_images('test_data_client_0.png', files[0], 1.0)
+        files = glob.glob(images_path)
+        compare_images(path_to_test+'/test_data_client_0.png', files[0], 1.0)
         os.remove(files[0])
         x_test = np.array([[-1.0,-1.0],[1.0,1.0]])
         y_test = np.array([0, 1])
         model = my_fn.create_keras_model()
-        model.load_weights("model.h5")
+        model.load_weights(path_to_test+"/model.h5")
         my_fn.plot_decision_boundary(model, x_test, y_test,
                                      client_id=0, fed_iter=1, path=path_to_pass)
         files =  glob.glob(images_path)
-        compare_images('test_dec_bound_c0_e1.png', files[0], 1.0)
+        compare_images(path_to_test+'/test_dec_bound_c0_e1.png', files[0], 1.0)
         os.remove(files[0])
         my_fn.plot_decision_boundary(model, x_test, y_test,
                                      client_id=0, path=path_to_pass)
         files =  glob.glob(images_path) 
-        compare_images('test_dec_bound_c0.png', files[0], 1.0)
+        compare_images(path_to_test+'/test_dec_bound_c0.png', files[0], 1.0)
         os.remove(files[0])
         my_fn.plot_decision_boundary(model, x_test, y_test,
                                      path=path_to_pass)
         files =  glob.glob(images_path)
-        compare_images('test_dec_bound_nofed.png', files[0], 1.0)
+        compare_images(path_to_test+'/test_dec_bound_nofed.png', files[0], 1.0)
         os.remove(files[0])
         
 
