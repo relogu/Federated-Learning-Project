@@ -89,12 +89,13 @@ class TestMethods(unittest.TestCase):
                 self.assertEqual(len(xx), 2, 'wrong number of coordinates')
             for yy in y_c:
                 self.assertTrue(yy==1 or yy==0, 'wrong label')
+        msg = 'wrong output, expected void list'
         x_c, y_c = my_fn.get_client_dataset(-1, 2, x, y)
-        self.assertTrue(x_c==[] and y_c==[], 'wrong output')
+        self.assertTrue(x_c==[] and y_c==[], msg)
         x_c, y_c = my_fn.get_client_dataset(0, 2, np.array(x_c), np.array(y))
-        self.assertTrue(x_c==[] and y_c==[], 'wrong output')
+        self.assertTrue(x_c==[] and y_c==[], msg)
         x_c, y_c = my_fn.get_client_dataset(0, 2, np.array(x), np.array(y_c))
-        self.assertTrue(x_c==[] and y_c==[], 'wrong output')
+        self.assertTrue(x_c==[] and y_c==[], msg)
 
     def test_plotters(self):
         x_train = np.array([[0.0,0.0],[2.0,2.0]])
