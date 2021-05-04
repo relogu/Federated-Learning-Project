@@ -20,6 +20,11 @@ path_parent = str(path.parent)
 sys.path.append(path_parent)
 import common_fn as my_fn
 
+# removing files in the output folder if present
+files = glob.glob(path_parent+'/output/*')
+for file in files:
+    os.remove(file)
+
 class TestMethods(unittest.TestCase):
 
     def test_rotate_moons(self):
