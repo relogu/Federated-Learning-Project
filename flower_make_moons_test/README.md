@@ -242,6 +242,7 @@ optional arguments:
                         number of total clients in the FL setting
   --server SERVER       server address to point
   --rounds ROUNDS       number of local epochs to perform at each federated epoch
+  --seed SEED           set the seed for the random generator of the whole dataset
   --noise NOISE         noise to put in the train dataset
   --is_rotated IS_ROTATED
                         set true for producing a rotated dataset
