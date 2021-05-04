@@ -343,6 +343,10 @@ I order to run the aggregated one simply
 python3 simple_model.py --n_clients=2 --n_samples=300 --n_epochs=1000 --plot=true
 ```
 
+A complete example can be run by using the
+[run.sh](https://github.com/relogu/Federated-Learning-Project/blob/master/flower_make_moons_test/run.sh)
+script (working on a Ubuntu 20.04 satisfying the dependencies)
+
 ## Analysis and results
 
 The easiest method to compare the performances of such models is to plot the losses and
