@@ -356,7 +356,7 @@ epochs for the aggregated model).
 Moreover, to have a general, and more informative, idea of the performance of the whole FL
 set ups, the mean values of the losses and the accuracies of all the clients in every FL
 set up are computed.
-A confidence interval, that covers a confidence level of $68\%$, i.e. standard deviation
+A confidence interval, that covers a confidence level of 68%, i.e. standard deviation
 was taken, is then associated to these mean values, in order to give a more complete
 representation.
 
