@@ -27,38 +27,72 @@ for file in files:
 
 class TestMethods(unittest.TestCase):
 
-    def test_rotate_moons(self):
+    def test_rotate_moons1(self):
         x = np.array([[0.0,0.0],[0.0,0.0]])
         theta = math.pi/10
-        theta1 = math.pi/12
         x_f = my_fn.rotate_moons(theta, x)
         self.assertAlmostEqual(x_f.all(), x.all())
+        
+    def test_rotate_moons2(self):
         x = np.array([[1.0,1.0],[1.0,1.0]])
+        theta = math.pi/10
         x_f = my_fn.rotate_moons(-theta, my_fn.rotate_moons(theta, x))
         self.assertAlmostEqual(x_f.all(), x.all())
+        
+    def test_rotate_moons3(self):
         x = np.array([[1.0,1.0],[1.0,1.0]])
+        theta = math.pi/10
+        theta1 = math.pi/12
         x = my_fn.rotate_moons(theta1, my_fn.rotate_moons(theta, x))
         x_f = my_fn.rotate_moons(theta, my_fn.rotate_moons(theta1, x))
         self.assertAlmostEqual(x_f.all(), x.all())
+        
+    def test_rotate_moons4(self):
         x = np.array([[1.0,1.0],[1.0,1.0]])
-        x = my_fn.rotate_moons(2*math.pi, x)
+        x_f = my_fn.rotate_moons(2*math.pi, x)
         self.assertAlmostEqual(x_f.all(), x.all())
+        
+    def test_rotate_moons5(self):
+        x = np.array([[1.0,1.0],[1.0,1.0]])
+        theta = math.pi/10
+        theta1 = math.pi/12
+        x = my_fn.rotate_moons(theta1, my_fn.rotate_moons(theta, x))
+        x_f = my_fn.rotate_moons(theta+theta1, x)
+        self.assertAlmostEqual(x_f.all(), x.all())
+        
+    def test_rotate_moons6(self):
+        x = np.array([[1.0,1.0,1.0],[1.0,1.0,1.0]])
+        with self.assertRaises(TypeError):
+            my_fn.rotate_moons(0.0, x)
 
-    def test_translate_moons(self):
+    def test_translate_moons1(self):
         x = np.array([[0.0,0.0],[0.0,0.0]])
         x_f = my_fn.translate_moons(0.0, 0.0, x)
         self.assertAlmostEqual(x_f.all(), x.all())
+        
+    def test_translate_moons2(self):
+        x = np.array([[0.0,0.0],[0.0,0.0]])
         x_f = my_fn.translate_moons(-1.0, -1.0, my_fn.translate_moons(1.0, 1.0, x))
         self.assertAlmostEqual(x_f.all(), x.all())
+        
+    def test_translate_moons3(self):
+        x = np.array([[0.0,0.0],[0.0,0.0]])
         x_f = my_fn.translate_moons(2.0, 2.0, my_fn.translate_moons(1.0, 1.0, x))
         x = my_fn.translate_moons(3.0, 3.0, x)
         self.assertAlmostEqual(x_f.all(), x.all())
+        
+    def test_translate_moons4(self):
         x = np.array([[0.0,0.0],[0.0,0.0]])
         x_f = my_fn.translate_moons(2.0, 2.0, my_fn.translate_moons(1.0, 1.0, x))
         x = my_fn.translate_moons(1.0, 1.0, my_fn.translate_moons(2.0, 2.0, x))
         self.assertAlmostEqual(x_f.all(), x.all())
+        
+    def test_translate_moons5(self):
+        x = np.array([[1.0,1.0,1.0],[1.0,1.0,1.0]])
+        with self.assertRaises(TypeError):
+            my_fn.translate_moons(1.0, 1.0, x)
 
-    def test_dump_learning_curve(self):
+    def test_dump_learning_curve1(self):
         file_to_test = path_parent+"/output/abc.dat"
         my_fn.dump_learning_curve("abc", 1, 1, 1)
         test_file = path_to_test+"/test0.dat"
@@ -66,6 +100,9 @@ class TestMethods(unittest.TestCase):
         lines = open(file_to_test).read()
         os.remove(file_to_test)
         self.assertMultiLineEqual(test_lines, lines, "not equal files")
+        
+    def test_dump_learning_curve2(self):
+        file_to_test = path_parent+"/output/abc.dat"
         my_fn.dump_learning_curve("abc", 1, 1, 1)
         my_fn.dump_learning_curve("abc", 2, 2, 2)
         test_file = path_to_test+"/test1.dat"
@@ -74,7 +111,7 @@ class TestMethods(unittest.TestCase):
         os.remove(file_to_test)
         self.assertMultiLineEqual(test_lines, lines, "not equal files")
 
-    def test_dataset_fn(self):
+    def test_build_dataset_fn(self):
         x, y = my_fn.build_dataset(2, 8, 0.1)
         self.assertEqual(len(x.shape), 2, 'wrong dimensions of points')
         self.assertEqual(len(y.shape), 1, 'wrong dimensions of labels')
@@ -84,6 +121,9 @@ class TestMethods(unittest.TestCase):
             self.assertEqual(len(xx), 2, 'wrong number of coordinates')
         for yy in y:
             self.assertTrue(yy==1 or yy==0, 'wrong label')
+            
+    def test_get_dataset_fn1(self):
+        x, y = my_fn.build_dataset(2, 8, 0.1)
         for client_id in [0,1]:
             x_c, y_c = my_fn.get_client_dataset(client_id, 2, x, y)
             self.assertEqual(len(x_c.shape), 2, 'wrong dimensions of points')
@@ -94,13 +134,21 @@ class TestMethods(unittest.TestCase):
                 self.assertEqual(len(xx), 2, 'wrong number of coordinates')
             for yy in y_c:
                 self.assertTrue(yy==1 or yy==0, 'wrong label')
-        msg = 'wrong output, expected void list'
-        x_c, y_c = my_fn.get_client_dataset(-1, 2, x, y)
-        self.assertTrue(x_c==[] and y_c==[], msg)
-        x_c, y_c = my_fn.get_client_dataset(0, 2, np.array(x_c), np.array(y))
-        self.assertTrue(x_c==[] and y_c==[], msg)
-        x_c, y_c = my_fn.get_client_dataset(0, 2, np.array(x), np.array(y_c))
-        self.assertTrue(x_c==[] and y_c==[], msg)
+
+    def test_get_dataset_fn2(self):
+        x, y = my_fn.build_dataset(2, 8, 0.1)
+        with self.assertRaises(TypeError):
+            my_fn.get_client_dataset(-1, 2, x, y)
+            
+    def test_get_dataset_fn3(self):
+        _, y = my_fn.build_dataset(2, 8, 0.1)
+        with self.assertRaises(TypeError):
+            my_fn.get_client_dataset(0, 2, np.array([]), y)
+            
+    def test_get_dataset_fn4(self):
+        x, _ = my_fn.build_dataset(2, 8, 0.1)
+        with self.assertRaises(TypeError):
+            my_fn.get_client_dataset(0, 2, x, np.array([]))
 
     def test_plotters(self):
         x_train = np.array([[0.0,0.0],[2.0,2.0]])
