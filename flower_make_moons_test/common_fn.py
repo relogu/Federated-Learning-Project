@@ -49,11 +49,11 @@ def dump_learning_curve(filename: str, round: int, loss: float, accuracy: float)
     path_to_file = path_to_file/"output"/(filename+".dat")
     # touching file
     path_to_file.touch()
-    with open(path_to_file, "a") as file:
+    with open(path_to_file, "a") as outfile:
         # write line(s)
         if round == 1:
-            print("client,round,loss,accuracy", file=file)
-        print(filename+","+str(round)+","+str(loss)+","+str(accuracy), file=file)
+            print("client,round,loss,accuracy", file=outfile)
+        print(filename+","+str(round)+","+str(loss)+","+str(accuracy), file=outfile)
 
 def translate_moons(dx: float, dy: float, x):
     """Translate using the vector (dx, dy) the make_moons dataset x.
@@ -76,7 +76,7 @@ def translate_moons(dx: float, dy: float, x):
         xc[:, 1] = x[:, 1] + dy
     else :
         # error msg
-        raise TypeError("x has not the correct shape")
+        raise TypeError
     return xc
 
 def rotate_moons(theta: float, x):
@@ -99,7 +99,7 @@ def rotate_moons(theta: float, x):
         xc[:, 1] = x[:, 0]*math.sin(theta) + x[:, 1]*math.cos(theta)
     else :
         # error msg
-        raise TypeError("x has not the correct shape")
+        raise TypeError
     return xc
 
 def plot_points(x, y):
@@ -202,14 +202,14 @@ def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None,
     plt.savefig(filename)
     plt.close()
 
-def build_dataset(n_clients: int, total_samples: int, noise: float, seed: float):
+def build_dataset(n_clients: int, total_samples: int, noise: float, seed: int=51550):
     """Build the entire dataset, to be distributed.
 
     Args:
         n_clients (int): number of clients onto which distribute the whole dataset
         total_samples (int): total number of sample of the whole datset
         noise (float): the amount of noise to generate the dataset
-        seed (float): the seed for the generator of the dataset
+        seed (int): the seed for the generator of the dataset
 
     Returns:
         x (ndarray of shape (total_samples, 2)): vector of 2-D points
@@ -270,5 +270,4 @@ def get_client_dataset(client_id: int, n_clients: int, x_tot, y_tot):
                 return x_tot[i*n_sam_client:(i+1)*n_sam_client], y_tot[i*n_sam_client:(i+1)*n_sam_client]
     else:
         # error msg
-        print("parameters have not the correct shape")
-        return [], []
+        raise TypeError
