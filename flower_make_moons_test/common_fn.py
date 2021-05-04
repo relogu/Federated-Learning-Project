@@ -46,15 +46,14 @@ def dump_learning_curve(filename: str, round: int, loss: float, accuracy: float)
     """
     # get file path
     path_to_file = pathlib.Path(__file__).parent.absolute()
-    path_to_file = str(path_to_file)+"/output/"+filename+".dat"
-    # write line(s)
-    if round == 1:
-        file = open(path_to_file, "w")
-        file.write("client,round,loss,accuracy\n")
-    else :
-        file = open(path_to_file, "a")
-    file.write(filename+","+str(round)+","+str(loss)+","+str(accuracy)+"\n")
-    file.close()
+    path_to_file = path_to_file/"output"/(filename+".dat")
+    # touching file
+    path_to_file.touch()
+    with open(path_to_file, "a") as file:
+        # write line(s)
+        if round == 1:
+            print("client,round,loss,accuracy", file=file)
+        print(filename+","+str(round)+","+str(loss)+","+str(accuracy), file=file)
 
 def translate_moons(dx: float, dy: float, x):
     """Translate using the vector (dx, dy) the make_moons dataset x.
