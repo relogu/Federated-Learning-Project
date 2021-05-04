@@ -199,12 +199,14 @@ def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None,
     plt.savefig(filename)
     plt.close()
 
-def build_dataset(n_clients: int, total_samples: int, noise: float):
+def build_dataset(n_clients: int, total_samples: int, noise: float, seed: float):
     """Build the entire dataset, to be distributed.
 
     Args:
         n_clients (int): number of clients onto which distribute the whole dataset
         total_samples (int): total number of sample of the whole datset
+        noise (float): the amount of noise to generate the dataset
+        seed (float): the seed for the generator of the dataset
 
     Returns:
         x (ndarray of shape (total_samples, 2)): vector of 2-D points
@@ -216,7 +218,7 @@ def build_dataset(n_clients: int, total_samples: int, noise: float):
     x = np.array(0)
     y = np.array(0)
     # set the intial seed for the RN generator
-    random.seed(51550)
+    random.seed(seed)
     # loop on clients
     for i in range(n_clients):
         # get a RN for the state of the dataset generator

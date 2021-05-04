@@ -73,6 +73,12 @@ def parse_args():
                         type=int,
                         action='store',
                         help='number of local epochs to perform at each federated epoch')
+    parser.add_argument('--seed',
+                        dest='seed',
+                        required=False,
+                        type=int,
+                        action='store',
+                        help='set the seed for the random generator of the whole dataset')
     parser.add_argument('--noise',
                         dest='noise',
                         required=False,
@@ -139,6 +145,11 @@ if __name__ == "__main__":
     if N_LOC_EPOCHS < 1:
         N_LOC_EPOCHS = 1
         
+    if not args.seed:
+        SEED = 51550
+    else:
+        SEED = args.seed
+        
     if not args.noise:
         R_NOISE = 0.1
     else:
@@ -168,7 +179,7 @@ if __name__ == "__main__":
         TEST = False
     else:
         TEST = args.test
-        random.seed(51550)
+        random.seed(SEED)
         TEST_RAND_STATE = random.randint(0, 100000)
         (x_test, y_test) = datasets.make_moons(n_samples=1000,
                                             shuffle=True,
@@ -182,7 +193,7 @@ if __name__ == "__main__":
     print("Server address: "+SERVER)
 
     # dataset, building the whole one and get the local
-    x_tot, y_tot = my_fn.build_dataset(N_CLIENTS, N_SAMPLES, R_NOISE)  
+    x_tot, y_tot = my_fn.build_dataset(N_CLIENTS, N_SAMPLES, R_NOISE, SEED)  
     x_train, y_train = my_fn.get_client_dataset(args.client_id, N_CLIENTS, x_tot, y_tot) 
      
     if IS_ROT: 
