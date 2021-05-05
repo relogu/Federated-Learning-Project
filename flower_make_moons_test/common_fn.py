@@ -76,7 +76,7 @@ def translate_moons(dx: float, dy: float, x):
         xc[:, 1] = x[:, 1] + dy
     else :
         # error msg
-        raise TypeError
+        raise TypeError("the input x has not the correct shape")
     return xc
 
 def rotate_moons(theta: float, x):
@@ -99,7 +99,7 @@ def rotate_moons(theta: float, x):
         xc[:, 1] = x[:, 0]*math.sin(theta) + x[:, 1]*math.cos(theta)
     else :
         # error msg
-        raise TypeError
+        raise TypeError("the input x has not the correct shape")
     return xc
 
 def plot_points(x, y):
@@ -254,20 +254,28 @@ def get_client_dataset(client_id: int, n_clients: int, x_tot, y_tot):
         y (ndarray of shape (single_client_samples)): vector of numerical labels relative to the client
     """
     # check on the shapes of the inputs
-    if client_id < n_clients and client_id > -1 \
-        and len(x_tot.shape) == 2 and x_tot.shape[1] == 2 \
-        and len(y_tot.shape) == 1 and y_tot.shape[0] == x_tot.shape[0]:
-        # get the total number of samples
-        n_samples = x_tot.shape[0]
-        # get the number of samples for the single clients
-        n_sam_client = int(n_samples/n_clients)
-        # loop on clients
-        for i in range(n_clients):
-            # continue on wrong clients and returning the right dataset
-            if i != client_id:
-                continue
-            else:
-                return x_tot[i*n_sam_client:(i+1)*n_sam_client], y_tot[i*n_sam_client:(i+1)*n_sam_client]
-    else:
-        # error msg
-        raise TypeError
+    if client_id >= n_clients or client_id < 0:
+        msg = "the input client_id has not an allowed value, " + \
+            "insert a positive value lesser than n_clients"
+        raise TypeError(msg)
+    if len(x_tot.shape) != 2 or x_tot.shape[1] != 2:
+        msg = "the input x_tot has not the correct shape"
+        raise TypeError(msg)
+    if len(y_tot.shape) != 1:
+        msg = "the input y_tot has not the correct shape"
+        raise TypeError(msg)
+    if y_tot.shape[0] != x_tot.shape[0]:
+        msg = "the inputs x_tot and y_tot have not compatible shapes, " + \
+            "they must represent the same number of points"
+        raise TypeError(msg)
+    # get the total number of samples
+    n_samples = x_tot.shape[0]
+    # get the number of samples for the single clients
+    n_sam_client = int(n_samples/n_clients)
+    # loop on clients
+    for i in range(n_clients):
+        # continue on wrong clients and returning the right dataset
+        if i != client_id:
+            continue
+        else:
+            return x_tot[i*n_sam_client:(i+1)*n_sam_client], y_tot[i*n_sam_client:(i+1)*n_sam_client]
