@@ -40,6 +40,13 @@ if __name__ == "__main__":
     output_folder = path_to_file/'output'
     images_folder = path_to_file/'images'/prefix
     images_folder.mkdir(exist_ok=True)
+    clients = sorted(output_folder.glob('*_ae.dat'))
+    # building dataframe of results
+    ae_df = pd.DataFrame()
+    for client in clients:
+        c = pd.read_csv(client)
+        ae_df = ae_df.append(c)
+        client.unlink()
     clients = sorted(output_folder.glob('*.dat'))
     # building dataframe of results
     df = pd.DataFrame()
@@ -51,11 +58,16 @@ if __name__ == "__main__":
     # %%
     overall = df.copy()
     overall['client'] = 'all'
-    
-    # %%
+    ae_overall = ae_df.copy()
+    ae_overall['client'] = 'all'
     metrics = list(df.columns)
     metrics.remove('client')
     metrics.remove('round')
+    ae_metrics = list(ae_df.columns)
+    ae_metrics.remove('client')
+    ae_metrics.remove('round')
+    '''
+    # %%
     sns.set_style('whitegrid')
     for metric in metrics:
         title = metric.replace('_', ' ')
@@ -68,6 +80,7 @@ if __name__ == "__main__":
         plt.draw()
         #plt.savefig(filename)
         plt.close()
+    '''
     # %%
     tmp = df.copy()
     tmp = tmp.append(overall)
@@ -82,7 +95,22 @@ if __name__ == "__main__":
         plt.draw()
         plt.savefig(filename)
         plt.close()
-    
+        
+    tmp = ae_df.copy()
+    tmp = tmp.append(ae_overall)
+    for metric in ae_metrics:
+        title = 'autoencoder '+metric
+        filename = images_folder/str('autoencoder_'+metric)
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
+        plt.title(title)
+        ax.set_ylabel(metric)
+        plt.xlabel("round")
+        sns.lineplot(x='round', y=metric, hue='client', data=tmp)#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
+        plt.draw()
+        plt.savefig(filename)
+        plt.close()
+    '''
+    # %%
     for metric in metrics:
         title = metric.replace('_', ' ')
         filename = images_folder/metric
@@ -94,7 +122,7 @@ if __name__ == "__main__":
         plt.draw()
         #plt.savefig(filename)
         plt.close()
-    
+    '''
     # moving other images
     imgs = sorted(output_folder.glob('*.png'))
     for img in imgs:

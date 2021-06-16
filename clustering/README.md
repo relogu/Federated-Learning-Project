@@ -32,19 +32,30 @@ repository.
 
 ## Datasets used
 
-TODO
+Different dataset were used to test the algorithm in [Models and algorithms](#models-and-algorithms).
+Tuning the configuration of the clients, the user is able to create imbalanced non-iid partitions of the selected dataset using Latent Dirichlet Allocation (LDA) without resampling.
+This procedure could be useful to simulate real distributions of data.
+The size of the entire dataset is tunable, as the number of clients, but it is recomended to take into account the partitioning while setting these values.
+Every partioned dataset is subdivided in train and test, respectively the 80% and the 20% of the whole dataset.
 
 ### Blobs
 
-TODO
+This dataset is generated exploiting [this](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_blobs.html#sklearn.datasets.make_blobs) method of [scikit-learn](https://scikit-learn.org/stable/index.html).
+As the description says, a defined number of isotropic Gaussian blobs are generated for clustering; the labels are provided also.
+In this specific case the user is able to selected the number of clusters manually, while the number of dimensions of the space is fixed to 30.
+The random state is tunable in the program.
 
 ### Moons
 
-TODO
+This dataset is generated exploiting [this](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.make_moons.html#sklearn.datasets.make_moons) method of [scikit-learn](https://scikit-learn.org/stable/index.html).
+As described, two interleaving half circles are generated; the labels are provided also.
+Clearly here the number of clusters is fixed to 2 as the number of dimensions of the data space, 2 also.
+The random state is tunable in the program.
 
 ### MNIST
 
-TODO
+This is the old-fashioned but widely used handwritten digits dataset.
+For those who are not familiar with this data, [this page](https://it.wikipedia.org/wiki/MNIST_database) provide many useful information.
 
 ## Models and algorithms
 

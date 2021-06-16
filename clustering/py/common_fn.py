@@ -21,6 +21,7 @@ import seaborn as sns
 from flwr.common import Weights
 import sklearn
 from sklearn import datasets
+from sklearn.model_selection import KFold
 from sklearn.metrics import normalized_mutual_info_score, adjusted_rand_score, rand_score, homogeneity_score, adjusted_mutual_info_score
 from scipy.optimize import linear_sum_assignment as linear_assignment
 
@@ -105,6 +106,32 @@ def distance_from_centroids(centroids_array, vector):
         d = np.linalg.norm(centroid-vector)
         distances = np.append(distances, d)
     return min(distances)
+
+def split_dataset(x,
+                  y = None,
+                  splits: int = 5,
+                  fold_n: int = 0,
+                  shuffle: bool = False,
+                  r_state: int = 51550):
+    if fold_n < 0 or fold_n > splits-1:
+        raise ValueError('The fold number, fold_n, cannot be lower than zero or higher than the number of splits minus one, splits-1')
+    # Define the K-fold Cross Validator
+    if shuffle:
+        kfold = KFold(n_splits=splits, shuffle=shuffle, random_state=r_state)
+    else:
+        kfold = KFold(n_splits=splits)
+    if y is None:
+        train, test = next(kfold.split(x))
+        x_test = x[test].copy()
+        x_train = x[train].copy()
+        return x_train, x_test
+    else:
+        train, test = next(kfold.split(x, y))
+        x_test = x[test].copy()
+        y_test = y[test].copy()
+        x_train = x[train].copy()
+        y_train = y[train].copy()
+        return x_train, y_train, x_test, y_test
 
 def create_autoencoder(dims, act='relu', init='glorot_uniform'):
     """
