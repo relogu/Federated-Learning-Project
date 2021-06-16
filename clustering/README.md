@@ -1,13 +1,16 @@
-# Federated Learning, tests of different clustering algorithms ina federated setting
+# Federated Learning, tests of different clustering algorithms in a federated setting
 
 This project aims to present the application of the Federated Learning (FL) approach to some clustering algorithm, in order to identify the clusters inside the dataset.
 
 ## Contents
 
-- [Federated Learning, tests of different clustering algorithms ina federated setting](#federated-learning-tests-of-different-clustering-algorithms-ina-federated-setting)
+- [Federated Learning, tests of different clustering algorithms in a federated setting](#federated-learning-tests-of-different-clustering-algorithms-in-a-federated-setting)
   - [Contents](#contents)
   - [Federated Learning (FL)](#federated-learning-fl)
   - [Datasets used](#datasets-used)
+    - [Blobs](#blobs)
+    - [Moons](#moons)
+    - [MNIST](#mnist)
   - [Models and algorithms](#models-and-algorithms)
   - [FL Framework](#fl-framework)
   - [Usage](#usage)
@@ -29,7 +32,23 @@ repository.
 
 ## Datasets used
 
+TODO
+
+### Blobs
+
+TODO
+
+### Moons
+
+TODO
+
+### MNIST
+
+TODO
+
 ## Models and algorithms
+
+TODO
 
 ## FL Framework
 
