@@ -5,8 +5,14 @@
 
 *.ipynb*
 
+*.dat
+
 papers
 TODO
+*.tar
+*.gz
+*ubyte
+*.pt
 *.aux
 *.fdb_latexmk
 *.fls
