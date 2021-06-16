@@ -20,3 +20,6 @@ TODO
 *.log
 *.out
 *.synctex*
+
+settings.json
+.vscode/
