@@ -5,13 +5,21 @@
 		}
 	],
 	"settings": {
-		"python.pythonPath": "/home/relogu/anaconda3/envs/flwr/bin/python",
+		"python.pythonPath": "/home/relogu/anaconda3/envs/uni-env/bin/python3.9",
 		"python.condaPath": "~/relogu/anaconda3/bin/conda",
 		"python.terminal.activateEnvInCurrentTerminal": true,
 		"python.venvPath": "~/anaconda3/envs",
 		"python.venvFolders": [
 			"~/anaconda3/envs"
 		],
-		"jupyter.jupyterServerType": "local"
+		"python.analysis.extraPaths": ["./**"],
+		"python.autoComplete.extraPaths": ["./**"],
+		"python.analysis.watchSearchPaths": true,
+		"jupyter.jupyterServerType": "local",
+		"git.ignoreLimitWarning": true,
+		"files.watcherExclude": {
+			"**/__pycache__/**": true,
+			"**/.ipynb_checkpoints/**": true
+		}
 	}
 }

@@ -22,4 +22,4 @@ TODO
 *.synctex*
 
 FL_workspace.code-workspace
-.vscode/settings.json
+.vscode

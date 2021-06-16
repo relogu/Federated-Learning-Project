@@ -1,4 +1,11 @@
 {
-    "python.pythonPath": "/home/relogu/anaconda3/envs/flwr/bin/python",
-    "python.condaPath": "~/relogu/anaconda3/bin/conda"
+    "python.pythonPath": "/home/relogu/anaconda3/envs/uni-env/bin/python3.9",
+    "python.condaPath": "~/relogu/anaconda3/bin/conda",
+    "python.analysis.extraPaths": ["./**"],
+    "python.autoComplete.extraPaths": ["./**"],
+    "python.analysis.watchSearchPaths": true,
+    "files.watcherExclude": {
+        "**/__pycache__/**": true,
+        "**/.ipynb_checkpoints/**": true
+    },
 }
