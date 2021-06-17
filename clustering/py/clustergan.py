@@ -122,7 +122,7 @@ class Reshape(nn.Module):
     """
     Class for performing a reshape as a layer in a sequential model.
     """
-    def __init__(self, shape=[]):
+    def __init__(self, shape = None):
         super(Reshape, self).__init__()
         self.shape = shape
 
@@ -325,6 +325,7 @@ x_shape = (channels, img_size, img_size)
 
 cuda = True if torch.cuda.is_available() else False
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'
 print('Using device {}'.format(device))
 torch.autograd.set_detect_anomaly(True)
 
