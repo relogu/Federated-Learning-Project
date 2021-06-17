@@ -21,6 +21,7 @@ TODO
 *.log
 *.out
 *.synctex*
+*.csv
 
 FL_workspace.code-workspace
 .vscode
