@@ -12,6 +12,10 @@ This project aims to present the application of the Federated Learning (FL) appr
     - [Moons](#moons)
     - [MNIST](#mnist)
   - [Models and algorithms](#models-and-algorithms)
+    - [Simple k-means](#simple-k-means)
+    - [Simplified k-FED](#simplified-k-fed)
+    - [Unsupervised deep embedding for clustering](#unsupervised-deep-embedding-for-clustering)
+    - [ClusterGAN](#clustergan)
   - [FL Framework](#fl-framework)
   - [Usage](#usage)
     - [Dependencies](#dependencies)
@@ -59,12 +63,36 @@ For those who are not familiar with this data, [this page](https://it.wikipedia.
 
 ## Models and algorithms
 
+Many different models and algorithms are implemented in order to perform th unsupervised clustering on the preferred dataset.
+Many others are in working.
+The objective is to have enough results to allow the best choice of the algorithm for every dataset.
+
+### Simple k-means
+
+The implementation from [scikit-learn.cluster](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.k_means.html#sklearn.cluster.k_means) is used in the federated setting initializing the algorithm at every client with the *k-means++* initilization and then et every federated step the centroids of the clients are averaged to initialize the next local step of k-means.
+For a deeper explanation on how the k-means algorithm works look at [this](https://en.wikipedia.org/wiki/K-means_clustering) page.
+
+### Simplified k-FED
+
+This new algorithm has been proposed in [3].
+It is based on a strict definition of heterogeneity of the distributed data.
+The implementation in this work exploits simple k-means as baseline algorithm and then following the same reasoning of [3] to built the centroids of clusters.
+
+### Unsupervised deep embedding for clustering
+
+The implementation of this model is based on the paper [4].
+It exploits the use of an autoencoder (AE), a Neural Network (NN) that tries to map the data into themselves, to make a dimensionality reduction.
+Once the autoencoder has been pre-trained, a clustering algorithm is used to initialize the weights of a statistical clustering layer that performs the final embedding.
+In this implementation the clustering algorithm exploited is simplified k-FED.
+The clustering layer, that is build on the top of the encoder part of the AE, tries to maximize the clustering label probability exploiting the t-Stundet's distribution.
+
+### ClusterGAN
+
 TODO
 
 ## FL Framework
 
-The framework adopted to make the necessary simulation is
-[Flower: A Friendly Federated Learning Framework](https://flower.dev/).
+The framework adopted to make the necessary simulation is [Flower: A Friendly Federated Learning Framework](https://flower.dev/), presented in [1] .
 The federated framework is set up by running a program for every client and one for
 the server.
 These will communicate using a RPC (Remote Procedure Call) framework exchanging the
@@ -116,17 +144,12 @@ Parameters to pass are explain at
 ```
 
 When the sufficient number of clients are connected an iteration step is performed.
-After the number of iterations given is completed, server and clients return the final
-performance.
+After the number of iterations given is completed, server and clients return the final performance.
 
-The code inside
-[common_fn.py](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/common_fn.py)
-is necessary, because contains some of the functions used by the procedures above.
+The code inside [common_fn.py](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/common_fn.py) is necessary, because contains some of the functions used by the procedures above.
 
-Additionally, inside the folder
-[test](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/test)
-are provided the necessary files to perform the tests on the functions.
-I fyou want to run test simply go with
+Additionally, inside the folder [test](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/test) are provided the necessary files to perform the tests on the functions.
+If you want to run test simply go with
 
 ```bash
 python3 function_tests.py
@@ -134,9 +157,7 @@ python3 function_tests.py
 
 in the [test](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/test) folder
 
-The folder
-[scripts](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/scripts)
-provides the scripts used for plotting some of the images inside the [Analysis and results](#analysis-and-results) part
+The folder [scripts](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/scripts) provides the scripts used for plotting some of the images inside the [Analysis and results](#analysis-and-results) part
 
 ### An example
 
@@ -159,6 +180,7 @@ Every folder in [images](https://github.com/relogu/Federated-Learning-Project/tr
 
 ## References
 
-1. Beutel, Daniel J and Topal, Taner and Mathur, Akhil and Qiu, Xinchi and Parcollet, Titouan and Lane, Nicholas D Flower: A Friendly Federated Learning Research Framework. arXiv preprint arXiv:2007.14390, 2020
-2. M. Aledhari, R. Razzak, R. M. Parizi, and F. Saeed.  Federated learning:  A survey on enabling technologies, protocols, and applications.IEEE Access, 8:140699–140725, 2020
-3. H. Brendan McMahan, Eider Moore, Daniel Ramage, Seth Hampson, and Blaise Aguera y Arcas.Communication-efficient learning of deep networks from decentralized data, 2017
+1. Daniel J. Beutel and Taner Topal and Akhil Mathur and Xinchi Qiu and Titouan Parcollet and Nicholas D. Lane (2020). Flower: A Friendly Federated Learning Research Framework. CoRR, abs/2007.14390.
+2. H. Brendan McMahan and Eider Moore and Daniel Ramage and Blaise Agüera y Arcas (2016). Federated Learning of Deep Networks using Model Averaging. CoRR, abs/1602.05629.
+3. Don Kurian Dennis and Tian Li and Virginia Smith (2021). Heterogeneity for the Win: One-Shot Federated Clustering. CoRR, abs/2103.00697.
+4. Junyuan Xie and Ross B. Girshick and Ali Farhadi (2015). Unsupervised Deep Embedding for Clustering Analysis. CoRR, abs/1511.06335.
