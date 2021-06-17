@@ -32,6 +32,7 @@ ari = adjusted_rand_score
 ran = rand_score
 homo = homogeneity_score
 
+
 def acc(y_true, y_pred):
     """
     Calculate clustering accuracy. Require scikit-learn installed
@@ -50,23 +51,24 @@ def acc(y_true, y_pred):
     row_ind, col_ind = linear_assignment(w.max() - w)
     return sum([w[i, j] for i, j in zip(row_ind, col_ind)]) * 1.0 / y_pred.size
 
+
 def simple_clustering_on_fit_config(rnd: int,
                                     ae_epochs: int = 300,
                                     kmeans_epochs: int = 20,
                                     cl_epochs: int = 1000):
     if rnd < ae_epochs+1:
         return {'model': 'autoencoder',
-                'first': (rnd==1),
+                'first': (rnd == 1),
                 'actual_round': rnd,
                 'total_round': ae_epochs}
     elif rnd < ae_epochs+kmeans_epochs+1:
         return {'model': 'k-means',
-                'first': (rnd==ae_epochs+1),
+                'first': (rnd == ae_epochs+1),
                 'actual_round': rnd-ae_epochs,
                 'total_round': kmeans_epochs}
     else:
         return {'model': 'clustering',
-                'first': (rnd==ae_epochs+kmeans_epochs+1),
+                'first': (rnd == ae_epochs+kmeans_epochs+1),
                 'actual_round': rnd-ae_epochs-kmeans_epochs,
                 'total_round': cl_epochs}
 
@@ -84,7 +86,7 @@ def kfed_clustering_on_fit_config(rnd: int,
     elif rnd < ae_epochs+2:
         config = {'model': 'k-FED',
                   'n_clusters': n_clusters,
-                  'first': (rnd ==  ae_epochs+1),
+                  'first': (rnd == ae_epochs+1),
                   'actual_round': rnd,
                   'total_rounds': 1}
     else:
@@ -95,10 +97,19 @@ def kfed_clustering_on_fit_config(rnd: int,
                   'total_rounds': cl_epochs}
     return config
 
+
+def clustergan_on_fit_config(rnd: int,
+                             total_epochs: int):
+    return {'model': 'clustergan',
+            'actual_rounds': rnd,
+            'total_epochs': total_epochs}
+
+
 def simple_kmeans_on_fit_config(rnd: int,
                                 kmeans_epochs: int = 20):
     if rnd < kmeans_epochs+1:
         return {'model': 'k-means'}
+
 
 def distance_from_centroids(centroids_array, vector):
     distances = []
@@ -107,14 +118,16 @@ def distance_from_centroids(centroids_array, vector):
         distances = np.append(distances, d)
     return min(distances)
 
+
 def split_dataset(x,
-                  y = None,
+                  y=None,
                   splits: int = 5,
                   fold_n: int = 0,
                   shuffle: bool = False,
                   r_state: int = 51550):
     if fold_n < 0 or fold_n > splits-1:
-        raise ValueError('The fold number, fold_n, cannot be lower than zero or higher than the number of splits minus one, splits-1')
+        raise ValueError(
+            'The fold number, fold_n, cannot be lower than zero or higher than the number of splits minus one, splits-1')
     # Define the K-fold Cross Validator
     if shuffle:
         kfold = KFold(n_splits=splits, shuffle=shuffle, random_state=r_state)
@@ -133,6 +146,7 @@ def split_dataset(x,
         y_train = y[train].copy()
         return x_train, y_train, x_test, y_test
 
+
 def create_autoencoder(dims, act='relu', init='glorot_uniform'):
     """
     Fully connected auto-encoder model, symmetric.
@@ -149,29 +163,37 @@ def create_autoencoder(dims, act='relu', init='glorot_uniform'):
     x = input_img
     # internal layers in encoder
     for i in range(n_stacks-1):
-        x = Dense(dims[i + 1], activation=act, kernel_initializer=init, name='encoder_%d' % i)(x)
+        x = Dense(dims[i + 1], activation=act,
+                  kernel_initializer=init, name='encoder_%d' % i)(x)
 
     # hidden layer
-    encoded = Dense(dims[-1], kernel_initializer=init, name='encoder_%d' % (n_stacks - 1))(x)  # hidden layer, features are extracted from here
+    encoded = Dense(dims[-1], kernel_initializer=init, name='encoder_%d' %
+                    (n_stacks - 1))(x)  # hidden layer, features are extracted from here
 
     x = encoded
     # internal layers in decoder
     for i in range(n_stacks-1, 0, -1):
-        x = Dense(dims[i], activation=act, kernel_initializer=init, name='decoder_%d' % i)(x)
+        x = Dense(dims[i], activation=act,
+                  kernel_initializer=init, name='decoder_%d' % i)(x)
 
     # output
     x = Dense(dims[0], kernel_initializer=init, name='decoder_0')(x)
     decoded = x
     return Model(inputs=input_img, outputs=decoded, name='AE'), Model(inputs=input_img, outputs=encoded, name='encoder')
 
+
 def create_clustering_model(n_clusters, encoder):
-    clustering_layer = ClusteringLayer(n_clusters, name='clustering')(encoder.output)
+    clustering_layer = ClusteringLayer(
+        n_clusters, name='clustering')(encoder.output)
     return Model(inputs=encoder.input, outputs=clustering_layer)
 
 # computing an auxiliary target distribution
+
+
 def target_distribution(q):
     weight = q ** 2 / q.sum(0)
     return (weight.T / weight.sum(1)).T
+
 
 class ClusteringLayer(Layer):
     """
@@ -204,7 +226,8 @@ class ClusteringLayer(Layer):
         assert len(input_shape) == 2
         input_dim = input_shape[1]
         self.input_spec = InputSpec(dtype=K.floatx(), shape=(None, input_dim))
-        self.clusters = self.add_weight(shape=(self.n_clusters, input_dim), initializer='glorot_uniform', name='clusters')
+        self.clusters = self.add_weight(shape=(
+            self.n_clusters, input_dim), initializer='glorot_uniform', name='clusters')
         if self.initial_weights is not None:
             self.set_weights(self.initial_weights)
             del self.initial_weights
@@ -220,9 +243,11 @@ class ClusteringLayer(Layer):
         Return:
             q: student's t-distribution, or soft labels for each sample. shape=(n_samples, n_clusters)
         """
-        q = 1.0 / (1.0 + (K.sum(K.square(K.expand_dims(inputs, axis=1) - self.clusters), axis=2) / self.alpha))
+        q = 1.0 / (1.0 + (K.sum(K.square(K.expand_dims(inputs,
+                   axis=1) - self.clusters), axis=2) / self.alpha))
         q **= (self.alpha + 1.0) / 2.0
-        q = K.transpose(K.transpose(q) / K.sum(q, axis=1)) # Make sure each sample's 10 values add up to 1.
+        # Make sure each sample's 10 values add up to 1.
+        q = K.transpose(K.transpose(q) / K.sum(q, axis=1))
         return q
 
     def compute_output_shape(self, input_shape):
@@ -233,6 +258,7 @@ class ClusteringLayer(Layer):
         config = {'n_clusters': self.n_clusters}
         base_config = super(ClusteringLayer, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
 
 def create_keras_model():
     """Define the common keras model used.
@@ -250,6 +276,7 @@ def create_keras_model():
                               kernel_initializer=initializer,
                               bias_initializer='ones',)])
 
+
 def create_model():
     """Define the common keras model used.
 
@@ -265,6 +292,7 @@ def create_model():
         tf.keras.layers.Dense(10, activation='softmax',
                               kernel_initializer=initializer,
                               bias_initializer='ones',)])
+
 
 def dump_learning_curve(filename: str, round: int, loss: float, accuracy: float):
     """Dump the learning curve.
@@ -289,7 +317,9 @@ def dump_learning_curve(filename: str, round: int, loss: float, accuracy: float)
         # write line(s)
         if round == 1:
             print("client,round,loss,accuracy", file=outfile)
-        print(filename+","+str(round)+","+str(loss)+","+str(accuracy), file=outfile)
+        print(filename+","+str(round)+","+str(loss) +
+              ","+str(accuracy), file=outfile)
+
 
 def dump_result_dict(filename: str, result: Dict, verbose: int = 0):
     """Dump the result dictionary.
@@ -316,7 +346,8 @@ def dump_result_dict(filename: str, result: Dict, verbose: int = 0):
         # write line(s)
         if result['round'] == 1:
             print(','.join(list(result.keys())), file=outfile)
-        print(','.join(map(str,list(result.values()))), file=outfile)
+        print(','.join(map(str, list(result.values()))), file=outfile)
+
 
 def translate_moons(dx: float, dy: float, x):
     """Translate using the vector (dx, dy) the make_moons dataset x.
@@ -337,10 +368,11 @@ def translate_moons(dx: float, dy: float, x):
         # applying transformation
         xc[:, 0] = x[:, 0] + dx
         xc[:, 1] = x[:, 1] + dy
-    else :
+    else:
         # error msg
         raise TypeError("the input x has not the correct shape")
     return xc
+
 
 def rotate_moons(theta: float, x):
     """Rotate using the angle theta the make_moons dataset x w.r.t the origin (0,0).
@@ -360,10 +392,11 @@ def rotate_moons(theta: float, x):
         # applying tranformation
         xc[:, 0] = x[:, 0]*math.cos(theta) - x[:, 1]*math.sin(theta)
         xc[:, 1] = x[:, 0]*math.sin(theta) + x[:, 1]*math.cos(theta)
-    else :
+    else:
         # error msg
         raise TypeError("the input x has not the correct shape")
     return xc
+
 
 def plot_points(x, y):
     """Plot the points x coloring them by the labels in vector y
@@ -371,11 +404,12 @@ def plot_points(x, y):
     Args:
         x (ndarray of shape (n_samples, 2)): vector of 2-D points to plot
         y (ndarray of shape (n_samples)): vector of numerical labels
-    
+
     Returns:
         (matplotlib.pyplot.PathCollection)
     """
     return plt.scatter(x[:, 0], x[:, 1], c=y, cmap=plt.cm.Spectral)
+
 
 def plot_dec_bound(model, x):
     """Plot the decision boundaries given by model.
@@ -384,7 +418,7 @@ def plot_dec_bound(model, x):
     Args:
         model (tensorflow.keras.Model): model from which get the predictions
         x (ndarray of shape (n_samples, 2)): vector of 2-D points to plot
-    
+
     Returns:
         (matplotlib.pyplot.QuadContourSet)
     """
@@ -393,12 +427,14 @@ def plot_dec_bound(model, x):
     y_min, y_max = x[:, 1].min() - .5, x[:, 1].max() + .5
     h = 0.01
     # Generate a grid of points with distance h between them
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                         np.arange(y_min, y_max, h))
     # Predict the function value for the whole gid
     Z = np.argmax(model.predict(np.c_[xx.ravel(), yy.ravel()]), axis=-1)
     Z = Z.reshape(xx.shape)
     # Plot the contour and training examples
-    return plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)    
+    return plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)
+
 
 def plot_client_dataset(client_id, x_train, y_train, x_test, y_test, path=None):
     """Plot and dump to a file the data samples given the specified client id and dataset.
@@ -414,7 +450,7 @@ def plot_client_dataset(client_id, x_train, y_train, x_test, y_test, path=None):
     if path is None:
         path = 'output'
     # initialize graph
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(18,9))
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(18, 9))
     ax.set_title("Data samples for the client " + str(client_id))
     ax.set_xlabel('x')
     ax.set_ylabel('Y')
@@ -424,9 +460,10 @@ def plot_client_dataset(client_id, x_train, y_train, x_test, y_test, path=None):
     y_test = y_test+2
     plot_points(x_test, y_test)
     plt.draw()
-    #plt.show(block=False)
+    # plt.show(block=False)
     plt.savefig(path+'/data_client_'+str(client_id)+'.png')
     plt.close()
+
 
 def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None, path=None):
     """Plot the decision boundary given the predictions of the model.
@@ -445,26 +482,37 @@ def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None,
     # initialize graph
     plt.figure(figsize=(18, 9))
     ax = plt.subplot(1, 1, 1)
-    if fed_iter is None and client_id is None: ax.set_title("Final decision boundary for the test set")
-    else: ax.set_title("Decision boundary for the test set at the federated round: " + str(fed_iter))
-    if client_id is None: title = 'Decison boundary for aggregated model'
-    else: title = 'Decison boundary for client-'+str(client_id)+' model'
-    if fed_iter is not None: title += ' at iteration '+str(fed_iter)  
+    if fed_iter is None and client_id is None:
+        ax.set_title("Final decision boundary for the test set")
+    else:
+        ax.set_title(
+            "Decision boundary for the test set at the federated round: " + str(fed_iter))
+    if client_id is None:
+        title = 'Decison boundary for aggregated model'
+    else:
+        title = 'Decison boundary for client-'+str(client_id)+' model'
+    if fed_iter is not None:
+        title += ' at iteration '+str(fed_iter)
     ax.set_title(title)
     # plot dec boundary
     plot_dec_bound(model, x_test)
     # plot test points
     plot_points(x_test, y_test)
     plt.draw()
-    #plt.show(block=False)
+    # plt.show(block=False)
     # dump to a file
-    if client_id is None: filename = path+'/dec_bound_nofed'
-    else: filename = path+'/dec_bound_c'+str(client_id)
-    if fed_iter is None: filename += '.png'
-    else: filename += '_e'+str(fed_iter)+'.png'    
+    if client_id is None:
+        filename = path+'/dec_bound_nofed'
+    else:
+        filename = path+'/dec_bound_c'+str(client_id)
+    if fed_iter is None:
+        filename += '.png'
+    else:
+        filename += '_e'+str(fed_iter)+'.png'
     plt.savefig(filename)
     plt.close()
-    
+
+
 def print_confusion_matrix(y, y_pred, client_id=None, fed_iter=None, path=None):
     # setting path for saving image
     if path is None:
@@ -472,19 +520,24 @@ def print_confusion_matrix(y, y_pred, client_id=None, fed_iter=None, path=None):
     sns.set(font_scale=3)
     confusion_matrix = sklearn.metrics.confusion_matrix(y, y_pred)
     plt.figure(figsize=(16, 14))
-    sns.heatmap(confusion_matrix, annot=True, fmt="d", annot_kws={"size": 20});
+    sns.heatmap(confusion_matrix, annot=True, fmt="d", annot_kws={"size": 20})
     plt.title("Confusion matrix", fontsize=30)
     plt.ylabel('True label', fontsize=25)
     plt.xlabel('Clustering label', fontsize=25)
     # dump to a file
-    if client_id is None: filename = path+'/conf_matrix_nofed'
-    else: filename = path+'/conf_matrix_c'+str(client_id)
-    if fed_iter is None: filename += '.png'
-    else: filename += '_e'+str(fed_iter)+'.png'    
+    if client_id is None:
+        filename = path+'/conf_matrix_nofed'
+    else:
+        filename = path+'/conf_matrix_c'+str(client_id)
+    if fed_iter is None:
+        filename += '.png'
+    else:
+        filename += '_e'+str(fed_iter)+'.png'
     plt.savefig(filename)
     plt.close()
 
-def build_dataset(n_clients: int, total_samples: int, noise: float, seed: int=51550):
+
+def build_dataset(n_clients: int, total_samples: int, noise: float, seed: int = 51550):
     """Build the entire dataset, to be distributed.
 
     Args:
@@ -517,12 +570,13 @@ def build_dataset(n_clients: int, total_samples: int, noise: float, seed: int=51
         if i == 0:
             x = x_client
             y = y_client
-        else :
+        else:
             x = np.concatenate((x, x_client), axis=0)
-            y = np.concatenate((y, y_client), axis=0)       
+            y = np.concatenate((y, y_client), axis=0)
     return x, y
 
-def build_mnist_dataset(n_clients: int, total_samples: int, noise: float, seed: int=51550):
+
+def build_mnist_dataset(n_clients: int, total_samples: int, noise: float, seed: int = 51550):
     """Build the entire dataset, to be distributed.
 
     Args:
@@ -544,6 +598,7 @@ def build_mnist_dataset(n_clients: int, total_samples: int, noise: float, seed: 
     x = x.reshape((x.shape[0], -1))
     x = np.divide(x, 255.)
     return x[0:N_SAMPLES], y[0:N_SAMPLES]
+
 
 def get_client_dataset(client_id: int, n_clients: int, x_tot, y_tot):
     """Get the single client dataset given the whole dataset.
@@ -584,6 +639,7 @@ def get_client_dataset(client_id: int, n_clients: int, x_tot, y_tot):
             continue
         else:
             return x_tot[i*n_sam_client:(i+1)*n_sam_client], y_tot[i*n_sam_client:(i+1)*n_sam_client]
+
 
 def get_client_mnist_dataset(client_id: int, n_clients: int, x_tot, y_tot):
     """Get the single client dataset given the whole dataset.
