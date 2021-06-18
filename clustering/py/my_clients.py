@@ -5,6 +5,8 @@ Created on Fri May 14 13:55:15 2021
 
 @author: relogu
 """
+import clustering.py.common_fn as my_fn
+from clustering.py.clustergan import Generator_CNN, Discriminator_CNN, Encoder_CNN, sample_z, calc_gradient_penalty
 import os
 from sklearn.ensemble._hist_gradient_boosting import loss
 from functools import reduce
@@ -26,8 +28,6 @@ from torch.utils.data import DataLoader
 import torchvision
 from torchvision.utils import save_image
 sys.path.append('../')
-from clustering.py.clustergan import Generator_CNN, Discriminator_CNN, Encoder_CNN, sample_z, calc_gradient_penalty
-import clustering.py.common_fn as my_fn
 
 k_means_initializer = 'k-means++'
 k_means_eval_string = 'Client %d, updated real accuracy of k-Means: %.5f'
@@ -885,7 +885,8 @@ class ClusterGANClient(NumPyClient):
         self.c_zc.append(lat_xe_loss.item())
 
         # Save cycled and generated examples!
-        r_imgs, i_label = self.real_imgs.data[:n_samp], self.itruth_label[:n_samp]
+        r_imgs, i_label = self.real_imgs.data[:
+                                              n_samp], self.itruth_label[:n_samp]
         e_zn, e_zc, e_zc_logits = self.encoder(r_imgs)
         reg_imgs = self.generator(e_zn, e_zc)
         save_image(reg_imgs.data[:n_samp],
@@ -943,15 +944,18 @@ class ClusterGANClient(NumPyClient):
         # generator
         g_par = parameters[:self.g_w_l].copy()
         params_dict = zip(self.generator.state_dict().keys(), g_par)
-        g_state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
+        g_state_dict = OrderedDict({k: torch.Tensor(v)
+                                   for k, v in params_dict})
         # discriminator
         d_par = parameters[self.g_w_l:int(self.g_w_l+self.d_w_l)].copy()
         params_dict = zip(self.discriminator.state_dict().keys(), d_par)
-        d_state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
+        d_state_dict = OrderedDict({k: torch.Tensor(v)
+                                   for k, v in params_dict})
         # encoder
         e_par = parameters[int(self.g_w_l+self.d_w_l):].copy()
         params_dict = zip(self.encoder.state_dict().keys(), e_par)
-        e_state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
+        e_state_dict = OrderedDict({k: torch.Tensor(v)
+                                   for k, v in params_dict})
         # checking for null weights
         g_state_dict = my_fn.check_weights_dict(g_state_dict)
         d_state_dict = my_fn.check_weights_dict(d_state_dict)
