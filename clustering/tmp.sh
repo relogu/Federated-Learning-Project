@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # clustergan and lda partitions
-python3 py/server.py --strategy=clustergan --total_epochs=100 --n_clients=8 & 
+python3 py/server.py --strategy=clustergan --total_epochs=2000 --n_clients=8 & 
 sleep 2 # Sleep for 2s to give the server enough time to start
 python3 py/client.py --client_id=0 --n_samples=70000 --alg=clustergan --n_clients=8 --n_clusters=10 --lda=True --dataset=mnist &
 python3 py/client.py --client_id=1 --n_samples=70000 --alg=clustergan --n_clients=8 --n_clusters=10 --lda=True --dataset=mnist &
