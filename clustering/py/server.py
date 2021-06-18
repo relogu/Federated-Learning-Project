@@ -125,7 +125,8 @@ if __name__ == "__main__":
             min_available_clients=args.clients,
             min_fit_clients=args.clients,
             min_eval_clients=args.clients,
-            on_fit_config_fn=clustergan_on_fit_config
+            on_fit_config_fn=clustergan_on_fit_config,
+            on_evaluate_config_fn=clustergan_on_fit_config
         )
     elif args.strategy == 'fed_avg_k-means':
         on_fit_conf = partial(my_fn.simple_kmeans_on_fit_config,
