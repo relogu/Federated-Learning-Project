@@ -24,6 +24,8 @@ from sklearn import datasets
 from sklearn.model_selection import KFold
 from sklearn.metrics import normalized_mutual_info_score, adjusted_rand_score, rand_score, homogeneity_score, adjusted_mutual_info_score
 from scipy.optimize import linear_sum_assignment as linear_assignment
+import torch
+from torch.utils.data import Dataset
 
 # definition of the metrics used
 nmi = normalized_mutual_info_score
@@ -119,6 +121,20 @@ def distance_from_centroids(centroids_array, vector):
     return min(distances)
 
 
+class PrepareData(Dataset):
+
+    def __init__(self, x, y):
+        if not torch.is_tensor(x):
+            self.x = torch.from_numpy(x)
+        if not torch.is_tensor(y):
+            self.y = torch.from_numpy(y)
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, idx):
+        return self.x[idx], self.y[idx]
+
 def split_dataset(x,
                   y=None,
                   splits: int = 5,
@@ -146,6 +162,12 @@ def split_dataset(x,
         y_train = y[train].copy()
         return x_train, y_train, x_test, y_test
 
+def check_weights_dict(weigths_dict):
+    a = weigths_dict.copy()
+    for k, v in a.items():
+        if v.shape == torch.Size([0]):
+            del weigths_dict[k]
+    return weigths_dict
 
 def create_autoencoder(dims, act='relu', init='glorot_uniform'):
     """
