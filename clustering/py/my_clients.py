@@ -918,7 +918,7 @@ class ClusterGANClient(NumPyClient):
         save_image(stack_imgs,
                    self.dir_to_save_images +
                    '/gen_classes_%06i.png' % (self.f_epoch),
-                   nrow=n_c, normalize=True)
+                   nrow=self.n_c, normalize=True)
 
         print("[Federated Epoch %d/%d] [Client ID %d] \n"
               "\tCycle Losses: [x: %f] [z_n: %f] [z_c: %f]" %
