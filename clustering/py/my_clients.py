@@ -867,7 +867,7 @@ class ClusterGANClient(NumPyClient):
         # Generate sample instances from encoding
         teg_imgs = self.generator(e_tzn, e_tzc)
         # Calculate cycle reconstruction loss
-        img_mse_loss = self.mse_loss(t_imgs, teg_imgs)
+        self.img_mse_loss = self.mse_loss(t_imgs, teg_imgs)
         # Save img reco cycle loss
         self.c_i.append(img_mse_loss.item())
 
@@ -882,8 +882,8 @@ class ClusterGANClient(NumPyClient):
         zn_e, zc_e, zc_e_logits = self.encoder(gen_imgs_samp)
 
         # Calculate cycle latent losses
-        lat_mse_loss = self.mse_loss(zn_e, zn_samp)
-        lat_xe_loss = self.xe_loss(zc_e_logits, zc_samp_idx)
+        self.lat_mse_loss = self.mse_loss(zn_e, zn_samp)
+        self.lat_xe_loss = self.xe_loss(zc_e_logits, zc_samp_idx)
 
         # Save latent space cycle losses
         self.c_zn.append(lat_mse_loss.item())
