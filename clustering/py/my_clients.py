@@ -869,7 +869,7 @@ class ClusterGANClient(NumPyClient):
         # Calculate cycle reconstruction loss
         self.img_mse_loss = self.mse_loss(t_imgs, teg_imgs)
         # Save img reco cycle loss
-        self.c_i.append(img_mse_loss.item())
+        self.c_i.append(self.img_mse_loss.item())
 
         # Cycle through randomly sampled encoding -> generator -> encoder
         zn_samp, zc_samp, zc_samp_idx = sample_z(shape=n_samp,
