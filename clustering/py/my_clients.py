@@ -886,8 +886,8 @@ class ClusterGANClient(NumPyClient):
         self.lat_xe_loss = self.xe_loss(zc_e_logits, zc_samp_idx)
 
         # Save latent space cycle losses
-        self.c_zn.append(lat_mse_loss.item())
-        self.c_zc.append(lat_xe_loss.item())
+        self.c_zn.append(self.lat_mse_loss.item())
+        self.c_zc.append(self.lat_xe_loss.item())
 
         # Save cycled and generated examples!
         r_imgs, i_label = self.real_imgs.data[:
