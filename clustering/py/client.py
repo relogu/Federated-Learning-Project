@@ -258,7 +258,7 @@ if __name__ == "__main__":
             'n_clusters': 10,
             'betan': 10,
             'betac': 10,
-            'n_local_epochs': 5,
+            'n_local_epochs': 1,
             'learning_rate': 0.0001,
             'beta_1': 0.5,
             'beta_2': 0.9,

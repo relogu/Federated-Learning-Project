@@ -903,7 +903,7 @@ class ClusterGANClient(NumPyClient):
             # Sample specific class
             zn_samp, zc_samp, zc_samp_idx = sample_z(shape=self.n_c,
                                                      latent_dim=self.latent_dim,
-                                                     n_c=self.Tensorn_c,
+                                                     n_c=self.n_c,
                                                      fix_class=idx)
 
             # Generate sample instances
