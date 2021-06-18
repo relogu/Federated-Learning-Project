@@ -925,9 +925,9 @@ class ClusterGANClient(NumPyClient):
               (self.f_epoch,
                config['total_epochs'],
                self.client_id,
-               self.img_mse_loss.item(),
-               self.lat_mse_loss.item(),
-               self.lat_xe_loss.item())
+               img_mse_loss.item(),
+               lat_mse_loss.item(),
+               lat_xe_loss.item())
               )
 
     def get_parameters(self):
