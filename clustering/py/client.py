@@ -13,6 +13,7 @@ import argparse
 import os
 import flwr as fl
 import tensorflow as tf
+import torch
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.initializers import VarianceScaling
 from sklearn import datasets
@@ -34,6 +35,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # for debug connection
 os.environ["GRPC_VERBOSITY"] = "debug"
+# for limiting the cpu cores to use
+torch.set_num_threads(2)
 
 
 def parse_args():
