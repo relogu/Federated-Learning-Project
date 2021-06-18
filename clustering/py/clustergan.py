@@ -24,7 +24,9 @@ except ImportError as e:
     print(e)
     raise ImportError
 
+# TODO: cuda managing
 Tensor = torch.FloatTensor
+network_setup_string = "Setting up {}...\n"
 
 def get_parser():
     parser = argparse.ArgumentParser(description="ClusterGAN Training Script")
@@ -52,14 +54,16 @@ def sample_z(shape=64, latent_dim=10, n_c=10, fix_class=-1, req_grad=False):
     zc_idx = torch.empty(shape, dtype=torch.long)
 
     if (fix_class == -1):
+        # TODO: cuda managing
         zc_idx = zc_idx.random_(n_c)#.cuda()
         zc_FT = zc_FT.scatter_(1, zc_idx.unsqueeze(1), 1.)
     else:
         zc_idx[:] = fix_class
         zc_FT[:, fix_class] = 1
 
-        zc_idx = zc_idx#.cuda()
-        zc_FT = zc_FT#.cuda()
+        # TODO: cuda managing
+        #zc_idx = zc_idx.cuda()
+        #zc_FT = zc_FT.cuda()
 
     zc = Variable(zc_FT, requires_grad=req_grad)
 
@@ -177,7 +181,7 @@ class Generator_CNN(nn.Module):
         initialize_weights(self)
 
         if self.verbose:
-            print("Setting up {}...\n".format(self.name))
+            print(network_setup_string.format(self.name))
             print(self.model)
     
     def forward(self, zn, zc):
@@ -225,7 +229,7 @@ class Encoder_CNN(nn.Module):
         initialize_weights(self)
         
         if self.verbose:
-            print("Setting up {}...\n".format(self.name))
+            print(network_setup_string.format(self.name))
             print(self.model)
 
     def forward(self, in_feat):
@@ -283,7 +287,7 @@ class Discriminator_CNN(nn.Module):
         initialize_weights(self)
 
         if self.verbose:
-            print("Setting up {}...\n".format(self.name))
+            print(network_setup_string.format(self.name))
             print(self.model)
 
     def forward(self, img):
