@@ -22,6 +22,7 @@ import numpy as np
 import sys
 import torch
 from torch.autograd import Variable
+from torch.utils.data import DataLoader
 import torchvision
 from torchvision.utils import save_image
 sys.path.append('../')
@@ -638,39 +639,31 @@ class CommunityClusteringClient(NumPyClient):
 class ClusterGANClient(NumPyClient):
 
     def __init__(self,
-                 train_dataloader,
-                 test_dataloader,
-                 n_local_epochs: int = 5,
-                 learning_rate: float = 0.0001,
-                 beta_1: float = 0.5,
-                 beta_2: float = 0.9,
-                 decay: float = 0.000025,
-                 d_step: int = 5,
-                 wass_metric: bool = False,
+                 x,
+                 y,
+                 config,
                  client_id: int = 0
                  ):
         # Training details
-        self.n_epochs = n_local_epochs
-        self.lr = learning_rate
-        self.b1 = beta_1
-        self.b2 = beta_2
-        self.decay = decay
-        self.n_skip_iter = d_step
+        self.n_epochs = config['n_local_epochs']
+        self.lr = config['learning_rate']
+        self.b1 = config['beta_1']
+        self.b2 = config['beta_2']
+        self.decay = config['decay']
+        self.n_skip_iter = config['d_step']
 
-        # Data dimensions (for MNIST)
-        self.img_size = 28
-        self.channels = 1
-        self.x_shape = (channels, img_size, img_size)
+        # Data dimensions
+        self.x_shape = x.shape[1:]
         # Latent space info
-        self.latent_dim = 30
-        self.n_c = 10
-        self.betan = 10
-        self.betac = 10
+        self.latent_dim = config['latent_dim']
+        self.n_c = config['n_clusters']
+        self.betan = config['betan']
+        self.betac = config['betac']
 
         # Wasserstein+GP metric flag
-        self.wass_metric = wass_metric
+        self.wass_metric = config['wass_metric']
         print('Using metric {}'.format(
-            'Wassestrain' if wass_metric else 'Vanilla'))
+            'Wassestrain' if self.wass_metric else 'Vanilla'))
 
         self.cuda = True if torch.cuda.is_available() else False
         self.device = torch.device(
@@ -699,11 +692,18 @@ class ClusterGANClient(NumPyClient):
             self.bce_loss.cuda()
             self.xe_loss.cuda()
             self.mse_loss.cuda()
-        self.Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+        self.Tensor = torch.cuda.FloatTensor if self.cuda else torch.FloatTensor
 
         # Configure data loader
-        self.trainloader = train_dataloader
-        self.testloader = test_dataloader
+        self.batch_size = config['batch_size']
+        self.x_train, self.y_train, self.x_test, self.y_test = my_fn.split_dataset(
+            x, y)
+        self.trainloader = DataLoader(
+            my_fn.PrepareData(self.x_train, y=self.y_train),
+            batch_size=self.batch_size)
+        self.testloader = DataLoader(
+            my_fn.PrepareData(self.x_test, y=self.y_test),
+            batch_size=self.batch_size)
         self.test_imgs, self.test_labels = next(iter(self.testloader))
         self.test_imgs = Variable(self.test_imgs.type(self.Tensor))
 
@@ -744,7 +744,7 @@ class ClusterGANClient(NumPyClient):
         # Training loop
         print('\nBegin training session with %i epochs...\n' % (self.n_epochs))
         for epoch in range(self.n_epochs):
-            for i, (imgs, self.itruth_label) in enumerate(self.dataloader):
+            for i, (imgs, self.itruth_label) in enumerate(self.trainloader):
 
                 # Ensure generator/encoder are trainable
                 self.generator.train()
@@ -775,7 +775,7 @@ class ClusterGANClient(NumPyClient):
 
                 # Discriminator output from real and generated samples
                 gen_d = self.discriminator(gen_imgs)
-                real_d = self.discriminator(real_imgs)
+                real_d = self.discriminator(self.real_imgs)
                 valid = Variable(self.Tensor(gen_imgs.size(
                     0), 1).fill_(1.0), requires_grad=False)
                 fake = Variable(self.Tensor(gen_imgs.size(
@@ -816,7 +816,7 @@ class ClusterGANClient(NumPyClient):
                 if self.wass_metric:
                     # Gradient penaltytorch.autograd.set_detect_anomaly(True) term
                     grad_penalty = calc_gradient_penalty(
-                        self.discriminator, real_imgs, gen_imgs)
+                        self.discriminator, self.real_imgs, gen_imgs)
 
                     # Wasserstein GAN loss w/gradient penalty
                     # d_losss = torch.mean(real_d) - torch.mean(gen_d) + grad_penalty # original
@@ -826,8 +826,8 @@ class ClusterGANClient(NumPyClient):
 
                 else:
                     # Vanilla GAN loss
-                    real_loss = bce_loss(real_d, valid)
-                    fake_loss = bce_loss(gen_d, fake)
+                    real_loss = self.bce_loss(real_d, valid)
+                    fake_loss = self.bce_loss(gen_d, fake)
                     d_loss = (real_loss + fake_loss) / 2
 
                 d_loss.backward(inputs=list(self.discriminator.parameters()))
@@ -885,8 +885,7 @@ class ClusterGANClient(NumPyClient):
         self.c_zc.append(lat_xe_loss.item())
 
         # Save cycled and generated examples!
-        r_imgs, i_label = self.real_imgs.data[:
-                                              n_samp], self.itruth_label[:n_samp]
+        r_imgs, i_label = self.real_imgs.data[:n_samp], self.itruth_label[:n_samp]
         e_zn, e_zc, e_zc_logits = self.encoder(r_imgs)
         reg_imgs = self.generator(e_zn, e_zc)
         save_image(reg_imgs.data[:n_samp],
@@ -942,20 +941,25 @@ class ClusterGANClient(NumPyClient):
 
     def set_parameters(self, parameters):
         # generator
-        g_par = parameters[:self.g_l]
+        g_par = parameters[:self.g_l].copy()
         params_dict = zip(self.generator.state_dict().keys(), g_par)
-        state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
-        self.generator.load_state_dict(state_dict, strict=True)
+        g_state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
         # discriminator
-        d_par = parameters[self.g_l:int(self.g_l+self.d_l)]
+        d_par = parameters[self.g_l:int(self.g_l+self.d_l)].copy()
         params_dict = zip(self.discriminator.state_dict().keys(), d_par)
-        state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
-        self.discriminator.load_state_dict(state_dict, strict=True)
+        d_state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
         # encoder
-        e_par = parameters[int(self.g_l+self.d_l):]
+        e_par = parameters[int(self.g_l+self.d_l):].copy()
         params_dict = zip(self.encoder.state_dict().keys(), e_par)
-        state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
-        self.encoder.load_state_dict(state_dict, strict=True)
+        e_state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
+        # checking for null weights
+        g_state_dict = my_fn.check_weights_dict(g_state_dict)
+        d_state_dict = my_fn.check_weights_dict(d_state_dict)
+        e_state_dict = my_fn.check_weights_dict(e_state_dict)
+        # assigning weights
+        self.generator.load_state_dict(g_state_dict, strict=True)
+        self.discriminator.load_state_dict(d_state_dict, strict=True)
+        self.encoder.load_state_dict(e_state_dict, strict=True)
 
     def fit(self, parameters, config):
         self.f_epoch += 1
