@@ -49,7 +49,7 @@ def parse_args():
                         required=False,
                         type=type(''),
                         default='fed_avg',
-                        choices=['fed_avg', 'k-fed', 'fed_avg_k-means'],
+                        choices=['fed_avg', 'k-fed', 'fed_avg_k-means', 'clustergan'],
                         action='store',
                         help='strategy for the server')
     parser.add_argument('--ae_epochs',
@@ -73,6 +73,13 @@ def parse_args():
                         default=1000,
                         action='store',
                         help='number of federated epoch to preform the clustering step')
+    parser.add_argument('--total_epochs',
+                        dest='total_epochs',
+                        required=False,
+                        type=int,
+                        default=100,
+                        action='store',
+                        help='number of total federated epochs to perform, used in clustergan strategy')
     parser.add_argument('--address',
                         dest='address',
                         required=False,
@@ -107,6 +114,18 @@ if __name__ == "__main__":
             min_fit_clients=args.clients,
             min_eval_clients=args.clients,
             on_fit_config_fn=on_fit_conf
+        )
+    elif args.strategy == 'clustergan':
+        
+        def clustergan_on_fit_config(rnd):
+            return {'total_epochs': args.total_epochs}
+        
+        n_rounds = args.total_epochs
+        strategy = strategies.FedAvg(
+            min_available_clients=args.clients,
+            min_fit_clients=args.clients,
+            min_eval_clients=args.clients,
+            on_fit_config_fn=clustergan_on_fit_config
         )
     elif args.strategy == 'fed_avg_k-means':
         on_fit_conf = partial(my_fn.simple_kmeans_on_fit_config,
