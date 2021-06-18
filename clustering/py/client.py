@@ -36,7 +36,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # for debug connection
 os.environ["GRPC_VERBOSITY"] = "debug"
 # for limiting the cpu cores to use
-torch.set_num_threads(2)
+torch.set_num_threads(1)
 
 
 def parse_args():

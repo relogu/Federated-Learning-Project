@@ -728,9 +728,9 @@ class ClusterGANClient(NumPyClient):
         self.c_i = []
 
         # leghts of NN parameters to send and receive
-        self.g_l = len(self.generator.state_dict().items())
-        self.d_l = len(self.discriminator.state_dict().items())
-        self.e_l = len(self.encoder.state_dict().items())
+        self.g_w_l = len(self.generator.state_dict().items())
+        self.d_w_l = len(self.discriminator.state_dict().items())
+        self.e_w_l = len(self.encoder.state_dict().items())
 
         # initiliazing to zero the federated epochs counter
         self.f_epoch = 0
@@ -941,15 +941,15 @@ class ClusterGANClient(NumPyClient):
 
     def set_parameters(self, parameters):
         # generator
-        g_par = parameters[:self.g_l].copy()
+        g_par = parameters[:self.g_w_l].copy()
         params_dict = zip(self.generator.state_dict().keys(), g_par)
         g_state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
         # discriminator
-        d_par = parameters[self.g_l:int(self.g_l+self.d_l)].copy()
+        d_par = parameters[self.g_w_l:int(self.g_w_l+self.d_w_l)].copy()
         params_dict = zip(self.discriminator.state_dict().keys(), d_par)
         d_state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
         # encoder
-        e_par = parameters[int(self.g_l+self.d_l):].copy()
+        e_par = parameters[int(self.g_w_l+self.d_w_l):].copy()
         params_dict = zip(self.encoder.state_dict().keys(), e_par)
         e_state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
         # checking for null weights
