@@ -248,6 +248,27 @@ if __name__ == "__main__":
                                                    local_epochs=1,
                                                    ae_local_epochs=300,
                                                    n_communities=2)
+    elif args.alg == 'clustergan':
+        config = {
+            'batch_size': 32,
+            'latent_dim': 30,
+            'n_clusters': 10,
+            'betan': 10,
+            'betac': 10,
+            'n_local_epochs': 5,
+            'learning_rate': 0.0001,
+            'beta_1': 0.5,
+            'beta_2': 0.9,
+            'decay': 0.000025,
+            'd_step': 5,
+            'wass_metric': False
+        }
+        if DATASET == 'mnist':
+            x = x.reshape(x.shape[0], 1, 28, 28)
+        client = clients.ClusterGANClient(x,
+                                          y,
+                                          config=config,
+                                          client_id=CLIENT_ID)
     # TODO: elif args.alg == 'k-clustergan':
     # Start Flower client
     fl.client.start_numpy_client(SERVER, client=client)
