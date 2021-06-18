@@ -1,4 +1,6 @@
 *.txt
+!spec-file.txt
+
 *.pyc
 
 *output/*
