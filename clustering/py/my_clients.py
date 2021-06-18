@@ -728,9 +728,9 @@ class ClusterGANClient(NumPyClient):
         self.c_i = []
         
         # metrics
-        self.img_mse_loss = []
-        self.lat_mse_loss = []
-        self.lat_xe_loss = []
+        self.img_mse_loss = None
+        self.lat_mse_loss = None
+        self.lat_xe_loss = None
 
         # leghts of NN parameters to send and receive
         self.g_w_l = len(self.generator.state_dict().items())
