@@ -6,7 +6,6 @@
 *.ipynb*
 
 *.dat
-*tmp.sh
 
 papers
 TODO
