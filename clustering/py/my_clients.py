@@ -726,7 +726,7 @@ class ClusterGANClient(NumPyClient):
         self.c_zn = []
         self.c_zc = []
         self.c_i = []
-        
+
         # metrics
         self.img_mse_loss = None
         self.lat_mse_loss = None
