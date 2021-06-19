@@ -747,7 +747,7 @@ class ClusterGANClient(NumPyClient):
 
     def train(self, config):
         # Training loop
-        print('\nBegin training session with %i epochs...\n' % (self.n_epochs))
+        print('Begin training session with %i epochs...\n' % (self.n_epochs))
         for epoch in range(self.n_epochs):
             for i, (imgs, self.itruth_label) in enumerate(self.trainloader):
 
@@ -841,17 +841,18 @@ class ClusterGANClient(NumPyClient):
             self.d_l.append(d_loss.item())
             self.ge_l.append(ge_loss.item())
             print("[Federated Epoch %d/%d] [Client ID %d] [Epoch %d/%d] \n"
-                  "\tModel Losses: [D: %f] [GE: %f]" %
+                  "\tModel Losses: [D: %f] [GE: %f]\n" %
                   (self.f_epoch,
                    config['total_epochs'],
                    self.client_id,
-                   epoch,
+                   epoch+1,
                    self.n_epochs,
                    d_loss.item(),
                    ge_loss.item())
                   )
 
     def test(self, config):
+        print('Begin evaluation session...\n')
         # Generator in eval mode
         self.generator.eval()
         self.encoder.eval()
@@ -926,7 +927,7 @@ class ClusterGANClient(NumPyClient):
                    nrow=self.n_c, normalize=True)
 
         print("[Federated Epoch %d/%d] [Client ID %d] \n"
-              "\tCycle Losses: [x: %f] [z_n: %f] [z_c: %f]" %
+              "\tCycle Losses: [x: %f] [z_n: %f] [z_c: %f]\n" %
               (self.f_epoch,
                config['total_epochs'],
                self.client_id,
