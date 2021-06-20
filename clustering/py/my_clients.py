@@ -6,7 +6,7 @@ Created on Fri May 14 13:55:15 2021
 @author: relogu
 """
 import clustering.py.common_fn as my_fn
-from clustering.py.clustergan import Generator_CNN, Discriminator_CNN, Encoder_CNN, sample_z, calc_gradient_penalty
+from clustering.py.clustergan import GeneratorCNN, DiscriminatorCNN, EncoderCNN, sample_z, calc_gradient_penalty
 import os
 from sklearn.ensemble._hist_gradient_boosting import loss
 from functools import reduce
@@ -678,12 +678,12 @@ class ClusterGANClient(NumPyClient):
         self.mse_loss = torch.nn.MSELoss()
 
         # Initialize generator and discriminator
-        self.generator = Generator_CNN(self.latent_dim,
+        self.generator = GeneratorCNN(self.latent_dim,
                                        self.n_c,
                                        self.x_shape)
-        self.encoder = Encoder_CNN(self.latent_dim,
+        self.encoder = EncoderCNN(self.latent_dim,
                                    self.n_c)
-        self.discriminator = Discriminator_CNN(wass_metric=self.wass_metric)
+        self.discriminator = DiscriminatorCNN(wass_metric=self.wass_metric)
 
         if self.cuda:
             self.generator.cuda()

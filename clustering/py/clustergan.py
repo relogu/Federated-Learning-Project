@@ -50,27 +50,27 @@ def sample_z(shape=64, latent_dim=10, n_c=10, fix_class=-1, req_grad=False):
 
     ######### zc, zc_idx variables with grads, and zc to one-hot vector
     # Pure one-hot vector generation
-    zc_FT = Tensor(shape, n_c).fill_(0)
+    zc_ft = Tensor(shape, n_c).fill_(0)
     zc_idx = torch.empty(shape, dtype=torch.long)
 
     if (fix_class == -1):
         # TODO: cuda managing
         zc_idx = zc_idx.random_(n_c)#.cuda()
-        zc_FT = zc_FT.scatter_(1, zc_idx.unsqueeze(1), 1.)
+        zc_ft = zc_ft.scatter_(1, zc_idx.unsqueeze(1), 1.)
     else:
         zc_idx[:] = fix_class
-        zc_FT[:, fix_class] = 1
+        zc_ft[:, fix_class] = 1
 
         # TODO: cuda managing
         #zc_idx = zc_idx.cuda()
-        #zc_FT = zc_FT.cuda()
+        #zc_ft = zc_ft.cuda()
 
-    zc = Variable(zc_FT, requires_grad=req_grad)
+    zc = Variable(zc_ft, requires_grad=req_grad)
 
     # Return components of latent space variable
     return zn, zc, zc_idx
 
-def calc_gradient_penalty(netD, real_data, generated_data):
+def calc_gradient_penalty(net_d, real_data, generated_data):
     # GP strength
     LAMBDA = 10
 
@@ -86,7 +86,7 @@ def calc_gradient_penalty(netD, real_data, generated_data):
     interpolated = interpolated.cuda()
 
     # Calculate probability of interpolated examples
-    prob_interpolated = netD(interpolated)
+    prob_interpolated = net_d(interpolated)
 
     # Calculate gradients of probabilities with respect to examples
     gradients = torch_grad(outputs=prob_interpolated, inputs=interpolated,
@@ -139,7 +139,7 @@ class Reshape(nn.Module):
             )
 
 
-class Generator_CNN(nn.Module):
+class GeneratorCNN(nn.Module):
     """
     CNN to model the generator of a ClusterGAN
     Input is a vector from representation space of dimension z_dim
@@ -147,7 +147,7 @@ class Generator_CNN(nn.Module):
     """
     # Architecture : FC1024_BR-FC7x7x128_BR-(64)4dc2s_BR-(1)4dc2s_S
     def __init__(self, latent_dim, n_c, x_shape, verbose=False):
-        super(Generator_CNN, self).__init__()
+        super(GeneratorCNN, self).__init__()
 
         self.name = 'generator'
         self.latent_dim = latent_dim
@@ -192,14 +192,14 @@ class Generator_CNN(nn.Module):
         return x_gen
 
 
-class Encoder_CNN(nn.Module):
+class EncoderCNN(nn.Module):
     """
     CNN to model the encoder of a ClusterGAN
     Input is vector X from image space if dimension X_dim
     Output is vector z from representation space of dimension z_dim
     """
     def __init__(self, latent_dim, n_c, verbose=False):
-        super(Encoder_CNN, self).__init__()
+        super(EncoderCNN, self).__init__()
 
         self.name = 'encoder'
         self.channels = 1
@@ -236,15 +236,16 @@ class Encoder_CNN(nn.Module):
         z_img = self.model(in_feat)
         # Reshape for output
         z = z_img.view(z_img.shape[0], -1)
-        # Separate continuous and one-hot components
+        # continuous components
         zn = z[:, 0:self.latent_dim]
+        # one-hot components
         zc_logits = z[:, self.latent_dim:]
-        # Softmax on zc component
+        # Softmax on one-hot component
         zc = softmax(zc_logits)
         return zn, zc, zc_logits
 
 
-class Discriminator_CNN(nn.Module):
+class DiscriminatorCNN(nn.Module):
     """
     CNN to model the discriminator of a ClusterGAN
     Input is tuple (X,z) of an image vector and its corresponding
@@ -254,7 +255,7 @@ class Discriminator_CNN(nn.Module):
     """            
     # Architecture : (64)4c2s-(128)4c2s_BL-FC1024_BL-FC1_S
     def __init__(self, wass_metric=False, verbose=False):
-        super(Discriminator_CNN, self).__init__()
+        super(DiscriminatorCNN, self).__init__()
         
         self.name = 'discriminator'
         self.channels = 1
@@ -344,9 +345,9 @@ if __name__ == "__main__":
     mse_loss = torch.nn.MSELoss()
 
     # Initialize generator and discriminator
-    generator = Generator_CNN(latent_dim, n_c, x_shape)
-    encoder = Encoder_CNN(latent_dim, n_c)
-    discriminator = Discriminator_CNN(wass_metric=wass_metric)
+    generator = GeneratorCNN(latent_dim, n_c, x_shape)
+    encoder = EncoderCNN(latent_dim, n_c)
+    discriminator = DiscriminatorCNN(wass_metric=wass_metric)
 
     if cuda:
         generator.cuda()

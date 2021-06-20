@@ -22,6 +22,7 @@ This project aims to present the application of the Federated Learning (FL) appr
     - [General set up](#general-set-up)
     - [An example](#an-example)
   - [Analysis and results](#analysis-and-results)
+    - [Metrics](#metrics)
   - [References](#references)
 
 ## Federated Learning (FL)
@@ -88,7 +89,10 @@ The clustering layer, that is build on the top of the encoder part of the AE, tr
 
 ### ClusterGAN
 
-TODO
+ClusterGAN as a mechanism for clustering using Generative Adversarial networks (GANs) introduced in [5].
+By sampling latent variables from a mixture of one-hot encoded variables and continuous latent variables, coupled with an inverse network (which projects the data to the latent space) trained jointly with a clustering specific loss, we are able to achieve clustering in the latent space.
+In [5] is shown a remarkable phenomenon that GANs can preserve latent space interpolation across categories, even though the discriminator is never exposed to such vectors.
+Until now this model can only be used to cluster the MNIST dataset, for the others the implemetation is a work in progress.
 
 ## FL Framework
 
@@ -113,6 +117,15 @@ The mandatory packages can be installed using `pip3` using the command
 ```bash
 pip3 install flwr tensorflow scikit-learn matplotlib numpy
 ```
+
+If one wants to clone the conda environment used for these simulations, [spec-file.txt](https://github.com/relogu/Federated-Learning-Project/blob/master/spec-file.txt) provides the list of packages necessary for the program.
+To create directly the conda environment one can simply use
+
+```bash
+conda create --name <env> --file spec-file.txt
+```
+
+After having cloned the environment it's howevere necessary to install *flwr* with *pip*, because it is not provided in conda.
 
 ### General set up
 
@@ -175,8 +188,19 @@ script (working on a Ubuntu 20.04 satisfying the dependencies listed above)
 
 ## Analysis and results
 
-In [images](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/images) folder are provided some output figures representing the resuslts of the simulations in [run.sh](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/run.sh).
-Every folder in [images](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/images) represents one of the simulations whose results are presented in the correspondent README file.
+In [results](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results) folder are provided some output figures representing the results of the simulations in [run.sh](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/run.sh).
+Every folder in [results](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results) represents one of the simulations whose results are presented in the correspondent README file.
+
+### Metrics
+
+The metrics used are the following
+
+- accuracy, simply the clustering accuracy as the ratio of well classified sample on the total number of samples;
+- adjusted mutual information score (AMI), it is used the [implementation in scikit-learn](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.adjusted_mutual_info_score.html#sklearn.metrics.adjusted_mutual_info_score);
+- adjusted random score (ARI), it is used the [implementation in scikit-learn](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.adjusted_rand_score.html#sklearn.metrics.adjusted_rand_score);
+- homogeneity scoro (HOMO), it is used the [implementation in scikit-learn](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.homogeneity_score.html#sklearn.metrics.homogeneity_score);
+- normalized mutual information score (NMI), it is used the [implementation in scikit-learn](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.normalized_mutual_info_score.html#sklearn.metrics.normalized_mutual_info_score);
+- random score (RAN), it is used the [implementation in scikit-learn](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.rand_score.html#sklearn.metrics.rand_score).
 
 ## References
 
@@ -184,3 +208,4 @@ Every folder in [images](https://github.com/relogu/Federated-Learning-Project/tr
 2. H. Brendan McMahan and Eider Moore and Daniel Ramage and Blaise Agüera y Arcas (2016). Federated Learning of Deep Networks using Model Averaging. CoRR, abs/1602.05629.
 3. Don Kurian Dennis and Tian Li and Virginia Smith (2021). Heterogeneity for the Win: One-Shot Federated Clustering. CoRR, abs/2103.00697.
 4. Junyuan Xie and Ross B. Girshick and Ali Farhadi (2015). Unsupervised Deep Embedding for Clustering Analysis. CoRR, abs/1511.06335.
+5. Sudipto Mukherjee and Himanshu Asnani and Eugene Lin and Sreeram Kannan (2018). ClusterGAN : Latent Space Clustering in Generative Adversarial Networks. CoRR, abs/1809.03627.
