@@ -35,6 +35,7 @@ def get_parser():
     parser.add_argument("-l", "--lr", dest="learning_rate", type=float, default=0.0001, help="Learning rate")
     parser.add_argument("-c", "--n_critic", dest="n_critic", type=int, default=5, help="Number of training steps for discriminator per iter")
     parser.add_argument("-w", "--wass_flag", dest="wass_flag", action='store_true', help="Flag for Wasserstein metric")
+    parser.add_argument("-h", "--hardware_acc", dest="cuda_flag", action='store_true', help="Flag for hardware acceleration using cuda (if available)")
     return parser
 
 # Sample a random latent space vector
@@ -305,7 +306,6 @@ if __name__ == "__main__":
 
     # Training details
     n_epochs = args.n_epochs
-    n_epochs = 2000
     batch_size = args.batch_size
     test_batch_size = 5000
     lr = args.learning_rate
@@ -330,8 +330,8 @@ if __name__ == "__main__":
 
     x_shape = (channels, img_size, img_size)
 
-    CUDA = True if torch.cuda.is_available() else False
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    CUDA = True if (torch.cuda.is_available() and args.cuda_flag) else False
+    device = torch.device('cuda:0' if CUDA else 'cpu')
     print('Using device {}'.format(device))
     torch.autograd.set_detect_anomaly(True)
 
