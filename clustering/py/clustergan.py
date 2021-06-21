@@ -326,7 +326,6 @@ if __name__ == "__main__":
 
     # Wasserstein+GP metric flag
     wass_metric = args.wass_flag
-    wass_metric = True
     print('Using metric {}'.format('Wassestrain' if wass_metric else 'Vanilla'))
 
     x_shape = (channels, img_size, img_size)
