@@ -642,7 +642,8 @@ class ClusterGANClient(NumPyClient):
                  x,
                  y,
                  config,
-                 client_id: int = 0
+                 client_id: int = 0,
+                 hardw_acc_flag: bool = False
                  ):
         # Training details
         self.n_epochs = config['n_local_epochs']
@@ -665,10 +666,9 @@ class ClusterGANClient(NumPyClient):
         print('Using metric {}'.format(
             'Wassestrain' if self.wass_metric else 'Vanilla'))
 
-        self.cuda = True if torch.cuda.is_available() else False
+        self.cuda = True if torch.cuda.is_available() and hardw_acc_flag else False
         self.device = torch.device(
             'cuda:0' if self.cuda else 'cpu')
-        #self.device = 'cpu'
         print('Using device {}'.format(self.device))
         torch.autograd.set_detect_anomaly(True)
 
