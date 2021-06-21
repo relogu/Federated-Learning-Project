@@ -24,8 +24,6 @@ except ImportError as e:
     print(e)
     raise ImportError
 
-# TODO: cuda managing
-Tensor = torch.FloatTensor
 network_setup_string = "Setting up {}...\n"
 
 def get_parser():
@@ -39,38 +37,36 @@ def get_parser():
     parser.add_argument("-w", "--wass_flag", dest="wass_flag", action='store_true', help="Flag for Wasserstein metric")
     return parser
 
-
 # Sample a random latent space vector
-def sample_z(shape=64, latent_dim=10, n_c=10, fix_class=-1, req_grad=False):
+def sample_z(shape=64, latent_dim=10, n_c=10, fix_class=-1, req_grad=False, cuda=False):
 
     assert (fix_class == -1 or (fix_class >= 0 and fix_class < n_c) ), "Requested class %i outside bounds."%fix_class
-    
+    TENSOR = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     # Sample noise as generator input, zn
-    zn = Variable(Tensor(0.75*np.random.normal(0, 1, (shape, latent_dim))), requires_grad=req_grad)
+    zn = Variable(TENSOR(0.75*np.random.normal(0, 1, (shape, latent_dim))), requires_grad=req_grad)
 
     ######### zc, zc_idx variables with grads, and zc to one-hot vector
     # Pure one-hot vector generation
-    zc_ft = Tensor(shape, n_c).fill_(0)
+    zc_ft = TENSOR(shape, n_c).fill_(0)
     zc_idx = torch.empty(shape, dtype=torch.long)
 
     if (fix_class == -1):
-        # TODO: cuda managing
-        zc_idx = zc_idx.random_(n_c)#.cuda()
+        zc_idx = zc_idx.random_(n_c).cuda() if cuda else zc_idx.random_(n_c)
         zc_ft = zc_ft.scatter_(1, zc_idx.unsqueeze(1), 1.)
     else:
         zc_idx[:] = fix_class
         zc_ft[:, fix_class] = 1
 
-        # TODO: cuda managing
-        #zc_idx = zc_idx.cuda()
-        #zc_ft = zc_ft.cuda()
+        if cuda:
+            zc_idx = zc_idx.cuda()
+            zc_ft = zc_ft.cuda()
 
     zc = Variable(zc_ft, requires_grad=req_grad)
 
     # Return components of latent space variable
     return zn, zc, zc_idx
 
-def calc_gradient_penalty(net_d, real_data, generated_data):
+def calc_gradient_penalty(net_d, real_data, generated_data, cuda=False):
     # GP strength
     LAMBDA = 10
 
@@ -79,18 +75,20 @@ def calc_gradient_penalty(net_d, real_data, generated_data):
     # Calculate interpolation
     alpha = torch.rand(b_size, 1, 1, 1)
     alpha = alpha.expand_as(real_data)
-    alpha = alpha.cuda()
+    if cuda: 
+        alpha = alpha.cuda()
     
     interpolated = alpha * real_data.data + (1 - alpha) * generated_data.data
     interpolated = Variable(interpolated, requires_grad=True)
-    interpolated = interpolated.cuda()
+    if cuda: 
+        interpolated = interpolated.cuda()
 
     # Calculate probability of interpolated examples
     prob_interpolated = net_d(interpolated)
 
     # Calculate gradients of probabilities with respect to examples
     gradients = torch_grad(outputs=prob_interpolated, inputs=interpolated,
-                           grad_outputs=torch.ones(prob_interpolated.size()).cuda(),
+                           grad_outputs=torch.ones(prob_interpolated.size()).cuda() if cuda else torch.ones(prob_interpolated.size()),
                            create_graph=True, retain_graph=True)[0]
 
     # Gradients have shape (batch_size, num_channels, img_width, img_height),
@@ -333,9 +331,8 @@ if __name__ == "__main__":
 
     x_shape = (channels, img_size, img_size)
 
-    cuda = True if torch.cuda.is_available() else False
+    CUDA = True if torch.cuda.is_available() else False
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    device = 'cpu'
     print('Using device {}'.format(device))
     torch.autograd.set_detect_anomaly(True)
 
@@ -349,7 +346,7 @@ if __name__ == "__main__":
     encoder = EncoderCNN(latent_dim, n_c)
     discriminator = DiscriminatorCNN(wass_metric=wass_metric)
 
-    if cuda:
+    if CUDA:
         generator.cuda()
         encoder.cuda()
         discriminator.cuda()
@@ -357,7 +354,7 @@ if __name__ == "__main__":
         xe_loss.cuda()
         mse_loss.cuda()
         
-    Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+    TENSOR = torch.cuda.FloatTensor if CUDA else torch.FloatTensor
 
     # Configure data loader
     #os.makedirs("../../data/mnist", exist_ok=True)
@@ -386,7 +383,7 @@ if __name__ == "__main__":
         shuffle=True,
     )
     test_imgs, test_labels = next(iter(testdata))
-    test_imgs = Variable(test_imgs.type(Tensor))
+    test_imgs = Variable(test_imgs.type(TENSOR))
 
     ge_chain = ichain(generator.parameters(),
                     encoder.parameters())
@@ -422,7 +419,7 @@ if __name__ == "__main__":
             optimizer_GE.zero_grad()
             
             # Configure input
-            real_imgs = Variable(imgs.type(Tensor))
+            real_imgs = Variable(imgs.type(TENSOR))
 
             # ---------------------------
             #  Train Generator + Encoder
@@ -431,7 +428,8 @@ if __name__ == "__main__":
             # Sample random latent variables
             zn, zc, zc_idx = sample_z(shape=imgs.shape[0],
                                     latent_dim=latent_dim,
-                                    n_c=n_c)
+                                    n_c=n_c,
+                                    cuda=CUDA)
 
             # Generate a batch of images
             gen_imgs = generator(zn, zc)
@@ -439,8 +437,8 @@ if __name__ == "__main__":
             # Discriminator output from real and generated samples
             D_gen = discriminator(gen_imgs)
             D_real = discriminator(real_imgs)
-            valid = Variable(Tensor(gen_imgs.size(0), 1).fill_(1.0), requires_grad=False)
-            fake = Variable(Tensor(gen_imgs.size(0), 1).fill_(0.0), requires_grad=False)
+            valid = Variable(TENSOR(gen_imgs.size(0), 1).fill_(1.0), requires_grad=False)
+            fake = Variable(TENSOR(gen_imgs.size(0), 1).fill_(0.0), requires_grad=False)
             
             # Step for Generator & Encoder, n_skip_iter times less than for discriminator
             if (i % n_skip_iter == 0):
@@ -472,7 +470,7 @@ if __name__ == "__main__":
             # Measure discriminator's ability to classify real from generated samples
             if wass_metric:
                 # Gradient penaltytorch.autograd.set_detect_anomaly(True) term
-                grad_penalty = calc_gradient_penalty(discriminator, real_imgs, gen_imgs)
+                grad_penalty = calc_gradient_penalty(discriminator, real_imgs, gen_imgs,cuda=CUDA)
 
                 # Wasserstein GAN loss w/gradient penalty
                 #d_loss = torch.mean(D_real) - torch.mean(D_gen) + grad_penalty # original
@@ -517,7 +515,8 @@ if __name__ == "__main__":
         ## Cycle through randomly sampled encoding -> generator -> encoder
         zn_samp, zc_samp, zc_samp_idx = sample_z(shape=n_samp,
                                                 latent_dim=latent_dim,
-                                                n_c=n_c)
+                                                n_c=n_c,
+                                    cuda=CUDA)
         # Generate sample instances
         gen_imgs_samp = generator(zn_samp, zc_samp)
 
@@ -550,7 +549,8 @@ if __name__ == "__main__":
             zn_samp, zc_samp, zc_samp_idx = sample_z(shape=n_c,
                                                     latent_dim=latent_dim,
                                                     n_c=n_c,
-                                                    fix_class=idx)
+                                                    fix_class=idx,
+                                    cuda=CUDA)
 
             # Generate sample instances
             gen_imgs_samp = generator(zn_samp, zc_samp)

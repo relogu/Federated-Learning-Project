@@ -30,7 +30,7 @@ sys.path.append(str(path.parent.parent))
 import clustering.py.common_fn as my_fn
 import clustering.py.my_clients as clients
 # disable possible gpu devices
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # for debug connection

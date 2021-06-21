@@ -667,8 +667,8 @@ class ClusterGANClient(NumPyClient):
 
         self.cuda = True if torch.cuda.is_available() else False
         self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() else 'cpu')
-        self.device = 'cpu'
+            'cuda:0' if self.cuda else 'cpu')
+        #self.device = 'cpu'
         print('Using device {}'.format(self.device))
         torch.autograd.set_detect_anomaly(True)
 
@@ -692,7 +692,7 @@ class ClusterGANClient(NumPyClient):
             self.bce_loss.cuda()
             self.xe_loss.cuda()
             self.mse_loss.cuda()
-        self.Tensor = torch.cuda.FloatTensor if self.cuda else torch.FloatTensor
+        self.TENSOR = torch.cuda.FloatTensor if self.cuda else torch.FloatTensor
 
         # Configure data loader
         self.batch_size = config['batch_size']
@@ -705,7 +705,7 @@ class ClusterGANClient(NumPyClient):
             my_fn.PrepareData(self.x_test, y=self.y_test),
             batch_size=self.batch_size)
         self.test_imgs, self.test_labels = next(iter(self.testloader))
-        self.test_imgs = Variable(self.test_imgs.type(self.Tensor))
+        self.test_imgs = Variable(self.test_imgs.type(self.TENSOR))
 
         self.ge_chain = ichain(self.generator.parameters(),
                                self.encoder.parameters())
@@ -764,7 +764,7 @@ class ClusterGANClient(NumPyClient):
                 self.optimizer_GE.zero_grad()
 
                 # Configure input
-                self.real_imgs = Variable(imgs.type(self.Tensor))
+                self.real_imgs = Variable(imgs.type(self.TENSOR))
 
                 # ---------------------------
                 #  Train Generator + Encoder
@@ -773,7 +773,8 @@ class ClusterGANClient(NumPyClient):
                 # Sample random latent variables
                 zn, zc, zc_idx = sample_z(shape=imgs.shape[0],
                                           latent_dim=self.latent_dim,
-                                          n_c=self.n_c)
+                                          n_c=self.n_c,
+                                          cuda=self.cuda)
 
                 # Generate a batch of images
                 gen_imgs = self.generator(zn, zc)
@@ -781,9 +782,9 @@ class ClusterGANClient(NumPyClient):
                 # Discriminator output from real and generated samples
                 gen_d = self.discriminator(gen_imgs)
                 real_d = self.discriminator(self.real_imgs)
-                valid = Variable(self.Tensor(gen_imgs.size(
+                valid = Variable(self.TENSOR(gen_imgs.size(
                     0), 1).fill_(1.0), requires_grad=False)
-                fake = Variable(self.Tensor(gen_imgs.size(
+                fake = Variable(self.TENSOR(gen_imgs.size(
                     0), 1).fill_(0.0), requires_grad=False)
 
                 # Step for Generator & Encoder, n_skip_iter times less than for discriminator
@@ -821,7 +822,7 @@ class ClusterGANClient(NumPyClient):
                 if self.wass_metric:
                     # Gradient penaltytorch.autograd.set_detect_anomaly(True) term
                     grad_penalty = calc_gradient_penalty(
-                        self.discriminator, self.real_imgs, gen_imgs)
+                        self.discriminator, self.real_imgs, gen_imgs, cuda=self.cuda)
 
                     # Wasserstein GAN loss w/gradient penalty
                     # d_losss = torch.mean(real_d) - torch.mean(gen_d) + grad_penalty # original
@@ -875,7 +876,8 @@ class ClusterGANClient(NumPyClient):
         # Cycle through randomly sampled encoding -> generator -> encoder
         zn_samp, zc_samp, zc_samp_idx = sample_z(shape=n_samp,
                                                  latent_dim=self.latent_dim,
-                                                 n_c=self.n_c)
+                                                 n_c=self.n_c,
+                                                 cuda=self.cuda)
         # Generate sample instances
         gen_imgs_samp = self.generator(zn_samp, zc_samp)
 
@@ -910,7 +912,8 @@ class ClusterGANClient(NumPyClient):
             zn_samp, zc_samp, zc_samp_idx = sample_z(shape=self.n_c,
                                                      latent_dim=self.latent_dim,
                                                      n_c=self.n_c,
-                                                     fix_class=idx)
+                                                     fix_class=idx,
+                                                     cuda=self.cuda)
 
             # Generate sample instances
             gen_imgs_samp = self.generator(zn_samp, zc_samp)

@@ -3,7 +3,9 @@
 
 *.pyc
 
-*output/*
+*output*
+
+*_images*
 
 *.ipynb*
 
