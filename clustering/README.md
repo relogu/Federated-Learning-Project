@@ -7,7 +7,7 @@ This project aims to present the application of the Federated Learning (FL) appr
 - [Federated Learning, tests of different clustering algorithms in a federated setting](#federated-learning-tests-of-different-clustering-algorithms-in-a-federated-setting)
   - [Contents](#contents)
   - [Federated Learning (FL)](#federated-learning-fl)
-  - [Datasets used](#datasets-used)
+  - [Datasets](#datasets)
     - [Blobs](#blobs)
     - [Moons](#moons)
     - [MNIST](#mnist)
@@ -35,7 +35,7 @@ file of the
 [this](https://github.com/relogu/Federated-Learning-Project/tree/master/flower_make_moons_test)
 repository.
 
-## Datasets used
+## Datasets
 
 Different dataset were used to test the algorithm in [Models and algorithms](#models-and-algorithms).
 Tuning the configuration of the clients, the user is able to create imbalanced non-iid partitions of the selected dataset using Latent Dirichlet Allocation (LDA) without resampling.
@@ -89,7 +89,7 @@ The clustering layer, that is build on the top of the encoder part of the AE, tr
 
 ### ClusterGAN
 
-ClusterGAN as a mechanism for clustering using Generative Adversarial networks (GANs) introduced in [5].
+ClusterGAN is a mechanism for clustering using Generative Adversarial networks (GANs) introduced in [5].
 By sampling latent variables from a mixture of one-hot encoded variables and continuous latent variables, coupled with an inverse network (which projects the data to the latent space) trained jointly with a clustering specific loss, we are able to achieve clustering in the latent space.
 In [5] is shown a remarkable phenomenon that GANs can preserve latent space interpolation across categories, even though the discriminator is never exposed to such vectors.
 Until now this model can only be used to cluster the MNIST dataset, for the others the implemetation is a work in progress.
@@ -140,6 +140,29 @@ The server starts waiting the handshake from clients to begin the federated iter
 Parameters to pass are explain at
 
 ```bash
+usage: server.py [-h] --n_clients {2,3,4,5,6,7,8} [--strategy {fed_avg,k-fed,fed_avg_k-means,clustergan}] [--ae_epochs AE_EPOCHS] [--kmeans_epochs KMEANS_EPOCHS]
+                 [--cluster_epochs CLUSTER_EPOCHS] [--total_epochs TOTAL_EPOCHS] [--address ADDRESS]
+
+Server program for moons test FL network using flower.
+Give the number of federated rounds to pass to the strategy builder.
+Give the minimum number of clients to wait for a federated averaging step.
+Give optionally the complete address onto which instantiate the server.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --n_clients {2,3,4,5,6,7,8}
+                        minimum number of active clients to perform an iteration step
+  --strategy {fed_avg,k-fed,fed_avg_k-means,clustergan}
+                        strategy for the server
+  --ae_epochs AE_EPOCHS
+                        number of federated epoch to preform the autoencoder step
+  --kmeans_epochs KMEANS_EPOCHS
+                        number of federated epoch to preform the k-means step
+  --cluster_epochs CLUSTER_EPOCHS
+                        number of federated epoch to preform the clustering step
+  --total_epochs TOTAL_EPOCHS
+                        number of total federated epochs to perform, used in clustergan strategy
+  --address ADDRESS     complete address to launch server, e.g. 127.0.0.1:8081
 ```
 
 Then set a series of client machines and launch the client program for each machine.
@@ -154,12 +177,70 @@ python3 client.py
 Parameters to pass are explain at
 
 ```bash
+usage: client.py [-h] --client_id CLIENT_ID --dataset {blobs,moons,mnist} --alg {k-means,k_fed-ae_clust,k-ae_clust,clustergan} --n_samples N_SAMPLES --n_clients
+                 {2,3,4,5,6,7,8} --n_clusters N_CLUSTERS [--server SERVER] [--rounds ROUNDS] [--seed SEED] [--noise NOISE] [--lda LDA]
+
+Client for moons test FL network using flower.
+Give the id of the client and the number of local epoch you want to perform.
+Give also the number of data samples you want to train for this client.
+Give also the number of clients in the FL set up to build properly the dataset.
+One can optionally give the server location to pass the client builder.
+One can optionally give the number of local epochs to perform.
+One can optionally give the noise to generate the dataset.
+One can optionally tell the program to plot the decision boundary at the evaluation step.
+One can optionally tell the program to use the shared test set (default) or the train set as test also.
+The client id will also initialize the seed for the train dataset.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --client_id CLIENT_ID
+                        client identifier
+  --dataset {blobs,moons,mnist}
+                        client dataset identifier
+  --alg {k-means,k_fed-ae_clust,k-ae_clust,clustergan}
+                        algorithm identifier
+  --n_samples N_SAMPLES
+                        number of total samples in whole training set
+  --n_clients {2,3,4,5,6,7,8}
+                        number of total clients in the FL setting
+  --n_clusters N_CLUSTERS
+                        number of total clusters to initialize the kMeans algorithm
+  --server SERVER       server address to point
+  --rounds ROUNDS       number of local epochs to perform at each federated epoch
+  --seed SEED           set the seed for the random generator of the whole dataset
+  --noise NOISE         noise to put in the train dataset
+  --lda LDA             wheater to apply LDA partitioning to the entire dataset
 ```
 
 When the sufficient number of clients are connected an iteration step is performed.
 After the number of iterations given is completed, server and clients return the final performance.
 
-The code inside [common_fn.py](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/common_fn.py) is necessary, because contains some of the functions used by the procedures above.
+The code inside [common_fn.py](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/py/common_fn.py) is necessary, because contains some of the functions used by the procedures above.
+
+The code inside [clustergan.py](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/py/clustergan.py) is necessary, because contains all the necessary to build the ClusterGAN model.
+It can be also used as a stand-alone model to test the centralized ClusterGAN.
+
+```bash
+usage: clustergan.py [-h] [-n N_EPOCHS] [-b BATCH_SIZE] [-i IMG_SIZE] [-d LATENT_DIM] [-l LEARNING_RATE] [-c N_CRITIC] [-w]
+
+ClusterGAN Training Script
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -n N_EPOCHS, --n_epochs N_EPOCHS
+                        Number of epochs
+  -b BATCH_SIZE, --batch_size BATCH_SIZE
+                        Batch size
+  -i IMG_SIZE, --img_size IMG_SIZE
+                        Size of image dimension
+  -d LATENT_DIM, --latent_dim LATENT_DIM
+                        Dimension of latent space
+  -l LEARNING_RATE, --lr LEARNING_RATE
+                        Learning rate
+  -c N_CRITIC, --n_critic N_CRITIC
+                        Number of training steps for discriminator per iter
+  -w, --wass_flag       Flag for Wasserstein metric
+```
 
 Additionally, inside the folder [test](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/test) are provided the necessary files to perform the tests on the functions.
 If you want to run test simply go with
@@ -173,8 +254,6 @@ in the [test](https://github.com/relogu/Federated-Learning-Project/blob/master/c
 The folder [scripts](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/scripts) provides the scripts used for plotting some of the images inside the [Analysis and results](#analysis-and-results) part
 
 ### An example
-
-TODO
 
 Imagine you want to instatiate the server at the port 51550.
 Imagine to have separate machines with different IP addresses.
@@ -190,6 +269,15 @@ script (working on a Ubuntu 20.04 satisfying the dependencies listed above)
 
 In [results](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results) folder are provided some output figures representing the results of the simulations in [run.sh](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/run.sh).
 Every folder in [results](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results) represents one of the simulations whose results are presented in the correspondent README file.
+
+| Dataset | LDA partitioning | Model | Results |
+|:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:|
+|Blobs|yes|k-means|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/lda_k-means)|
+|Blobs|no|k-means|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/k-means)|
+|Blobs|yes|k-FED + Unsupervised Deep Embedding|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/lda_k-fed_ae)|
+|Blobs|no|k-FED + Unsupervised Deep Embedding|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/k-fed_ae)|
+|MNIST|yes|ClusterGAN|TODO|
+|MNIST|no|ClusterGAN|TODO|
 
 ### Metrics
 
