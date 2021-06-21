@@ -35,7 +35,8 @@ def get_parser():
     parser.add_argument("-l", "--lr", dest="learning_rate", type=float, default=0.0001, help="Learning rate")
     parser.add_argument("-c", "--n_critic", dest="n_critic", type=int, default=5, help="Number of training steps for discriminator per iter")
     parser.add_argument("-w", "--wass_flag", dest="wass_flag", action='store_true', help="Flag for Wasserstein metric")
-    parser.add_argument("-h", "--hardware_acc", dest="cuda_flag", action='store_true', help="Flag for hardware acceleration using cuda (if available)")
+    parser.add_argument("-a", "--hardware_acc", dest="cuda_flag", action='store_true', help="Flag for hardware acceleration using cuda (if available)")
+    parser.add_argument("-f", "--folder", dest="out_folder", type= type(str('')), help="Folder to output images")
     return parser
 
 # Sample a random latent space vector
@@ -296,13 +297,12 @@ class DiscriminatorCNN(nn.Module):
         return validity
 
 if __name__ == "__main__":
-    
-    # defning output folder
-    dir_to_save_images = 'images'
-    os.makedirs(dir_to_save_images, exist_ok=True)
-    
     # get parameters
     args = get_parser().parse_args()
+    
+    # defining output folder
+    dir_to_save_images = args.out_folder
+    os.makedirs(dir_to_save_images, exist_ok=True)
 
     # Training details
     n_epochs = args.n_epochs
