@@ -4,6 +4,10 @@
 *.pyc
 
 *output*
+*cycle_reg_*
+*gen_*
+*gen_classes_*
+
 
 *_images*
 
