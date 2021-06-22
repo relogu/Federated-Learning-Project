@@ -16,7 +16,7 @@
 *.dat
 
 papers
-TODO
+blocknotes.md
 *.tar
 *.gz
 *ubyte
