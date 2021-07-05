@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # k-FED with ae clustering using EUROMDS
-python3 py/server.py --strategy=fed_avg --ae_epochs=10 --cluster_epochs=10 --n_clients=8 & 
+python3 py/server.py --strategy=fed_avg --ae_epochs=1000 --cluster_epochs=1000 --n_clients=8 & 
 sleep 2 # Sleep for 2s to give the server enough time to start
 python3 py/client.py --client_id=0 --alg=k-ae_clust --n_clients=8 --n_clusters=6 --dataset=EUROMDS &
 python3 py/client.py --client_id=1 --alg=k-ae_clust --n_clients=8 --n_clusters=6 --dataset=EUROMDS &
