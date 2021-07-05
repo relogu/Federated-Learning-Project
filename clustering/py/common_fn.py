@@ -6,168 +6,32 @@ Created on Wed Mar 10 14:25:15 2021
 @author: relogu
 """
 
-from typing import List, Optional, Tuple, Dict
-import tensorflow as tf
-from tensorflow.keras.datasets import mnist
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Layer, InputSpec, Dense, Input
-from tensorflow.keras.models import Model
+import math
 import pathlib
+import random
+from typing import Dict, List, Optional, Tuple
+
 import matplotlib.pyplot as plt
 import numpy as np
-import math
-import random
 import seaborn as sns
-from flwr.common import Weights
 import sklearn
-from sklearn import datasets
-from sklearn.model_selection import KFold
-from sklearn.metrics import normalized_mutual_info_score, adjusted_rand_score, rand_score, homogeneity_score, adjusted_mutual_info_score
-from scipy.optimize import linear_sum_assignment as linear_assignment
+import tensorflow as tf
+import tensorflow.keras.backend as K
 import torch
+from flwr.common import Weights
+from scipy.optimize import linear_sum_assignment as linear_assignment
+from sklearn import datasets
+from sklearn.metrics import (adjusted_mutual_info_score, adjusted_rand_score,
+                             homogeneity_score, normalized_mutual_info_score,
+                             rand_score)
+from sklearn.model_selection import KFold
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.layers import Dense, Input, InputSpec, Layer
+from tensorflow.keras.models import Model
 from torch.utils.data import Dataset
 
-# definition of the metrics used
-nmi = normalized_mutual_info_score
-ami = adjusted_mutual_info_score
-ari = adjusted_rand_score
-ran = rand_score
-homo = homogeneity_score
+from py.dataset_util import plot_points_2d
 
-
-def acc(y_true, y_pred):
-    """
-    Calculate clustering accuracy. Require scikit-learn installed
-    # Arguments
-        y: true labels, numpy.array with shape `(n_samples,)`
-        y_pred: predicted labels, numpy.array with shape `(n_samples,)`
-    # Return
-        accuracy, in [0,1]
-    """
-    y_true = y_true.astype(np.int64)
-    assert y_pred.size == y_true.size
-    D = max(y_pred.max(), y_true.max()) + 1
-    w = np.zeros((D, D), dtype=np.int64)
-    for i in range(y_pred.size):
-        w[y_pred[i], y_true[i]] += 1
-    row_ind, col_ind = linear_assignment(w.max() - w)
-    return sum([w[i, j] for i, j in zip(row_ind, col_ind)]) * 1.0 / y_pred.size
-
-
-def simple_clustering_on_fit_config(rnd: int,
-                                    ae_epochs: int = 300,
-                                    kmeans_epochs: int = 20,
-                                    cl_epochs: int = 1000):
-    if rnd < ae_epochs+1:
-        return {'model': 'autoencoder',
-                'first': (rnd == 1),
-                'actual_round': rnd,
-                'total_round': ae_epochs}
-    elif rnd < ae_epochs+kmeans_epochs+1:
-        return {'model': 'k-means',
-                'first': (rnd == ae_epochs+1),
-                'actual_round': rnd-ae_epochs,
-                'total_round': kmeans_epochs}
-    else:
-        return {'model': 'clustering',
-                'first': (rnd == ae_epochs+kmeans_epochs+1),
-                'actual_round': rnd-ae_epochs-kmeans_epochs,
-                'total_round': cl_epochs}
-
-
-def kfed_clustering_on_fit_config(rnd: int,
-                                  ae_epochs: int = 300,
-                                  cl_epochs: int = 1000,
-                                  n_clusters: int = 2):
-    if rnd < ae_epochs+1:
-        config = {'model': 'pretrain_ae',
-                  'n_clusters': n_clusters,
-                  'first': (rnd == 1),
-                  'actual_round': rnd-1,
-                  'total_rounds': ae_epochs}
-    elif rnd < ae_epochs+2:
-        config = {'model': 'k-FED',
-                  'n_clusters': n_clusters,
-                  'first': (rnd == ae_epochs+1),
-                  'actual_round': rnd,
-                  'total_rounds': 1}
-    else:
-        config = {'model': 'clustering',
-                  'n_clusters': n_clusters,
-                  'first': (rnd == ae_epochs+2),
-                  'actual_round': rnd-ae_epochs-1,
-                  'total_rounds': cl_epochs}
-    return config
-
-
-def clustergan_on_fit_config(rnd: int,
-                             total_epochs: int):
-    return {'model': 'clustergan',
-            'actual_rounds': rnd,
-            'total_epochs': total_epochs}
-
-
-def simple_kmeans_on_fit_config(rnd: int,
-                                kmeans_epochs: int = 20):
-    if rnd < kmeans_epochs+1:
-        return {'model': 'k-means'}
-
-
-def distance_from_centroids(centroids_array, vector):
-    distances = []
-    for centroid in centroids_array:
-        d = np.linalg.norm(centroid-vector)
-        distances = np.append(distances, d)
-    return min(distances)
-
-
-class PrepareData(Dataset):
-
-    def __init__(self, x, y):
-        if not torch.is_tensor(x):
-            self.x = torch.from_numpy(x)
-        if not torch.is_tensor(y):
-            self.y = torch.from_numpy(y)
-
-    def __len__(self):
-        return len(self.x)
-
-    def __getitem__(self, idx):
-        return self.x[idx], self.y[idx]
-
-def split_dataset(x,
-                  y=None,
-                  splits: int = 5,
-                  fold_n: int = 0,
-                  shuffle: bool = False,
-                  r_state: int = 51550):
-    if fold_n < 0 or fold_n > splits-1:
-        raise ValueError(
-            'The fold number, fold_n, cannot be lower than zero or higher than the number of splits minus one, splits-1')
-    # Define the K-fold Cross Validator
-    if shuffle:
-        kfold = KFold(n_splits=splits, shuffle=shuffle, random_state=r_state)
-    else:
-        kfold = KFold(n_splits=splits)
-    if y is None:
-        train, test = next(kfold.split(x))
-        x_test = x[test].copy()
-        x_train = x[train].copy()
-        return x_train, x_test
-    else:
-        train, test = next(kfold.split(x, y))
-        x_test = x[test].copy()
-        y_test = y[test].copy()
-        x_train = x[train].copy()
-        y_train = y[train].copy()
-        return x_train, y_train, x_test, y_test
-
-def check_weights_dict(weigths_dict):
-    a = weigths_dict.copy()
-    for k, v in a.items():
-        if v.shape == torch.Size([0]):
-            del weigths_dict[k]
-    return weigths_dict
 
 def create_autoencoder(dims, act='relu', init='glorot_uniform'):
     """
@@ -208,13 +72,6 @@ def create_clustering_model(n_clusters, encoder):
     clustering_layer = ClusteringLayer(
         n_clusters, name='clustering')(encoder.output)
     return Model(inputs=encoder.input, outputs=clustering_layer)
-
-# computing an auxiliary target distribution
-
-
-def target_distribution(q):
-    weight = q ** 2 / q.sum(0)
-    return (weight.T / weight.sum(1)).T
 
 
 class ClusteringLayer(Layer):
@@ -371,68 +228,6 @@ def dump_result_dict(filename: str, result: Dict, verbose: int = 0):
         print(','.join(map(str, list(result.values()))), file=outfile)
 
 
-def translate_moons(dx: float, dy: float, x):
-    """Translate using the vector (dx, dy) the make_moons dataset x.
-    The function will retrieve a copy of x.
-
-    Args:
-        dx (float): x-component of the translation vector
-        dy (float): y-component of the translation vector
-        x (ndarray of shape (n_samples, 2)): list of 2-D points generated by sklearn.datasets.make_moons()
-
-    Returns:
-        (ndarray of shape (n_samples, 2)): translated list of 2-D points generated by sklearn.datasets.make_moons()
-    """
-    # get a copy
-    xc = x.copy()
-    # check on shape
-    if x.shape[1] == 2:
-        # applying transformation
-        xc[:, 0] = x[:, 0] + dx
-        xc[:, 1] = x[:, 1] + dy
-    else:
-        # error msg
-        raise TypeError("the input x has not the correct shape")
-    return xc
-
-
-def rotate_moons(theta: float, x):
-    """Rotate using the angle theta the make_moons dataset x w.r.t the origin (0,0).
-    The function will retrieve a copy of x.
-
-    Args:
-        theta (float): angle generator for the rotation transformation
-        x (ndarray of shape (n_samples, 2)): list of 2-D points generated by sklearn.datasets.make_moons()
-
-    Returns:
-        (ndarray of shape (n_samples, 2)): rotated list of 2-D points generated by sklearn.datasets.make_moons()
-    """
-    # get a copy
-    xc = x.copy()
-    # check on shape
-    if xc.shape[1] == 2:
-        # applying tranformation
-        xc[:, 0] = x[:, 0]*math.cos(theta) - x[:, 1]*math.sin(theta)
-        xc[:, 1] = x[:, 0]*math.sin(theta) + x[:, 1]*math.cos(theta)
-    else:
-        # error msg
-        raise TypeError("the input x has not the correct shape")
-    return xc
-
-
-def plot_points(x, y):
-    """Plot the points x coloring them by the labels in vector y
-
-    Args:
-        x (ndarray of shape (n_samples, 2)): vector of 2-D points to plot
-        y (ndarray of shape (n_samples)): vector of numerical labels
-
-    Returns:
-        (matplotlib.pyplot.PathCollection)
-    """
-    return plt.scatter(x[:, 0], x[:, 1], c=y, cmap=plt.cm.Spectral)
-
-
 def plot_dec_bound(model, x):
     """Plot the decision boundaries given by model.
     The vector x is used only to set the range of the axis.
@@ -456,35 +251,6 @@ def plot_dec_bound(model, x):
     Z = Z.reshape(xx.shape)
     # Plot the contour and training examples
     return plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral)
-
-
-def plot_client_dataset(client_id, x_train, y_train, x_test, y_test, path=None):
-    """Plot and dump to a file the data samples given the specified client id and dataset.
-
-    Args:
-        client_id (str or int or cast to str): identifier for the client
-        x_train (ndarray of shape (n_samples, 2)): vector of 2-D points to plot for the train set
-        y_train (ndarray of shape (n_samples)): vector of numerical labels for the train set
-        x_test (ndarray of shape (n_samples, 2)): vector of 2-D points to plot for the test set
-        y_test (ndarray of shape (n_samples)): vector of numerical labels for the test set
-    """
-    # setting path for saving image
-    if path is None:
-        path = 'output'
-    # initialize graph
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(18, 9))
-    ax.set_title("Data samples for the client " + str(client_id))
-    ax.set_xlabel('x')
-    ax.set_ylabel('Y')
-    # Plot the samples
-    plot_points(x_train, y_train)
-    # augment test to be colored differently
-    y_test = y_test+2
-    plot_points(x_test, y_test)
-    plt.draw()
-    # plt.show(block=False)
-    plt.savefig(path+'/data_client_'+str(client_id)+'.png')
-    plt.close()
 
 
 def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None, path=None):
@@ -519,7 +285,7 @@ def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None,
     # plot dec boundary
     plot_dec_bound(model, x_test)
     # plot test points
-    plot_points(x_test, y_test)
+    plot_points_2d(x_test, y_test)
     plt.draw()
     # plt.show(block=False)
     # dump to a file
@@ -557,148 +323,3 @@ def print_confusion_matrix(y, y_pred, client_id=None, fed_iter=None, path=None):
         filename += '_e'+str(fed_iter)+'.png'
     plt.savefig(filename)
     plt.close()
-
-
-def build_dataset(n_clients: int, total_samples: int, noise: float, seed: int = 51550):
-    """Build the entire dataset, to be distributed.
-
-    Args:
-        n_clients (int): number of clients onto which distribute the whole dataset
-        total_samples (int): total number of sample of the whole datset
-        noise (float): the amount of noise to generate the dataset
-        seed (int): the seed for the generator of the dataset
-
-    Returns:
-        x (ndarray of shape (total_samples, 2)): vector of 2-D points
-        y (ndarray of shape (total_samples)): vector of numerical labels
-    """
-    # getting the number of samples of the clients' dataset
-    N_SAMPLES = int(total_samples/n_clients)
-    # initializing arrays of points and labels (may be not needed)
-    x = np.array(0)
-    y = np.array(0)
-    # set the intial seed for the RN generator
-    random.seed(seed)
-    # loop on clients
-    for i in range(n_clients):
-        # get a RN for the state of the dataset generator
-        train_rand_state = random.randint(0, 100000)
-        # get data points and labels
-        (x_client, y_client) = datasets.make_moons(n_samples=int(N_SAMPLES),
-                                                   noise=noise,
-                                                   shuffle=True,
-                                                   random_state=train_rand_state)
-        # fill the arrays of points and labels
-        if i == 0:
-            x = x_client
-            y = y_client
-        else:
-            x = np.concatenate((x, x_client), axis=0)
-            y = np.concatenate((y, y_client), axis=0)
-    return x, y
-
-
-def build_mnist_dataset(n_clients: int, total_samples: int, noise: float, seed: int = 51550):
-    """Build the entire dataset, to be distributed.
-
-    Args:
-        n_clients (int): number of clients onto which distribute the whole dataset
-        total_samples (int): total number of sample of the whole datset
-        noise (float): the amount of noise to generate the dataset
-        seed (int): the seed for the generator of the dataset
-
-    Returns:
-        x (ndarray of shape (total_samples, 2)): vector of 2-D points
-        y (ndarray of shape (total_samples)): vector of numerical labels
-    """
-    # getting the number of samples of the clients' dataset
-    N_SAMPLES = int(total_samples/n_clients)
-    # initializing arrays of points and labels (may be not needed)
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-    x = np.concatenate((x_train, x_test))
-    y = np.concatenate((y_train, y_test))
-    x = x.reshape((x.shape[0], -1))
-    x = np.divide(x, 255.)
-    return x[0:N_SAMPLES], y[0:N_SAMPLES]
-
-
-def get_client_dataset(client_id: int, n_clients: int, x_tot, y_tot):
-    """Get the single client dataset given the whole dataset.
-
-    Args:
-        client_id (int): identifier of the client, must be inside [0, (n_clients) - 1]
-        n_clients (int): number of clients onto which the whole dataset is being distributed
-        x (ndarray of shape (total_samples, 2)): vector of 2-D points
-        y (ndarray of shape (total_samples)): vector of numerical labels
-
-    Returns:
-        x (ndarray of shape (single_client_samples, 2)): vector of 2-D points relative to the client
-        y (ndarray of shape (single_client_samples)): vector of numerical labels relative to the client
-    """
-    # check on the shapes of the inputs
-    if client_id >= n_clients or client_id < 0:
-        msg = "the input client_id has not an allowed value, " + \
-            "insert a positive value lesser than n_clients"
-        raise TypeError(msg)
-    if len(x_tot.shape) != 2 or x_tot.shape[1] != 2:
-        msg = "the input x_tot has not the correct shape"
-        raise TypeError(msg)
-    if len(y_tot.shape) != 1:
-        msg = "the input y_tot has not the correct shape"
-        raise TypeError(msg)
-    if y_tot.shape[0] != x_tot.shape[0]:
-        msg = "the inputs x_tot and y_tot have not compatible shapes, " + \
-            "they must represent the same number of points"
-        raise TypeError(msg)
-    # get the total number of samples
-    n_samples = x_tot.shape[0]
-    # get the number of samples for the single clients
-    n_sam_client = int(n_samples/n_clients)
-    # loop on clients
-    for i in range(n_clients):
-        # continue on wrong clients and returning the right dataset
-        if i != client_id:
-            continue
-        else:
-            return x_tot[i*n_sam_client:(i+1)*n_sam_client], y_tot[i*n_sam_client:(i+1)*n_sam_client]
-
-
-def get_client_mnist_dataset(client_id: int, n_clients: int, x_tot, y_tot):
-    """Get the single client dataset given the whole dataset.
-
-    Args:
-        client_id (int): identifier of the client, must be inside [0, (n_clients) - 1]
-        n_clients (int): number of clients onto which the whole dataset is being distributed
-        x (ndarray of shape (total_samples, 2)): vector of 2-D points
-        y (ndarray of shape (total_samples)): vector of numerical labels
-
-    Returns:
-        x (ndarray of shape (single_client_samples, 2)): vector of 2-D points relative to the client
-        y (ndarray of shape (single_client_samples)): vector of numerical labels relative to the client
-    """
-    # check on the shapes of the inputs
-    if client_id >= n_clients or client_id < 0:
-        msg = "the input client_id has not an allowed value, " + \
-            "insert a positive value lesser than n_clients"
-        raise TypeError(msg)
-    if len(x_tot.shape) != 2 or x_tot.shape[1] != 784:
-        msg = "the input x_tot has not the correct shape"
-        raise TypeError(msg)
-    if len(y_tot.shape) != 1:
-        msg = "the input y_tot has not the correct shape"
-        raise TypeError(msg)
-    if y_tot.shape[0] != x_tot.shape[0]:
-        msg = "the inputs x_tot and y_tot have not compatible shapes, " + \
-            "they must represent the same number of points"
-        raise TypeError(msg)
-    # get the total number of samples
-    n_samples = x_tot.shape[0]
-    # get the number of samples for the single clients
-    n_sam_client = int(n_samples/n_clients)
-    # loop on clients
-    for i in range(n_clients):
-        # continue on wrong clients and returning the right dataset
-        if i != client_id:
-            continue
-        else:
-            return x_tot[i*n_sam_client:(i+1)*n_sam_client], y_tot[i*n_sam_client:(i+1)*n_sam_client]

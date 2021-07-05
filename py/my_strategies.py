@@ -5,21 +5,17 @@ Created on Fri May 14 13:55:15 2021
 
 @author: relogu
 """
-from functools import reduce
 from typing import Callable, Dict, List, Optional, Tuple
-from tensorflow.keras.optimizers import SGD
+
 import flwr as fl
-from flwr.client import NumPyClient
-from flwr.server.client_proxy import ClientProxy
-from flwr.common import Scalar, Parameters, FitRes, Weights, parameters_to_weights, weights_to_parameters
-from flwr.server.strategy import FedAvg
-from sklearn.cluster import KMeans
 import numpy as np
 import numpy.random as rand
-import sys
-sys.path.append('../')
-import clustering.py.common_fn as my_fn
-from sklearn.ensemble._hist_gradient_boosting import loss
+from flwr.common import (FitRes, Parameters, Scalar, Weights,
+                         parameters_to_weights, weights_to_parameters)
+from flwr.server.client_proxy import ClientProxy
+from flwr.server.strategy import FedAvg
+from py.util import distance_from_centroids
+
 
 class KFEDStrategy(FedAvg):
     
@@ -61,8 +57,9 @@ class KFEDStrategy(FedAvg):
             # Do not aggregate if there are failures and failures are not accepted
             if not self.accept_failures and failures:
                 return None, {}
-            # getting all centroids
+            # getting all centroids --> (n_clients, n_centroids, n_dimensions)
             all_centroids = np.array([parameters_to_weights(fit_res.parameters) for _, fit_res in results])
+            print('All centroids\' shape: {}'.format(all_centroids.shape))
             # pick, randomly, one client's centroids
             idx = self.rng.integers(0, all_centroids.shape[0], 1)
             # basis to be completed
@@ -73,12 +70,12 @@ class KFEDStrategy(FedAvg):
             # loop for completing the basis
             while base_centroids.shape[0] < config['n_clusters']:
                 # all distances from the basis of centroids
-                distances = [my_fn.distance_from_centroids(base_centroids, c) for c in other_centroids]
+                distances = [distance_from_centroids(base_centroids, c) for c in other_centroids]
                 # get the index of the maximum distance
                 idx = np.argmax(distances)
-                # add the new centroid
+                # add the new centroid --> (n_centroids, n_dimensions)
                 base_centroids = np.concatenate((base_centroids, [other_centroids[idx]]), axis=0)
-            print(base_centroids.shape)
+                print(base_centroids.shape)
             return weights_to_parameters(base_centroids), {}
         else :
             aggregated_weights = super().aggregate_fit(rnd, results, failures)

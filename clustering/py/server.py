@@ -5,22 +5,29 @@ Created on Wed Mar 13 14:25:15 2021
 
 @author: relogu
 """
-import os
-from typing import Callable, Dict, List, Optional, Tuple
 import argparse
-from argparse import RawTextHelpFormatter
-import flwr as fl
-from flwr.server.client_proxy import ClientProxy
-from flwr.common import FitRes, Weights
-from flwr.server.strategy import FedAvg
-from sklearn.cluster import KMeans
-from functools import partial
+import os
 import pathlib
 import sys
+from argparse import RawTextHelpFormatter
+from functools import partial
+from typing import Callable, Dict, List, Optional, Tuple
+
+import flwr as fl
+from flwr.common import FitRes, Weights
+from flwr.server.client_proxy import ClientProxy
+from flwr.server.strategy import FedAvg
+from sklearn.cluster import KMeans
+
 path = pathlib.Path(__file__).parent.absolute()
 sys.path.append(str(path.parent.parent))
-import clustering.py.common_fn as my_fn
-import clustering.py.my_strategies as strategies
+
+import py.my_strategies as strategies
+from py.server_fit_config import (clustergan_on_fit_config,
+                                  kfed_clustering_on_fit_config,
+                                  simple_clustering_on_fit_config,
+                                  simple_kmeans_on_fit_config)
+
 # disable possible gpu devices
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # for debug connection
@@ -104,7 +111,7 @@ if __name__ == "__main__":
     args = parse_args()
     # instantiating the strategy
     if args.strategy == 'fed_avg':
-        on_fit_conf = partial(my_fn.simple_clustering_on_fit_config,
+        on_fit_conf = partial(simple_clustering_on_fit_config,
                               ae_epochs=args.ae_epochs,
                               kmeans_epochs=args.kmeans_epochs,
                               cl_epochs=args.cluster_epochs)
@@ -129,7 +136,7 @@ if __name__ == "__main__":
             on_evaluate_config_fn=clustergan_on_fit_config
         )
     elif args.strategy == 'fed_avg_k-means':
-        on_fit_conf = partial(my_fn.simple_kmeans_on_fit_config,
+        on_fit_conf = partial(simple_kmeans_on_fit_config,
                               kmeans_epochs=args.kmeans_epochs)
         n_rounds = args.kmeans_epochs
         strategy = strategies.FedAvg(
@@ -139,9 +146,9 @@ if __name__ == "__main__":
             on_fit_config_fn=on_fit_conf
         )
     elif args.strategy == 'k-fed':
-        on_fit_conf = partial(my_fn.kfed_clustering_on_fit_config,
+        on_fit_conf = partial(kfed_clustering_on_fit_config,
                               ae_epochs=args.ae_epochs,
-                              n_clusters=10,
+                              n_clusters=25,
                               cl_epochs=args.cluster_epochs)
         n_rounds = 1+args.ae_epochs+args.cluster_epochs
         strategy = strategies.KFEDStrategy(

@@ -5,32 +5,41 @@ Created on Wed Mar 13 14:25:15 2021
 
 @author: relogu
 """
-import sys
-import pathlib
-import math
-import random
 import argparse
+import math
 import os
-import flwr as fl
-import tensorflow as tf
-import torch
-from tensorflow.keras.optimizers import SGD
-from tensorflow.keras.initializers import VarianceScaling
-from sklearn import datasets
-from sklearn.model_selection import KFold
-from sklearn.cluster import KMeans
-from flwr.dataset.utils.common import create_lda_partitions, create_partitions
+import pathlib
+import random
+import sys
 from argparse import RawTextHelpFormatter
-import numpy as np
+
+import flwr as fl
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+import torch
+import umap
+import hdbscan
+from flwr.dataset.utils.common import create_lda_partitions, create_partitions
+from sklearn import datasets
+from sklearn.cluster import KMeans
+from sklearn.model_selection import KFold
+from tensorflow.keras.initializers import VarianceScaling
+from tensorflow.keras.optimizers import SGD
+
 matplotlib.use('Agg')
 path = pathlib.Path(__file__).parent.absolute()
 sys.path.append(str(path.parent.parent))
+
 import clustering.py.common_fn as my_fn
-import clustering.py.my_clients as clients
+import py.dataset_util as data_util
+import py.metrics as my_metrics
+import py.my_clients as clients
+
+
 # disable possible gpu devices
-#os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # for debug connection
@@ -64,7 +73,7 @@ def parse_args():
                         required=True,
                         type=type(''),
                         default='blobs',
-                        choices=['blobs', 'moons', 'mnist'],
+                        choices=['blobs', 'moons', 'mnist', 'EUROMDS'],
                         action='store',
                         help='client dataset identifier')
     parser.add_argument('--alg',
@@ -76,9 +85,16 @@ def parse_args():
                                  'k-ae_clust', 'clustergan'],
                         action='store',
                         help='algorithm identifier')
+    parser.add_argument('--dim_red',
+                        dest='dim_red',
+                        required=False,
+                        type=bool,
+                        default=False,
+                        action='store',
+                        help='set True if You want to do the dimensionality reduction')
     parser.add_argument('--n_samples',
                         dest='n_samples',
-                        required=True,
+                        required=False,
                         type=int,
                         default=500,
                         action='store',
@@ -169,15 +185,18 @@ if __name__ == "__main__":
             Y = create_partitions(unpartitioned_dataset=X,
                                   iid_fraction=0.5,
                                   num_partitions=N_CLIENTS)
-        x, y = Y[CLIENT_ID]
+        x, y = Y[CLIENT_ID]  # .copy()
         # dimensions of the autoencoder dense layers
         dims = [x.shape[-1], int(4*n_features), N_CLUSTERS]
+        del X, Y
     elif DATASET == 'moons':
-        x_tot, y_tot = my_fn.build_dataset(N_CLIENTS, N_SAMPLES, R_NOISE, SEED)
-        x_train, y_train = my_fn.get_client_dataset(
+        x_tot, y_tot = data_util.build_dataset(
+            N_CLIENTS, N_SAMPLES, R_NOISE, SEED)
+        x_train, y_train = data_util.get_client_dataset(
             args.client_id, N_CLIENTS, x_tot, y_tot)
         # dimensions of the autoencoder dense layers
         dims = [x.shape[-1], 8, 8, 32, N_CLUSTERS]
+        del x_tot, y_tot
     elif DATASET == 'mnist':
         (X1, Y1), (X2, Y2) = tf.keras.datasets.mnist.load_data()
         X = np.concatenate((X1, X2))
@@ -190,22 +209,72 @@ if __name__ == "__main__":
             Y = create_partitions(unpartitioned_dataset=X,
                                   iid_fraction=0.5,
                                   num_partitions=N_CLIENTS)
-        x, y = Y[CLIENT_ID]
+        x, y = Y[CLIENT_ID].copy()
         x = x.reshape((x.shape[0], -1))
         x = np.divide(x, 255.)
         # dimensions of the autoencoder dense layers
         dims = [x.shape[-1], 500, 500, 2000, N_CLUSTERS]
-
-    # initializing kmeans
-    kmeans = KMeans(n_clusters=N_CLUSTERS,
-                    max_iter=1,
-                    verbose=0,
-                    random_state=SEED)
-    y_pred_kmeans = kmeans.fit_predict(x)
-    print('Client %d, initial accuracy of k-Means: %.5f' %
-          (CLIENT_ID, my_fn.acc(y, y_pred_kmeans)))
+        del X, Y
+    elif DATASET == 'EUROMDS':
+        # getting the entire dataset
+        x = data_util.get_euromds_dataset(groups=['Genetics', 'CNA', 'Demographics', 'Clinical', 'GeneGene', 'CytoCyto', 'GeneCyto'])
+        # setting labels to None
+        prob = data_util.get_euromds_dataset(groups=['HDP'])
+        y = []
+        for label, row in prob.iterrows():
+            if np.sum(row) > 0:
+                y.append(row.argmax())
+            else:
+                y.append(-1)
+        y = np.array(y)
+        n_features = len(x.columns)
+        if args.dim_red:
+            # dimensionality reduction through UMAP alg
+            n_features = 2
+            x = umap.UMAP(
+                n_neighbors=30,
+                min_dist=0.0,
+                n_components=n_features,
+                random_state=42,
+            ).fit_transform(x)
+        
+        # inferring ground truth labels usign HDBSCAN alg
+        y_h = hdbscan.HDBSCAN(
+            min_samples=5,
+            min_cluster_size=25,
+        ).fit_predict(x)
+        # getting the client's dataset (partition)
+        interval = int(len(x)/N_CLIENTS)
+        start = int(interval*CLIENT_ID)
+        end = int(interval*(CLIENT_ID+1)) if CLIENT_ID < N_CLIENTS-1 else len(x)
+        x = np.array(x[start:end])
+        y = y[start:end]
+        N_CLUSTERS = 25#len(np.unique(y[y>0]))
+        '''
+        TODO: compatibility with create_partitions methods
+        X = (x, y)
+        if USE_LDA:
+            Y, _ = create_lda_partitions(dataset=X, num_partitions=N_CLIENTS)
+        else:
+            Y = create_partitions(unpartitioned_dataset=X,
+                                  iid_fraction=0.4,
+                                  num_partitions=N_CLIENTS)
+        x, y = Y[CLIENT_ID]
+        del X, Y
+        '''
+        dims = [x.shape[-1], int(2*n_features), int(4*n_features), N_CLUSTERS]
 
     '''
+    # kmeans baseline
+    if y is not None:
+        kmeans = KMeans(n_clusters=N_CLUSTERS,
+                        verbose=0,
+                        random_state=SEED)
+        y_pred_kmeans = kmeans.fit_predict(x)
+        print('Client %d, initial accuracy of k-Means: %.5f' %
+              (CLIENT_ID, my_metrics.acc(y, y_pred_kmeans)))
+        print('Client %d, initial accuracy of HDBSCAN: %.5f' %
+              (CLIENT_ID, my_metrics.acc(y, y_h)))
     # some hyperparameters
     UPDATE_INTERVAL = 140
     PRETRAIN_EPOCHS = 150

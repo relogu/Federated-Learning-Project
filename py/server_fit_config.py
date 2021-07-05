@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jun 22 19:11:01 2021
+
+@author: relogu
+"""
+
+def simple_clustering_on_fit_config(rnd: int,
+                                    ae_epochs: int = 300,
+                                    kmeans_epochs: int = 20,
+                                    cl_epochs: int = 1000):
+    if rnd < ae_epochs+1:
+        return {'model': 'autoencoder',
+                'first': (rnd == 1),
+                'actual_round': rnd,
+                'total_round': ae_epochs}
+    elif rnd < ae_epochs+kmeans_epochs+1:
+        return {'model': 'k-means',
+                'first': (rnd == ae_epochs+1),
+                'actual_round': rnd-ae_epochs,
+                'total_round': kmeans_epochs}
+    else:
+        return {'model': 'clustering',
+                'first': (rnd == ae_epochs+kmeans_epochs+1),
+                'actual_round': rnd-ae_epochs-kmeans_epochs,
+                'total_round': cl_epochs}
+
+
+def kfed_clustering_on_fit_config(rnd: int,
+                                  ae_epochs: int = 300,
+                                  cl_epochs: int = 1000,
+                                  n_clusters: int = 2):
+    if rnd < ae_epochs+1:
+        config = {'model': 'pretrain_ae',
+                  'n_clusters': n_clusters,
+                  'first': (rnd == 1),
+                  'actual_round': rnd-1,
+                  'total_rounds': ae_epochs}
+    elif rnd < ae_epochs+2:
+        config = {'model': 'k-FED',
+                  'n_clusters': n_clusters,
+                  'first': (rnd == ae_epochs+1),
+                  'actual_round': rnd,
+                  'total_rounds': 1}
+    else:
+        config = {'model': 'clustering',
+                  'n_clusters': n_clusters,
+                  'first': (rnd == ae_epochs+2),
+                  'actual_round': rnd-ae_epochs-1,
+                  'total_rounds': cl_epochs}
+    return config
+
+
+def clustergan_on_fit_config(rnd: int,
+                             total_epochs: int):
+    return {'model': 'clustergan',
+            'actual_rounds': rnd,
+            'total_epochs': total_epochs}
+
+
+def simple_kmeans_on_fit_config(rnd: int,
+                                kmeans_epochs: int = 20):
+    if rnd < kmeans_epochs+1:
+        return {'model': 'k-means'}
