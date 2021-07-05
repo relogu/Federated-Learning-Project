@@ -11,20 +11,20 @@ def simple_clustering_on_fit_config(rnd: int,
                                     kmeans_epochs: int = 20,
                                     cl_epochs: int = 1000):
     if rnd < ae_epochs+1:
-        return {'model': 'autoencoder',
+        return {'model': 'pretrain_ae',
                 'first': (rnd == 1),
                 'actual_round': rnd,
-                'total_round': ae_epochs}
+                'total_rounds': ae_epochs}
     elif rnd < ae_epochs+kmeans_epochs+1:
         return {'model': 'k-means',
                 'first': (rnd == ae_epochs+1),
                 'actual_round': rnd-ae_epochs,
-                'total_round': kmeans_epochs}
+                'total_rounds': kmeans_epochs}
     else:
         return {'model': 'clustering',
                 'first': (rnd == ae_epochs+kmeans_epochs+1),
                 'actual_round': rnd-ae_epochs-kmeans_epochs,
-                'total_round': cl_epochs}
+                'total_rounds': cl_epochs}
 
 
 def kfed_clustering_on_fit_config(rnd: int,

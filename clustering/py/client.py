@@ -250,6 +250,16 @@ if __name__ == "__main__":
         x = np.array(x[start:end])
         y = y[start:end]
         N_CLUSTERS = 25#len(np.unique(y[y>0]))
+        dims = [x.shape[-1], int(2*n_features), int(4*n_features), N_CLUSTERS]
+        config = {'n_clusters': N_CLUSTERS,
+                  'ae_dims': dims,
+                  'ae_local_epochs': 1,
+                  'ae_lr': 0.01,
+                  'ae_momentum': 0.9,
+                  'cl_lr': 0.01,
+                  'cl_momentum': 0.9,
+                  'cl_local_epochs': 1,
+                  'update_interval': 55}
         '''
         TODO: compatibility with create_partitions methods
         X = (x, y)
@@ -262,7 +272,6 @@ if __name__ == "__main__":
         x, y = Y[CLIENT_ID]
         del X, Y
         '''
-        dims = [x.shape[-1], int(2*n_features), int(4*n_features), N_CLUSTERS]
 
     '''
     # kmeans baseline
@@ -308,18 +317,10 @@ if __name__ == "__main__":
     elif args.alg == 'k-ae_clust':
         autoencoder, encoder = my_fn.create_autoencoder(dims=dims)
         autoencoder.summary()
-        client = clients.CommunityClusteringClient(autoencoder,
-                                                   encoder,
-                                                   kmeans,
-                                                   my_fn.create_model(),
-                                                   x,
-                                                   y,
-                                                   CLIENT_ID,
-                                                   ae_fed_epochs=1,
-                                                   n_clusters=10,
-                                                   local_epochs=1,
-                                                   ae_local_epochs=300,
-                                                   n_communities=2)
+        client = clients.KMeansEmbedClusteringClient(x=x,
+                                                     y=y,
+                                                     client_id=CLIENT_ID,
+                                                     config=config)
     elif args.alg == 'clustergan':
         config = {
             'batch_size': 32,
