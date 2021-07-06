@@ -576,9 +576,9 @@ class ClusterGANClient(NumPyClient):
         # Encode sample real instances
         e_tzn, e_tzc, e_tzc_logits = self.encoder(t_imgs)
         
-        print(t_label.detach().cpu().numpy())
+        print(t_label.detach().cpu().numpy().shape)
         
-        print(e_tzc.detach().cpu().numpy())
+        print(e_tzc.detach().cpu().numpy().shape)
         
         # computing metrics
         acc = my_metrics.acc(t_label.detach().cpu().numpy(),
