@@ -357,8 +357,9 @@ if __name__ == "__main__":
             config['x_shape'] = x[1:]
             config['save_images'] = True
             config['conv_net'] = True
-        client = clients.ClusterGANClient(x,
-                                          y,
+        client = clients.ClusterGANClient(x=x,
+                                          y=y,
+                                          outcomes=outcomes,
                                           config=config,
                                           client_id=CLIENT_ID)
     # TODO: elif args.alg == 'k-clustergan':
