@@ -183,7 +183,7 @@ class GeneratorCNN(nn.Module):
         z = torch.cat((zn, zc), 1)
         x_gen = self.model(z)
         # Reshape for output
-        x_gen = x_gen.view(x_gen.size(0), self.x_shape)
+        x_gen = x_gen.view(self.x_shape)
         return x_gen
 
 
