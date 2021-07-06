@@ -37,7 +37,7 @@ from py.util import check_weights_dict, target_distribution
 k_means_initializer = 'k-means++'
 k_means_eval_string = 'Client %d, updated real accuracy of k-Means: %.5f'
 out_1 = 'Client %d, FedIter %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f'
-out_2 = 'Client %d, FedIter %d\n\ae_loss %.5f'
+out_2 = 'Client %d, FedIter %d\n\tae_loss %.5f'
 clustering_eval_string = 'Client %d, Acc = %.5f, nmi = %.5f, ari = %.5f ; loss = %.5f'
 
 
