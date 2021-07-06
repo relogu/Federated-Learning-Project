@@ -578,12 +578,18 @@ class ClusterGANClient(NumPyClient):
         
         
         # computing metrics
-        acc = my_metrics.acc(t_label, e_tzc)
-        nmi = my_metrics.nmi(t_label, e_tzc)
-        ami = my_metrics.ami(t_label, e_tzc)
-        ari = my_metrics.ari(t_label, e_tzc)
-        ran = my_metrics.ran(t_label, e_tzc)
-        homo = my_metrics.homo(t_label, e_tzc)
+        acc = my_metrics.acc(t_label.detach().cpu().numpy(),
+         e_tzc.detach().cpu().numpy())
+        nmi = my_metrics.nmi(t_label.detach().cpu().numpy(),
+         e_tzc.detach().cpu().numpy())
+        ami = my_metrics.ami(t_label.detach().cpu().numpy(),
+         e_tzc.detach().cpu().numpy())
+        ari = my_metrics.ari(t_label.detach().cpu().numpy(),
+         e_tzc.detach().cpu().numpy())
+        ran = my_metrics.ran(t_label.detach().cpu().numpy(),
+         e_tzc.detach().cpu().numpy())
+        homo = my_metrics.homo(t_label.detach().cpu().numpy(),
+         e_tzc.detach().cpu().numpy())
         print(out_1 % (self.client_id, self.f_round,
                 acc, nmi, ami, ari, ran, homo))
         
