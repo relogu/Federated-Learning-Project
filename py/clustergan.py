@@ -146,8 +146,56 @@ class GeneratorCNN(nn.Module):
     output is a vector from image space of dimension X_dim
     """
     # Architecture : FC1024_BR-FC7x7x128_BR-(64)4dc2s_BR-(1)4dc2s_S
-    def __init__(self, latent_dim, n_c, x_shape, verbose=False):
+    def __init__(self, latent_dim, n_c, gen_dims, x_shape, verbose=False):
         super(GeneratorCNN, self).__init__()
+
+        self.name = 'generator'
+        self.latent_dim = latent_dim
+        self.n_c = n_c
+        self.gen_dims = gen_dims
+        self.x_shape = x_shape
+        self.verbose = verbose
+        
+        self.model = nn.Sequential(
+            # Fully connected layers
+            torch.nn.Linear(self.latent_dim + self.n_c, self.gen_dims[0]),
+            nn.BatchNorm1d(self.gen_dims[0]),
+            nn.LeakyReLU(0.2, inplace=True),
+            torch.nn.Linear(self.gen_dims[0], self.gen_dims[1]),
+            nn.BatchNorm1d(self.gen_dims[1]),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            torch.nn.Linear(self.gen_dims[1], self.gen_dims[2]),
+            nn.BatchNorm1d(self.gen_dims[2]),
+            nn.LeakyReLU(0.2, inplace=True),
+            
+            torch.nn.Linear(self.gen_dims[2], self.gen_dims[3]),
+            nn.Sigmoid()
+        )
+
+        initialize_weights(self)
+
+        if self.verbose:
+            print(network_setup_string.format(self.name))
+            print(self.model)
+    
+    def forward(self, zn, zc):
+        z = torch.cat((zn, zc), 1)
+        x_gen = self.model(z)
+        # Reshape for output
+        x_gen = x_gen.view(x_gen.size(0), self.x_shape)
+        return x_gen
+
+
+class ConvGeneratorCNN(nn.Module):
+    """
+    CNN to model the generator of a ClusterGAN
+    Input is a vector from representation space of dimension z_dim
+    output is a vector from image space of dimension X_dim
+    """
+    # Architecture : FC1024_BR-FC7x7x128_BR-(64)4dc2s_BR-(1)4dc2s_S
+    def __init__(self, latent_dim, n_c, x_shape, verbose=False):
+        super(ConvGeneratorCNN, self).__init__()
 
         self.name = 'generator'
         self.latent_dim = latent_dim
@@ -198,8 +246,53 @@ class EncoderCNN(nn.Module):
     Input is vector X from image space if dimension X_dim
     Output is vector z from representation space of dimension z_dim
     """
-    def __init__(self, latent_dim, n_c, verbose=False):
+    def __init__(self, latent_dim, enc_dims, n_c, verbose=False):
         super(EncoderCNN, self).__init__()
+
+        self.name = 'encoder'
+        self.latent_dim = latent_dim
+        self.enc_dims = enc_dims
+        self.n_c = n_c
+        self.verbose = verbose
+        
+        self.model = nn.Sequential(
+            # Fully connected layers
+            torch.nn.Linear(self.enc_dims[0], self.enc_dims[1]),
+            nn.LeakyReLU(0.2, inplace=True),
+            torch.nn.Linear(self.enc_dims[1], self.enc_dims[2]),
+            nn.LeakyReLU(0.2, inplace=True),
+            torch.nn.Linear(self.enc_dims[2], self.enc_dims[3]),
+            nn.LeakyReLU(0.2, inplace=True),
+            torch.nn.Linear(self.enc_dims[3], latent_dim + n_c)
+        )
+
+        initialize_weights(self)
+        
+        if self.verbose:
+            print(network_setup_string.format(self.name))
+            print(self.model)
+
+    def forward(self, in_feat):
+        z_img = self.model(in_feat)
+        # Reshape for output
+        z = z_img.view(z_img.shape[0], -1)
+        # continuous components
+        zn = z[:, 0:self.latent_dim]
+        # one-hot components
+        zc_logits = z[:, self.latent_dim:]
+        # Softmax on one-hot component
+        zc = softmax(zc_logits)
+        return zn, zc, zc_logits
+
+
+class ConvEncoderCNN(nn.Module):
+    """
+    CNN to model the encoder of a ClusterGAN
+    Input is vector X from image space if dimension X_dim
+    Output is vector z from representation space of dimension z_dim
+    """
+    def __init__(self, latent_dim, n_c, verbose=False):
+        super(ConvEncoderCNN, self).__init__()
 
         self.name = 'encoder'
         self.channels = 1
@@ -254,8 +347,52 @@ class DiscriminatorCNN(nn.Module):
     Output is a 1-dimensional value
     """            
     # Architecture : (64)4c2s-(128)4c2s_BL-FC1024_BL-FC1_S
-    def __init__(self, wass_metric=False, verbose=False):
+    def __init__(self, disc_dims, wass_metric=False, verbose=False):
         super(DiscriminatorCNN, self).__init__()
+        
+        self.name = 'discriminator'
+        self.disc_dims = disc_dims
+        self.wass = wass_metric
+        self.verbose = verbose
+        
+        self.model = nn.Sequential(
+            # Fully connected layers
+            torch.nn.Linear(self.disc_dims[0], self.disc_dims[1]),
+            nn.LeakyReLU(0.2, inplace=True),
+            torch.nn.Linear(self.disc_dims[1], self.disc_dims[2]),
+            nn.LeakyReLU(0.2, inplace=True),
+            torch.nn.Linear(self.disc_dims[2], self.disc_dims[3]),
+            nn.LeakyReLU(0.2, inplace=True),
+            torch.nn.Linear(self.disc_dims[3], 1)
+        )
+        
+        # If NOT using Wasserstein metric, final Sigmoid
+        if (not self.wass):
+            self.model = nn.Sequential(self.model, torch.nn.Sigmoid())
+        
+        initialize_weights(self)
+        
+        if self.verbose:
+            print(network_setup_string.format(self.name))
+            print(self.model)
+
+    def forward(self, img):
+        # Get output
+        validity = self.model(img)
+        return validity
+    
+
+class ConvDiscriminatorCNN(nn.Module):
+    """
+    CNN to model the discriminator of a ClusterGAN
+    Input is tuple (X,z) of an image vector and its corresponding
+    representation z vector. For example, if X comes from the dataset, corresponding
+    z is Encoder(X), and if z is sampled from representation space, X is Generator(z)
+    Output is a 1-dimensional value
+    """            
+    # Architecture : (64)4c2s-(128)4c2s_BL-FC1024_BL-FC1_S
+    def __init__(self, wass_metric=False, verbose=False):
+        super(ConvDiscriminatorCNN, self).__init__()
         
         self.name = 'discriminator'
         self.channels = 1
@@ -341,9 +478,9 @@ if __name__ == "__main__":
     mse_loss = torch.nn.MSELoss()
 
     # Initialize generator and discriminator
-    generator = GeneratorCNN(latent_dim, n_c, x_shape)
-    encoder = EncoderCNN(latent_dim, n_c)
-    discriminator = DiscriminatorCNN(wass_metric=wass_metric)
+    generator = ConvGeneratorCNN(latent_dim, n_c, x_shape)
+    encoder = ConvEncoderCNN(latent_dim, n_c)
+    discriminator = ConvDiscriminatorCNN(wass_metric=wass_metric)
 
     if CUDA:
         generator.cuda()
