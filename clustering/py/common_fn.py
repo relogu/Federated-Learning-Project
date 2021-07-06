@@ -30,7 +30,7 @@ from tensorflow.keras.layers import Dense, Input, InputSpec, Layer
 from tensorflow.keras.models import Model
 from torch.utils.data import Dataset
 import lifelines
-from lifelines import KaplanMeierFitter
+from lifelines import KaplanMeierFitter, WeibullFitter, ExponentialFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitter, GeneralizedGammaFitter, SplineFitter
 
 
 from py.dataset_util import plot_points_2d
@@ -235,30 +235,58 @@ def plot_lifelines_pred(outcomes, labels, fed_iter = None, client_id = None, pat
     # setting path for saving image
     if path is None:
         path = 'output'
-    # get times
-    T = outcomes['outcome_3']
-    # get events
-    E = outcomes['outcome_2']
-    kmf = KaplanMeierFitter()
     # initialize graph
-    plt.figure(figsize=(18, 9))
-    ax = plt.subplot(1, 1, 1)
-    # loop on labels
-    for label in np.unique(labels):
-        idx = (labels == label)
-        kmf.fit(T[idx], E[idx], label='label_{}'.format(label))
-        kmf.plot_survival_function(ax=ax)
-    plt.draw()
+    fig, axes = plt.subplots(2, 2, figsize=(25, 15))
+    # setting title and filename
+    if fed_iter is None and client_id is None:
+        fig.suptitle("Final lifelines for the test set", fontsize=16)
+        filename = path+'/lifelines_pred.png'
+    elif fed_iter is None and client_id is not None:
+        fig.suptitle("Actual lifelines for the test set for client {}". \
+            format(client_id), fontsize=16)
+        filename = path+'/lifelines_pred_'+str(client_id)+'.png'
+    elif fed_iter is not None and client_id is None:
+        fig.suptitle(
+            "Lifelines for the test set at the federated round {}". \
+                format(str(fed_iter)), fontsize=16)
+        filename = path+'/lifelines_pred_e'+str(fed_iter)+'.png'
+    else:
+        fig.suptitle(
+            "Lifelines for the test set at the federated round {} for client {}". \
+                format(str(fed_iter), client_id), fontsize=16)
+        filename = path+'/lifelines_pred_'+str(client_id)+'_e'+str(fed_iter)+'.png'
+    # selected fitters
+    fitters = {'KaplanMeierFitter': KaplanMeierFitter(),
+               'WeibullFitter': WeibullFitter(),
+               #'ExponentialFitter': ExponentialFitter(),
+               'LogNormalFitter': LogNormalFitter(),
+               'LogLogisticFitter': LogLogisticFitter(),
+               #'PiecewiseExponentialFitter': PiecewiseExponentialFitter([40, 60]),
+               #'GeneralizedGammaFitter': GeneralizedGammaFitter()
+               #'SplineFitter': SplineFitter(T.loc[E.astype(bool)], [0, 50, 100])
+               }
+    # get times
+    T = outcomes['outcome_3'].copy()
+    #print(T)
+    #T.loc[T['outcome_3']==0, 'outcome_3'] = 1e-7
+    # get events
+    E = outcomes['outcome_2'].copy()
+    # loop on fitters
+    i=j=0
+    for key in fitters:
+        ax = axes[i][j]
+        # loop on labels
+        for label in np.unique(labels):
+            idx = (labels == label)
+            if len(idx) > 5:
+                fitters[key].fit(T[idx], E[idx], label='f_{} l_{}'.format(key, label))
+                fitters[key].plot_survival_function(ax=ax)
+        i+=1
+        if i>1:
+            i=0
+            j+=1
     # plt.show(block=False)
     # dump to a file
-    if client_id is None:
-        filename = path+'/lifelines_pred'
-    else:
-        filename = path+'/lifelines_pred_'+str(client_id)
-    if fed_iter is None:
-        filename += '.png'
-    else:
-        filename += '_e'+str(fed_iter)+'.png'
     plt.savefig(filename)
     plt.close()
 
