@@ -350,7 +350,7 @@ if __name__ == "__main__":
             'conv_net': False,
             'gen_dims': [int(4*n_features), int(4*n_features), int(2*n_features), x.shape[-1]],
             'enc_dims': [int(4*n_features), int(4*n_features), int(2*n_features), int(2*n_features)],
-            'disc_dims': [int(2*n_features), int(2*n_features), int(4*n_features), int(4*n_features)]
+            'disc_dims': [int(32*x.shape[-1]), int(2*n_features), int(4*n_features), int(4*n_features)]
         }
         if DATASET == 'mnist':
             x = x.reshape(x.shape[0], 1, 28, 28)
