@@ -268,7 +268,7 @@ def plot_lifelines_pred(time, event, labels, fed_iter = None, client_id = None, 
     # loop on fitters
     i=j=0
     for key in fitters:
-        ax = axes[i][j]
+        ax = axes#[i][j]
         # loop on labels
         for label in np.unique(labels):
             idx = (labels == label)
