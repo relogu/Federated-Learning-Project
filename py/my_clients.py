@@ -594,7 +594,7 @@ class ClusterGANClient(NumPyClient):
          computed_labels)
         homo = my_metrics.homo(t_label.detach().cpu().numpy(),
          computed_labels)
-        print(out_1 % (self.client_id, self.f_round,
+        print(out_1 % (self.client_id, self.f_epoch,
                 acc, nmi, ami, ari, ran, homo))
         
         
