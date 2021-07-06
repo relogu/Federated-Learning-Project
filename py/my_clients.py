@@ -575,6 +575,19 @@ class ClusterGANClient(NumPyClient):
         t_imgs, t_label = self.test_imgs.data, self.test_labels
         # Encode sample real instances
         e_tzn, e_tzc, e_tzc_logits = self.encoder(t_imgs)
+        
+        
+        # computing metrics
+        acc = my_metrics.acc(t_label, e_tzc)
+        nmi = my_metrics.nmi(t_label, e_tzc)
+        ami = my_metrics.ami(t_label, e_tzc)
+        ari = my_metrics.ari(t_label, e_tzc)
+        ran = my_metrics.ran(t_label, e_tzc)
+        homo = my_metrics.homo(t_label, e_tzc)
+        print(out_1 % (self.client_id, self.f_round,
+                acc, nmi, ami, ari, ran, homo))
+        
+        
         # Generate sample instances from encoding
         teg_imgs = self.generator(e_tzn, e_tzc)
         # Calculate cycle reconstruction loss
