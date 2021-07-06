@@ -576,23 +576,24 @@ class ClusterGANClient(NumPyClient):
         # Encode sample real instances
         e_tzn, e_tzc, e_tzc_logits = self.encoder(t_imgs)
         
-        print(t_label.detach().cpu().numpy().shape)
-        
-        print(e_tzc.detach().cpu().numpy().shape)
+        computed_labels = []
+        for pred in e_tzc.detach().cpu().numpy():
+            computed_labels.append(pred.argmax())
+        computed_labels = np.array(computed_labels)
         
         # computing metrics
         acc = my_metrics.acc(t_label.detach().cpu().numpy(),
-         e_tzc.detach().cpu().numpy())
+         computed_labels)
         nmi = my_metrics.nmi(t_label.detach().cpu().numpy(),
-         e_tzc.detach().cpu().numpy())
+         computed_labels)
         ami = my_metrics.ami(t_label.detach().cpu().numpy(),
-         e_tzc.detach().cpu().numpy())
+         computed_labels)
         ari = my_metrics.ari(t_label.detach().cpu().numpy(),
-         e_tzc.detach().cpu().numpy())
+         computed_labels)
         ran = my_metrics.ran(t_label.detach().cpu().numpy(),
-         e_tzc.detach().cpu().numpy())
+         computed_labels)
         homo = my_metrics.homo(t_label.detach().cpu().numpy(),
-         e_tzc.detach().cpu().numpy())
+         computed_labels)
         print(out_1 % (self.client_id, self.f_round,
                 acc, nmi, ami, ari, ran, homo))
         
