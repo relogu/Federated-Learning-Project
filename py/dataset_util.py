@@ -135,12 +135,18 @@ def get_outcome_euromds_dataset(accept_nan: int = 0,
     prev = prev.replace('yes', 0)
     prev = prev.replace('Alive', 1)
     prev = prev.replace('Dead', 0)
+    prev = prev.replace('dead', 0)
     ret = {}
     i = 0
     for col in prev.columns:
         ret['outcome_{}'.format(i)] = prev[col]
         i += 1
-    return pd.DataFrame(ret)
+    ret = pd.DataFrame(ret)#.astype(float)
+    # modifying zeros to avoid statistical problems while using lifelines
+    ret.loc[ret['outcome_1']==0, 'outcome_1'] = 1e-7
+    ret.loc[ret['outcome_3']==0, 'outcome_3'] = 1e-7
+    ret.loc[ret['outcome_5']==0, 'outcome_5'] = 1e-7
+    return ret
     
 
 
