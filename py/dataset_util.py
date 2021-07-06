@@ -108,6 +108,39 @@ def dump_labels_euromds(labels,
                             'label': labels})
     # saving the file
     main_df.to_csv(data_folder/filename)
+
+
+def get_outcome_euromds_dataset(accept_nan: int = 0,
+                                groups: list[str] = None,
+                                exclude_cols: list[str] = None,
+                                path_to_data: Union[Path, str] = None):
+    # set the path
+    if path_to_data is None:
+        parent = pathlib.Path(__file__).parent.parent.absolute()
+        data_folder = parent/'data'/'euromds'
+    else:
+        data_folder = path_to_data
+    # get the groups dataframe
+    raw_cat = pd.read_csv(data_folder/'dataRawCategories.csv')
+    # get the groups of columns/variables
+    out_cat = raw_cat[raw_cat['category']=='Outcome Data']
+    # get columns' names
+    cols = out_cat['data']
+    # raw df
+    raw_df = pd.read_csv(data_folder/'dataRaw.csv')
+    # get outcomes df
+    prev = raw_df[cols]
+    # filtering
+    prev = prev.replace('no', 1)
+    prev = prev.replace('yes', 0)
+    prev = prev.replace('Alive', 1)
+    prev = prev.replace('Dead', 0)
+    ret = {}
+    i = 0
+    for col in prev.columns:
+        ret['outcome_{}'.format(i)] = prev[col]
+        i += 1
+    return pd.DataFrame(ret)
     
 
 

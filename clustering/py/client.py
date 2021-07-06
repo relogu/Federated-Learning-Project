@@ -32,11 +32,10 @@ matplotlib.use('Agg')
 path = pathlib.Path(__file__).parent.absolute()
 sys.path.append(str(path.parent.parent))
 
-import clustering.py.common_fn as my_fn
-import py.dataset_util as data_util
-import py.metrics as my_metrics
 import py.my_clients as clients
-
+import py.metrics as my_metrics
+import py.dataset_util as data_util
+import clustering.py.common_fn as my_fn
 
 # disable possible gpu devices
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -46,7 +45,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["GRPC_VERBOSITY"] = "debug"
 # for limiting the cpu cores to use
 torch.set_num_threads(1)
-
+tf.config.threading.set_inter_op_parallelism_threads(1)
+tf.config.threading.set_intra_op_parallelism_threads(1)
 
 def parse_args():
     """Parse the arguments passed."""
@@ -171,6 +171,24 @@ if __name__ == "__main__":
     SERVER = args.server
     print("Server address: "+SERVER)
 
+    # initializing common configuration dict
+    config = {
+        'batch_size': 32,
+        'n_clusters': N_CLUSTERS,
+        'kmeans_local_epochs': 300,
+        'kmeans_n_init': 25,
+        'ae_local_epochs': 1,
+        'ae_lr': 0.01,
+        'ae_momentum': 0.9,
+        'cl_lr': 0.01,
+        'cl_momentum': 0.9,
+        'cl_local_epochs': 1,
+        'update_interval': 55,
+        'ae_loss': 'mse',
+        'cl_loss': 'kld'}
+    
+    outcomes = None
+
     # dataset, building the whole one and get the local
     if DATASET == 'blobs':
         n_features = 30
@@ -217,8 +235,9 @@ if __name__ == "__main__":
         del X, Y
     elif DATASET == 'EUROMDS':
         # getting the entire dataset
-        x = data_util.get_euromds_dataset(groups=['Genetics', 'CNA', 'Demographics', 'Clinical', 'GeneGene', 'CytoCyto', 'GeneCyto'])
-        # setting labels to None
+        x = data_util.get_euromds_dataset(
+            groups=['Genetics', 'CNA', 'Demographics', 'Clinical', 'GeneGene', 'CytoCyto', 'GeneCyto'])
+        # getting labels from HDP
         prob = data_util.get_euromds_dataset(groups=['HDP'])
         y = []
         for label, row in prob.iterrows():
@@ -227,9 +246,11 @@ if __name__ == "__main__":
             else:
                 y.append(-1)
         y = np.array(y)
+        # getting the outcomes
+        outcomes = data_util.get_outcome_euromds_dataset()
         n_features = len(x.columns)
+        # dimensionality reduction through UMAP alg
         if args.dim_red:
-            # dimensionality reduction through UMAP alg
             n_features = 2
             x = umap.UMAP(
                 n_neighbors=30,
@@ -237,7 +258,6 @@ if __name__ == "__main__":
                 n_components=n_features,
                 random_state=42,
             ).fit_transform(x)
-        
         # inferring ground truth labels usign HDBSCAN alg
         y_h = hdbscan.HDBSCAN(
             min_samples=5,
@@ -249,17 +269,10 @@ if __name__ == "__main__":
         end = int(interval*(CLIENT_ID+1)) if CLIENT_ID < N_CLIENTS-1 else len(x)
         x = np.array(x[start:end])
         y = y[start:end]
-        N_CLUSTERS = 25#len(np.unique(y[y>0]))
+        outcomes = outcomes[start:end].reindex()
+        # setting the autoencoder layers
         dims = [x.shape[-1], int(2*n_features), int(4*n_features), N_CLUSTERS]
-        config = {'n_clusters': N_CLUSTERS,
-                  'ae_dims': dims,
-                  'ae_local_epochs': 1,
-                  'ae_lr': 0.01,
-                  'ae_momentum': 0.9,
-                  'cl_lr': 0.01,
-                  'cl_momentum': 0.9,
-                  'cl_local_epochs': 1,
-                  'update_interval': 55}
+
         '''
         TODO: compatibility with create_partitions methods
         X = (x, y)
@@ -272,6 +285,8 @@ if __name__ == "__main__":
         x, y = Y[CLIENT_ID]
         del X, Y
         '''
+
+    config['ae_dims'] = dims
 
     '''
     # kmeans baseline
@@ -300,25 +315,20 @@ if __name__ == "__main__":
                                             ae_local_epochs=1)'''
     # algorithm choice
     if args.alg == 'k-means':
+        config['kmeans_local_epochs'] = 1
         client = clients.SimpleKMeansClient(x=x,
                                             y=y,
                                             seed=SEED,
-                                            n_clusters=N_CLUSTERS,
-                                            client_id=CLIENT_ID)
+                                            config=config)
     elif args.alg == 'k_fed-ae_clust':
-        # initializing hyperparameters and encoder
-        autoencoder, encoder = my_fn.create_autoencoder(dims=dims)
-        autoencoder.summary()
         client = clients.KFEDClusteringClient(x=x,
                                               y=y,
-                                              ae_dims=dims,
                                               client_id=CLIENT_ID,
-                                              n_clusters=N_CLUSTERS)
+                                              config=config)
     elif args.alg == 'k-ae_clust':
-        autoencoder, encoder = my_fn.create_autoencoder(dims=dims)
-        autoencoder.summary()
         client = clients.KMeansEmbedClusteringClient(x=x,
                                                      y=y,
+                                                     outcomes=outcomes,
                                                      client_id=CLIENT_ID,
                                                      config=config)
     elif args.alg == 'clustergan':

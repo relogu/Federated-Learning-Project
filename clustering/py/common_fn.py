@@ -29,6 +29,9 @@ from tensorflow.keras.datasets import mnist
 from tensorflow.keras.layers import Dense, Input, InputSpec, Layer
 from tensorflow.keras.models import Model
 from torch.utils.data import Dataset
+import lifelines
+from lifelines import KaplanMeierFitter
+
 
 from py.dataset_util import plot_points_2d
 
@@ -226,6 +229,38 @@ def dump_result_dict(filename: str, result: Dict, verbose: int = 0):
         if result['round'] == 1:
             print(','.join(list(result.keys())), file=outfile)
         print(','.join(map(str, list(result.values()))), file=outfile)
+
+
+def plot_lifelines_pred(outcomes, labels, fed_iter = None, client_id = None, path=None):
+    # setting path for saving image
+    if path is None:
+        path = 'output'
+    # get times
+    T = outcomes['outcome_3']
+    # get events
+    E = outcomes['outcome_2']
+    kmf = KaplanMeierFitter()
+    # initialize graph
+    plt.figure(figsize=(18, 9))
+    ax = plt.subplot(1, 1, 1)
+    # loop on labels
+    for label in np.unique(labels):
+        idx = (labels == label)
+        kmf.fit(T[idx], E[idx], label='label_{}'.format(label))
+        kmf.plot_survival_function(ax=ax)
+    plt.draw()
+    # plt.show(block=False)
+    # dump to a file
+    if client_id is None:
+        filename = path+'/lifelines_pred'
+    else:
+        filename = path+'/lifelines_pred_'+str(client_id)
+    if fed_iter is None:
+        filename += '.png'
+    else:
+        filename += '_e'+str(fed_iter)+'.png'
+    plt.savefig(filename)
+    plt.close()
 
 
 def plot_dec_bound(model, x):
