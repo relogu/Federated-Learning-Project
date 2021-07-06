@@ -337,6 +337,7 @@ class ClusterGANClient(NumPyClient):
     def __init__(self,
                  x,
                  y,
+                 outcomes,
                  config,
                  client_id: int = 0,
                  hardw_acc_flag: bool = False
@@ -596,7 +597,23 @@ class ClusterGANClient(NumPyClient):
          computed_labels)
         print(out_1 % (self.client_id, self.f_epoch,
                 acc, nmi, ami, ari, ran, homo))
-        
+        # plotting outcomes on the labels
+        if self.outcomes is not None:
+            my_fn.plot_lifelines_pred(
+                self.outcomes, computed_labels, client_id=self.client_id)
+        if self.f_epoch % 10 == 0:  # print confusion matrix
+            my_fn.print_confusion_matrix(
+                t_label.detach().cpu().numpy(),
+                computed_labels,
+                client_id=self.client_id)
+        # dumping and retrieving the results
+        metrics = {"accuracy": acc,
+                    "normalized_mutual_info_score": nmi,
+                    "adjusted_mutual_info_score": ami,
+                    "adjusted_rand_score": ari,
+                    "rand_score": ran,
+                    "homogeneity_score": homo}
+        result = metrics.copy()
         
         # Generate sample instances from encoding
         teg_imgs = self.generator(e_tzn, e_tzc)
@@ -669,6 +686,13 @@ class ClusterGANClient(NumPyClient):
                self.lat_mse_loss.item(),
                self.lat_xe_loss.item())
               )
+        
+        result['img_mse_loss'] = self.img_mse_loss.item()
+        result['lat_mse_loss_mse_loss'] = self.lat_mse_loss.item()
+        result['lat_xe_loss'] = self.lat_xe_loss.item()
+        result['client'] = self.client_id
+        result['round'] = self.f_epoch
+        my_fn.dump_result_dict('client_'+str(self.client_id), result)
 
     def get_parameters(self):
         g_par = [val.cpu().numpy()
