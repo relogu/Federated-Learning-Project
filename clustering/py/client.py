@@ -333,6 +333,7 @@ if __name__ == "__main__":
                                                      config=config)
     elif args.alg == 'clustergan':
         config = {
+            'x_shape': x.shape[-1],
             'batch_size': 32,
             'latent_dim': 30,
             'n_clusters': 10,
@@ -344,10 +345,18 @@ if __name__ == "__main__":
             'beta_2': 0.9,
             'decay': 0.000025,
             'd_step': 5,
-            'wass_metric': False
+            'wass_metric': False,
+            'save_images': False,
+            'conv_net': False,
+            'gen_dims': [int(4*n_features), int(4*n_features), int(2*n_features), int(2*n_features)],
+            'enc_dims': [int(4*n_features), int(4*n_features), int(2*n_features), int(2*n_features)],
+            'disc_dims': [int(2*n_features), int(2*n_features), int(4*n_features), int(4*n_features)]
         }
         if DATASET == 'mnist':
             x = x.reshape(x.shape[0], 1, 28, 28)
+            config['x_shape'] = x[1:]
+            config['save_images'] = True
+            config['conv_net'] = True
         client = clients.ClusterGANClient(x,
                                           y,
                                           config=config,

@@ -15,9 +15,10 @@ import flwr as fl
 import numpy as np
 import torch
 import torchvision
-from clustering.py.clustergan import (DiscriminatorCNN, EncoderCNN,
-                                      GeneratorCNN, calc_gradient_penalty,
-                                      sample_z)
+from py.clustergan import (ConvDiscriminatorCNN, ConvEncoderCNN,
+                           ConvGeneratorCNN, DiscriminatorCNN, EncoderCNN,
+                           GeneratorCNN, calc_gradient_penalty,
+                           sample_z)
 from flwr.client import NumPyClient
 from flwr.common import (FitRes, Parameters, Scalar, Weights,
                          parameters_to_weights)
@@ -31,7 +32,7 @@ from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 
 import py.metrics as my_metrics
-from py.dataset_util import split_dataset
+from py.dataset_util import split_dataset, PrepareData
 from py.util import check_weights_dict, target_distribution
 
 k_means_initializer = 'k-means++'
@@ -48,16 +49,18 @@ class KFEDClusteringClient(NumPyClient):
                  x,  # data
                  y,  # labels
                  client_id,  # id of the client
-                 config, # configuration dict
+                 config,  # configuration dict
                  seed: int = 51550):  # see for random gen
         # set
         self.n_clusters = config['n_clusters']
         self.ae_dims = config['ae_dims']
         self.ae_local_epochs = config['ae_local_epochs']
-        self.ae_optimizer = SGD(lr=config['ae_lr'], momentum=config['ae_momentum'])
+        self.ae_optimizer = SGD(
+            lr=config['ae_lr'], momentum=config['ae_momentum'])
         self.ae_loss = config['ae_loss']
         self.cl_local_epochs = config['cl_local_epochs']
-        self.cl_optimizer = SGD(lr=config['cl_lr'], momentum=config['cl_momentum'])
+        self.cl_optimizer = SGD(
+            lr=config['cl_lr'], momentum=config['cl_momentum'])
         self.cl_loss = config['cl_loss']
         self.update_interval = config['update_interval']
         self.kmeans_local_epochs = config['kmeans_local_epochs']
@@ -66,7 +69,8 @@ class KFEDClusteringClient(NumPyClient):
             self.x_train, self.x_test = split_dataset(x)
             self.y_train = self.y_test = None
         else:
-            self.x_train, self.y_train, self.x_test, self.y_test = split_dataset(x, y)
+            self.x_train, self.y_train, self.x_test, self.y_test = split_dataset(
+                x, y)
         self.batch_size = config['batch_size']
         self.client_id = client_id
         self.seed = seed
@@ -135,7 +139,7 @@ class KFEDClusteringClient(NumPyClient):
             self.kmeans = KMeans(init=parameters,
                                  n_clusters=n_cl,
                                  max_iter=self.kmeans_local_epochs,
-                                 n_init=self.kmeans_n_init, # number of different random initializations
+                                 n_init=self.kmeans_n_init,  # number of different random initializations
                                  random_state=self.seed)
             # fitting clusters' centers using k-means
             self.kmeans.fit(self.encoder.predict(self.x_train))
@@ -247,7 +251,8 @@ class SimpleKMeansClient(NumPyClient):
             self.x_train, self.x_test = split_dataset(x)
             self.y_train = self.y_test = None
         else:
-            self.x_train, self.y_train, self.x_test, self.y_test = split_dataset(x, y)
+            self.x_train, self.y_train, self.x_test, self.y_test = split_dataset(
+                x, y)
         self.client_id = client_id
         self.seed = seed
         self.kmeans_local_epochs = config['kmeans_local_epochs']
@@ -345,7 +350,7 @@ class ClusterGANClient(NumPyClient):
         self.n_skip_iter = config['d_step']
 
         # Data dimensions
-        self.x_shape = x.shape[1:]
+        self.x_shape = config['x_shape']
         # Latent space info
         self.latent_dim = config['latent_dim']
         self.n_c = config['n_clusters']
@@ -368,13 +373,25 @@ class ClusterGANClient(NumPyClient):
         self.xe_loss = torch.nn.CrossEntropyLoss()
         self.mse_loss = torch.nn.MSELoss()
 
-        # Initialize generator and discriminator
-        self.generator = GeneratorCNN(self.latent_dim,
-                                      self.n_c,
-                                      self.x_shape)
-        self.encoder = EncoderCNN(self.latent_dim,
-                                  self.n_c)
-        self.discriminator = DiscriminatorCNN(wass_metric=self.wass_metric)
+        # Initialize NNs
+        if config['conv_net']:
+            self.generator = ConvGeneratorCNN(self.latent_dim,
+                                              self.n_c,
+                                              self.x_shape)
+            self.encoder = ConvEncoderCNN(self.latent_dim,
+                                          self.n_c)
+            self.discriminator = ConvDiscriminatorCNN(
+                wass_metric=self.wass_metric)
+        else:
+            self.generator = GeneratorCNN(latent_dim=self.latent_dim,
+                                          n_c=self.n_c,
+                                          gen_dims=config['gen_dims'],
+                                          x_shape=self.x_shape)
+            self.encoder = EncoderCNN(latent_dim=self.latent_dim,
+                                      enc_dims=config['enc_dims'],
+                                      n_c=self.n_c)
+            self.discriminator = DiscriminatorCNN(
+                disc_dims=config['disc_dims'], wass_metric=self.wass_metric)
 
         if self.cuda:
             self.generator.cuda()
@@ -390,10 +407,10 @@ class ClusterGANClient(NumPyClient):
         self.x_train, self.y_train, self.x_test, self.y_test = split_dataset(
             x, y)
         self.trainloader = DataLoader(
-            my_fn.PrepareData(self.x_train, y=self.y_train),
+            PrepareData(self.x_train, y=self.y_train),
             batch_size=self.batch_size)
         self.testloader = DataLoader(
-            my_fn.PrepareData(self.x_test, y=self.y_test),
+            PrepareData(self.x_test, y=self.y_test),
             batch_size=self.batch_size)
         self.test_imgs, self.test_labels = next(iter(self.testloader))
         self.test_imgs = Variable(self.test_imgs.type(self.TENSOR))
@@ -432,6 +449,7 @@ class ClusterGANClient(NumPyClient):
         self.f_epoch = 0
 
         # for saving images
+        self.save_images = config['save_images']
         self.client_id = client_id
         self.dir_to_save_images = 'client_%d_images' % (self.client_id)
         os.makedirs(self.dir_to_save_images, exist_ok=True)
@@ -584,41 +602,40 @@ class ClusterGANClient(NumPyClient):
         self.c_zc.append(self.lat_xe_loss.item())
 
         # Save cycled and generated examples!
-        r_imgs, i_label = self.real_imgs.data[:
-                                              n_samp], self.itruth_label[:n_samp]
-        e_zn, e_zc, e_zc_logits = self.encoder(r_imgs)
-        reg_imgs = self.generator(e_zn, e_zc)
-        save_image(reg_imgs.data[:n_samp],
-                   self.dir_to_save_images +
-                   '/cycle_reg_%06i.png' % (self.f_epoch),
-                   nrow=n_sqrt_samp, normalize=True)
-        save_image(gen_imgs_samp.data[:n_samp],
-                   self.dir_to_save_images+'/gen_%06i.png' % (self.f_epoch),
-                   nrow=n_sqrt_samp, normalize=True)
+        if self.save_images:
+            r_imgs, i_label = self.real_imgs.data[:
+                                                  n_samp], self.itruth_label[:n_samp]
+            e_zn, e_zc, e_zc_logits = self.encoder(r_imgs)
+            reg_imgs = self.generator(e_zn, e_zc)
+            save_image(reg_imgs.data[:n_samp],
+                       self.dir_to_save_images +
+                       '/cycle_reg_%06i.png' % (self.f_epoch),
+                       nrow=n_sqrt_samp, normalize=True)
+            save_image(gen_imgs_samp.data[:n_samp],
+                       self.dir_to_save_images +
+                       '/gen_%06i.png' % (self.f_epoch),
+                       nrow=n_sqrt_samp, normalize=True)
+            # Generate samples for specified classes
+            stack_imgs = []
+            for idx in range(self.n_c):
+                # Sample specific class
+                zn_samp, zc_samp, zc_samp_idx = sample_z(shape=self.n_c,
+                                                         latent_dim=self.latent_dim,
+                                                         n_c=self.n_c,
+                                                         fix_class=idx,
+                                                         cuda=self.cuda)
+                # Generate sample instances
+                gen_imgs_samp = self.generator(zn_samp, zc_samp)
 
-        # Generate samples for specified classes
-        stack_imgs = []
-        for idx in range(self.n_c):
-            # Sample specific class
-            zn_samp, zc_samp, zc_samp_idx = sample_z(shape=self.n_c,
-                                                     latent_dim=self.latent_dim,
-                                                     n_c=self.n_c,
-                                                     fix_class=idx,
-                                                     cuda=self.cuda)
-
-            # Generate sample instances
-            gen_imgs_samp = self.generator(zn_samp, zc_samp)
-
-            if (len(stack_imgs) == 0):
-                stack_imgs = gen_imgs_samp
-            else:
-                stack_imgs = torch.cat((stack_imgs, gen_imgs_samp), 0)
-
-        # Save class-specified generated examples!
-        save_image(stack_imgs,
-                   self.dir_to_save_images +
-                   '/gen_classes_%06i.png' % (self.f_epoch),
-                   nrow=self.n_c, normalize=True)
+                if (len(stack_imgs) == 0):
+                    stack_imgs = gen_imgs_samp
+                else:
+                    stack_imgs = torch.cat((stack_imgs, gen_imgs_samp), 0)
+            # Save class-specified generated examples!
+            save_image(stack_imgs,
+                       self.dir_to_save_images +
+                       '/gen_classes_%06i.png' % (self.f_epoch),
+                       nrow=self.n_c, normalize=True)
 
         print("[Federated Epoch %d/%d] [Client ID %d] \n"
               "\tCycle Losses: [x: %f] [z_n: %f] [z_c: %f]\n" %
@@ -687,18 +704,21 @@ class KMeansEmbedClusteringClient(NumPyClient):
                  x,  # data
                  y,  # labels
                  client_id,  # id of the client
-                 config, # configuration dictionary
-                 outcomes = None, # outcomes for lifelines
+                 config,  # configuration dictionary
+                 outcomes=None,  # outcomes for lifelines
                  seed: int = 51550):  # see for random gen
         # set
         self.n_clusters = config['n_clusters']
         self.ae_dims = config['ae_dims']
         self.ae_local_epochs = config['ae_local_epochs']
-        self.ae_optimizer = SGD(lr=config['ae_lr'], momentum=config['ae_momentum'])
+        self.ae_optimizer = SGD(
+            lr=config['ae_lr'], momentum=config['ae_momentum'])
         self.ae_loss = config['ae_loss']
-        self.cl_optimizer = SGD(learning_rate=config['cl_lr'], momentum=config['cl_momentum'])
+        self.cl_optimizer = SGD(
+            learning_rate=config['cl_lr'], momentum=config['cl_momentum'])
         self.cl_local_epochs = config['cl_local_epochs']
-        self.cl_optimizer = SGD(lr=config['cl_lr'], momentum=config['cl_momentum'])
+        self.cl_optimizer = SGD(
+            lr=config['cl_lr'], momentum=config['cl_momentum'])
         self.cl_loss = config['cl_loss']
         self.update_interval = config['update_interval']
         self.kmeans_n_init = config['kmeans_n_init']
@@ -707,7 +727,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
             self.x_train, self.x_test = split_dataset(x)
             self.y_train = self.y_test = None
         else:
-            self.x_train, self.y_train, self.x_test, self.y_test = split_dataset(x, y)
+            self.x_train, self.y_train, self.x_test, self.y_test = split_dataset(
+                x, y)
         self.outcomes = outcomes[len(self.x_train):]
         self.batch_size = config['batch_size']
         self.client_id = client_id
@@ -775,7 +796,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             self.kmeans = KMeans(init=parameters,
                                  n_clusters=self.n_clusters,
                                  max_iter=self.kmeans_local_epochs,
-                                 n_init=self.kmeans_n_init, # number of different random initializations
+                                 n_init=self.kmeans_n_init,  # number of different random initializations
                                  random_state=self.seed)
             # fitting clusters' centers using k-means
             self.kmeans.fit(self.encoder.predict(self.x_train))
@@ -847,7 +868,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
             y_pred = q.argmax(1)
             # plotting outcomes on the labels
             if self.outcomes is not None:
-                my_fn.plot_lifelines_pred(self.outcomes, y_pred, client_id=self.client_id)
+                my_fn.plot_lifelines_pred(
+                    self.outcomes, y_pred, client_id=self.client_id)
             # evaluating metrics
             if self.y_test is not None:
                 acc = my_metrics.acc(self.y_test, y_pred)
