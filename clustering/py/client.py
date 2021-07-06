@@ -348,7 +348,7 @@ if __name__ == "__main__":
             'wass_metric': False,
             'save_images': False,
             'conv_net': False,
-            'gen_dims': [int(4*n_features), int(4*n_features), int(2*n_features), int(2*n_features)],
+            'gen_dims': [int(4*n_features), int(4*n_features), int(2*n_features), x.shape[-1]],
             'enc_dims': [int(4*n_features), int(4*n_features), int(2*n_features), int(2*n_features)],
             'disc_dims': [int(2*n_features), int(2*n_features), int(4*n_features), int(4*n_features)]
         }
