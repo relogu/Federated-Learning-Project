@@ -415,6 +415,7 @@ class ClusterGANClient(NumPyClient):
             batch_size=self.batch_size)
         self.test_imgs, self.test_labels = next(iter(self.testloader))
         self.test_imgs = Variable(self.test_imgs.type(self.TENSOR))
+        self.outcomes = outcomes
 
         self.ge_chain = ichain(self.generator.parameters(),
                                self.encoder.parameters())
