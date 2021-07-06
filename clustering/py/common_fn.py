@@ -231,7 +231,7 @@ def dump_result_dict(filename: str, result: Dict, verbose: int = 0):
         print(','.join(map(str, list(result.values()))), file=outfile)
 
 
-def plot_lifelines_pred(outcomes, labels, fed_iter = None, client_id = None, path=None):
+def plot_lifelines_pred(time, event, labels, fed_iter = None, client_id = None, path=None):
     # setting path for saving image
     if path is None:
         path = 'output'
@@ -265,12 +265,6 @@ def plot_lifelines_pred(outcomes, labels, fed_iter = None, client_id = None, pat
                #'GeneralizedGammaFitter': GeneralizedGammaFitter()
                #'SplineFitter': SplineFitter(T.loc[E.astype(bool)], [0, 50, 100])
                }
-    # get times
-    T = outcomes['outcome_3'].copy()
-    #print(T)
-    #T.loc[T['outcome_3']==0, 'outcome_3'] = 1e-7
-    # get events
-    E = outcomes['outcome_2'].copy()
     # loop on fitters
     i=j=0
     for key in fitters:
@@ -279,7 +273,7 @@ def plot_lifelines_pred(outcomes, labels, fed_iter = None, client_id = None, pat
         for label in np.unique(labels):
             idx = (labels == label)
             if len(idx) > 5:
-                fitters[key].fit(T[idx], E[idx], label='f_{} l_{}'.format(key, label))
+                fitters[key].fit(time[idx], event[idx], label='f_{} l_{}'.format(key, label))
                 fitters[key].plot_survival_function(ax=ax)
         i+=1
         if i>1:

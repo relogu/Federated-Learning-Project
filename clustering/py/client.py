@@ -359,7 +359,7 @@ if __name__ == "__main__":
             config['conv_net'] = True
         client = clients.ClusterGANClient(x=x,
                                           y=y,
-                                          outcomes=outcomes,
+                                          outcomes=np.array(outcomes[['outcome_3', 'outcome_2']]),
                                           config=config,
                                           client_id=CLIENT_ID)
     # TODO: elif args.alg == 'k-clustergan':

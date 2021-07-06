@@ -337,8 +337,8 @@ class ClusterGANClient(NumPyClient):
     def __init__(self,
                  x,
                  y,
-                 outcomes,
                  config,
+                 outcomes = None,
                  client_id: int = 0,
                  hardw_acc_flag: bool = False
                  ):
@@ -415,7 +415,13 @@ class ClusterGANClient(NumPyClient):
             batch_size=self.batch_size)
         self.test_imgs, self.test_labels = next(iter(self.testloader))
         self.test_imgs = Variable(self.test_imgs.type(self.TENSOR))
-        self.outcomes = outcomes
+        if outcomes is not None:
+            self.outcomes_loader = DataLoader(
+                PrepareData(x=outcomes[:,0], y=outcomes[:,1]),
+                batch_size=self.batch_size)
+            self.times, self.events = next(iter(self.outcomes_loader))
+        else:
+            self.outcomes_loader = outcomes
 
         self.ge_chain = ichain(self.generator.parameters(),
                                self.encoder.parameters())
@@ -599,9 +605,9 @@ class ClusterGANClient(NumPyClient):
         print(out_1 % (self.client_id, self.f_epoch,
                 acc, nmi, ami, ari, ran, homo))
         # plotting outcomes on the labels
-        if self.outcomes is not None:
+        if self.outcomes_loader is not None:
             my_fn.plot_lifelines_pred(
-                self.outcomes, computed_labels, client_id=self.client_id)
+                self.times, self.events, computed_labels, client_id=self.client_id)
         if self.f_epoch % 10 == 0:  # print confusion matrix
             my_fn.print_confusion_matrix(
                 t_label.detach().cpu().numpy(),
