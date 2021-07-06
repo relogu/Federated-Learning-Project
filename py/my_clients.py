@@ -37,6 +37,7 @@ from py.util import check_weights_dict, target_distribution
 k_means_initializer = 'k-means++'
 k_means_eval_string = 'Client %d, updated real accuracy of k-Means: %.5f'
 out_1 = 'Client %d, FedIter %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f'
+out_2 = 'Client %d, FedIter %d\n\ae_loss %.5f'
 clustering_eval_string = 'Client %d, Acc = %.5f, nmi = %.5f, ari = %.5f ; loss = %.5f'
 
 
@@ -123,7 +124,8 @@ class KFEDClusteringClient(NumPyClient):
             self.autoencoder.fit(x=self.x_train,
                                  y=self.x_train,
                                  batch_size=32,
-                                 epochs=self.ae_local_epochs)
+                                 epochs=self.ae_local_epochs,
+                                 verbose=0)
             # returning the parameters necessary for FedAvg
             return self.autoencoder.get_weights(), len(self.x_train), {}
         elif self.step == 'k-FED':  # k-Means step
@@ -174,6 +176,7 @@ class KFEDClusteringClient(NumPyClient):
             result['client'] = self.client_id
             result['round'] = self.f_round
             my_fn.dump_result_dict('client_'+str(self.client_id)+'_ae', result)
+            print(out_2 % (self.client_id, self.f_round, loss))
             result = (loss, len(self.x_test), {})
         elif self.step == 'k-FED':
             # predicting labels
@@ -763,7 +766,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
             self.autoencoder.fit(x=self.x_train,
                                  y=self.x_train,
                                  batch_size=self.batch_size,
-                                 epochs=self.ae_local_epochs)
+                                 epochs=self.ae_local_epochs,
+                                 verbose=0)
             # returning the parameters necessary for FedAvg
             return self.autoencoder.get_weights(), len(self.x_train), {}
         elif self.step == 'k-means':  # k-Means step
@@ -812,6 +816,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             result['client'] = self.client_id
             result['round'] = self.f_round
             my_fn.dump_result_dict('client_'+str(self.client_id)+'_ae', result)
+            print(out_2 % (self.client_id, self.f_round, loss))
             result = (loss, len(self.x_test), {})
         elif self.step == 'k-means':
             # predicting labels
