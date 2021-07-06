@@ -349,7 +349,7 @@ if __name__ == "__main__":
             'save_images': False,
             'conv_net': False,
             'gen_dims': [int(4*n_features), int(4*n_features), int(2*n_features), x.shape[-1]],
-            'enc_dims': [int(4*n_features), int(4*n_features), int(2*n_features), int(2*n_features)],
+            'enc_dims': [int(x.shape[-1]), int(4*n_features), int(2*n_features), int(2*n_features)],
             'disc_dims': [int(x.shape[-1]), int(2*n_features), int(4*n_features), int(4*n_features)]
         }
         if DATASET == 'mnist':
