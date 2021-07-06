@@ -236,7 +236,7 @@ def plot_lifelines_pred(time, event, labels, fed_iter = None, client_id = None, 
     if path is None:
         path = 'output'
     # initialize graph
-    fig, axes = plt.subplots(2, 2, figsize=(25, 15))
+    fig, axes = plt.subplots(1, 1, figsize=(25, 15))
     # setting title and filename
     if fed_iter is None and client_id is None:
         fig.suptitle("Final lifelines for the test set", fontsize=16)
@@ -257,10 +257,10 @@ def plot_lifelines_pred(time, event, labels, fed_iter = None, client_id = None, 
         filename = path+'/lifelines_pred_'+str(client_id)+'_e'+str(fed_iter)+'.png'
     # selected fitters
     fitters = {'KaplanMeierFitter': KaplanMeierFitter(),
-               'WeibullFitter': WeibullFitter(),
+               #'WeibullFitter': WeibullFitter(),
                #'ExponentialFitter': ExponentialFitter(),
-               'LogNormalFitter': LogNormalFitter(),
-               'LogLogisticFitter': LogLogisticFitter(),
+               #'LogNormalFitter': LogNormalFitter(),
+               #'LogLogisticFitter': LogLogisticFitter(),
                #'PiecewiseExponentialFitter': PiecewiseExponentialFitter([40, 60]),
                #'GeneralizedGammaFitter': GeneralizedGammaFitter()
                #'SplineFitter': SplineFitter(T.loc[E.astype(bool)], [0, 50, 100])
