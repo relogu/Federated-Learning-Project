@@ -9,7 +9,7 @@ Created on Wed Mar 10 14:25:15 2021
 import math
 import pathlib
 import random
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
