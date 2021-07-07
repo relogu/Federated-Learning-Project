@@ -128,7 +128,7 @@ if __name__ == "__main__":
         plt.close()
     '''
     # moving other images
-    imgs = sorted(output_folder.glob('*.png'))
+    imgs = sorted(output_folder.glob('*'))
     for img in imgs:
         filename = img.name
         img.rename(images_folder/filename)

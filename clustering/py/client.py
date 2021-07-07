@@ -149,6 +149,14 @@ def parse_args():
                         default=False,
                         action='store',
                         help='wheater to apply LDA partitioning to the entire dataset')
+    parser.add_argument('--groups',
+                        dest='groups',
+                        required=False,
+                        type=int,
+                        choices=[1,2,3,4,5,6,7],
+                        default=7,
+                        action='store',
+                        help='how many groups of variables to use for EUROMDS dataset')
     _args = parser.parse_args()
     return _args
 
@@ -234,9 +242,9 @@ if __name__ == "__main__":
         dims = [x.shape[-1], 500, 500, 2000, N_CLUSTERS]
         del X, Y
     elif DATASET == 'EUROMDS':
+        groups = ['Genetics', 'CNA', 'Demographics', 'Clinical', 'GeneGene', 'CytoCyto', 'GeneCyto']
         # getting the entire dataset
-        x = data_util.get_euromds_dataset(
-            groups=['Genetics'])#, 'CNA'])#, 'Demographics', 'Clinical'])#, 'GeneGene', 'CytoCyto', 'GeneCyto'])
+        x = data_util.get_euromds_dataset(groups=groups[:args.groups])
         # getting labels from HDP
         prob = data_util.get_euromds_dataset(groups=['HDP'])
         y = []
