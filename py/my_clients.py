@@ -32,7 +32,7 @@ from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 
 import py.metrics as my_metrics
-from py.dataset_util import split_dataset, PrepareData
+from py.dataset_util import split_dataset, PrepareData, PrepareDataSimple
 from py.util import check_weights_dict, target_distribution
 
 k_means_initializer = 'k-means++'
@@ -413,50 +413,34 @@ class ClusterGANClient(NumPyClient):
         
         self.x_train = x[train_idx]
         self.y_train = y[train_idx]
-        self.id_train = ids[train_idx]
-        self.outcomes_train = outcomes[train_idx]
         self.x_test = x[test_idx]
         self.y_test = y[test_idx]
-        self.id_test = ids[test_idx]
-        self.outcomes_test = outcomes[test_idx]
-        '''
-        self.trainloader = DataLoader1(
-            PrepareData(self.x_train, y=self.y_train),
-            batch_size=self.batch_size)
-        self.testloader = DataLoader1(
-            PrepareData(self.x_test, y=self.y_test),
-            batch_size=self.batch_size)
-        '''
-        self.trainloader = DataLoader(
-            PrepareData(x=self.x_train,
-                        y=self.y_train,
-                        ids=self.id_train,
-                        outcomes=self.outcomes_train),
-            batch_size=self.batch_size)
-        self.testloader = DataLoader(
-            PrepareData(x=self.x_test,
-                        y=self.y_test,
-                        ids=self.id_test,
-                        outcomes=self.outcomes_test),
-            batch_size=self.batch_size)
         
-        '''
-        if outcomes is not None:
-            self.outcomes_loader = DataLoader(
-                PrepareData(x=outcomes[:,0], y=outcomes[:,1]),
+        if outcomes is None or ids is None:
+            self.trainloader = DataLoader(
+                PrepareDataSimple(self.x_train, y=self.y_train),
                 batch_size=self.batch_size)
-            self.times, self.events = next(iter(self.outcomes_loader))
-        else:
-            self.outcomes_loader = outcomes
-            
-        if ids is not None:
-            self.outcomes_loader = DataLoader(
-                PrepareData(x=outcomes[:,0], y=outcomes[:,1]),
+            self.testloader = DataLoader(
+                PrepareDataSimple(self.x_test, y=self.y_test),
                 batch_size=self.batch_size)
-            self.times, self.events = next(iter(self.outcomes_loader))
         else:
-            self.outcomes_loader = outcomes
-        '''
+            self.id_train = ids[train_idx]
+            self.outcomes_train = outcomes[train_idx]
+            self.id_test = ids[test_idx]
+            self.outcomes_test = outcomes[test_idx]
+            self.trainloader = DataLoader(
+                PrepareData(x=self.x_train,
+                            y=self.y_train,
+                            ids=self.id_train,
+                            outcomes=self.outcomes_train),
+                batch_size=self.batch_size)
+            self.testloader = DataLoader(
+                PrepareData(x=self.x_test,
+                            y=self.y_test,
+                            ids=self.id_test,
+                            outcomes=self.outcomes_test),
+                batch_size=self.batch_size)
+        
         self.ge_chain = ichain(self.generator.parameters(),
                                self.encoder.parameters())
 
