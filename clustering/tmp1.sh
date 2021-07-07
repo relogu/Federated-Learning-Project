@@ -14,4 +14,4 @@ python3 py/client.py --client_id=7 --alg=clustergan --n_clients=8 --n_clusters=1
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=lda_clustergan
+#python3 scripts/plot_metrics.py --prefix=EUROMDS-red_clustergan
