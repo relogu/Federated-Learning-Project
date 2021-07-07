@@ -236,7 +236,7 @@ if __name__ == "__main__":
     elif DATASET == 'EUROMDS':
         # getting the entire dataset
         x = data_util.get_euromds_dataset(
-            groups=['Genetics', 'CNA', 'Demographics', 'Clinical', 'GeneGene', 'CytoCyto', 'GeneCyto'])
+            groups=['Genetics', 'CNA', 'Demographics', 'Clinical'])#, 'GeneGene', 'CytoCyto', 'GeneCyto'])
         # getting labels from HDP
         prob = data_util.get_euromds_dataset(groups=['HDP'])
         y = []
