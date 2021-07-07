@@ -644,9 +644,9 @@ class ClusterGANClient(NumPyClient):
         print(out_1 % (self.client_id, self.f_epoch,
                 acc, nmi, ami, ari, ran, homo))
         # plotting outcomes on the labels
-        if self.outcomes_loader is not None:
-            my_fn.plot_lifelines_pred(
-                times, events, computed_labels, client_id=self.client_id)
+        #if self.outcomes_loader is not None:
+        my_fn.plot_lifelines_pred(
+            times, events, computed_labels, client_id=self.client_id)
         if self.f_epoch % 10 == 0:  # print confusion matrix
             my_fn.print_confusion_matrix(
                 t_label.detach().cpu().numpy(),
