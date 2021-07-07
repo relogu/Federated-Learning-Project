@@ -456,7 +456,7 @@ if __name__ == "__main__":
     
     
     # for managing the cpu cores to use
-    torch.set_num_threads(4)
+    torch.set_num_threads(8)
     
     # get parameters
     args = get_parser().parse_args()
@@ -763,7 +763,7 @@ if __name__ == "__main__":
         homo = my_metrics.homo(t_label.detach().cpu().numpy(),
          computed_labels)
         print('FedIter %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' % \
-            (epoch, acc, nmi, ami, ari, ran, homo))
+            (epoch+1, acc, nmi, ami, ari, ran, homo))
         if args.dataset == 'euromds':
             # plotting outcomes on the labels
             my_fn.plot_lifelines_pred(time=times,
@@ -817,10 +817,10 @@ if __name__ == "__main__":
             e_zn, e_zc, e_zc_logits = encoder(r_imgs)
             reg_imgs = generator(e_zn, e_zc)
             save_image(reg_imgs.data[:n_samp],
-                    path_to_out+('cycle_reg_%06i.png' %(epoch)), 
+                    path_to_out+('cycle_reg_%06i.png' %(epoch+1)), 
                     nrow=n_sqrt_samp, normalize=True)
             save_image(gen_imgs_samp.data[:n_samp],
-                    path_to_out+('gen_%06i.png' %(epoch)), 
+                    path_to_out+('gen_%06i.png' %(epoch+1)), 
                     nrow=n_sqrt_samp, normalize=True)
             
             ## Generate samples for specified classes
@@ -843,12 +843,12 @@ if __name__ == "__main__":
 
             # Save class-specified generated examples!
             save_image(stack_imgs,
-                    path_to_out/('gen_classes_%06i.png' %(epoch)),
+                    path_to_out/('gen_classes_%06i.png' %(epoch+1)),
                     nrow=n_c, normalize=True)
     
 
         print ("[Epoch %d/%d] \n"\
-            "\tModel Losses: [D: %f] [GE: %f]" % (epoch, 
+            "\tModel Losses: [D: %f] [GE: %f]" % (epoch+1, 
                                                     n_epochs, 
                                                     d_loss.item(),
                                                     ge_loss.item())
@@ -862,7 +862,7 @@ if __name__ == "__main__":
         result['img_mse_loss'] = img_mse_loss.item()
         result['lat_mse_loss'] = lat_mse_loss.item()
         result['lat_xe_loss'] = lat_xe_loss.item()
-        result['round'] = epoch
+        result['round'] = epoch+1
         my_fn.dump_result_dict(filename='clustergan', result=result, path_to_out=path_to_out)
         pred = {'ID': test_ids,
                 'label': computed_labels}
