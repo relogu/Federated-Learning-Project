@@ -113,7 +113,8 @@ def get_euromds_ids(path_to_data: Union[Path, str] = None):
     main_df = pd.read_csv(data_folder/'dataFrame.csv')
     # select the column
     main_df = main_df[main_df.columns[0]]
-    return main_df
+    main_df.replace('EUROMDS', '')
+    return main_df.asint()
 
 
 def dump_labels_euromds(labels,
