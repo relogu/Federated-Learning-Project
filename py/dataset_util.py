@@ -134,8 +134,9 @@ def dump_labels_euromds(labels,
     main_df = pd.read_csv(data_folder/'dataFrame.csv')
     # selected the IDs
     main_df = main_df[main_df.columns[0]]
+    main_df.replace('EUROMDS', '')
     # building the dataframe
-    main_df = pd.DataFrame({'ID': main_df,
+    main_df = pd.DataFrame({'ID': main_df.asint(),
                             'label': labels})
     # saving the file
     main_df.to_csv(data_folder/filename)
