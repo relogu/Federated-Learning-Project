@@ -3,8 +3,8 @@
 echo $PWD
 
 # entire dataset
-#python3 py/clustergan.py -s=euromds -n=5000 -a
-#wait
+python3 py/clustergan.py -s=euromds -n=5000 -a
+wait
 python3 clustering/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDS_clustergan
 sleep 10
 
