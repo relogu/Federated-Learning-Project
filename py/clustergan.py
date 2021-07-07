@@ -767,9 +767,9 @@ if __name__ == "__main__":
                                       path_to_out=path_to_out)
         if epoch % 10 == 0:  # print confusion matrix
             my_fn.print_confusion_matrix(
-                t_label.detach().cpu().numpy(),
-                computed_labels,
-                path_to_out)
+                y=t_label.detach().cpu().numpy(),
+                y_pred=computed_labels,
+                path_to_out=path_to_out)
         # dumping and retrieving the results
         metrics = {"accuracy": acc,
                     "normalized_mutual_info_score": nmi,
@@ -858,7 +858,7 @@ if __name__ == "__main__":
         result['lat_mse_loss'] = lat_mse_loss.item()
         result['lat_xe_loss'] = lat_xe_loss.item()
         result['round'] = epoch
-        my_fn.dump_result_dict('clustergan', result, path_to_out)
+        my_fn.dump_result_dict(filename='clustergan', result=result, path_to_out=path_to_out)
         pred = {'ID': test_ids,
                 'label': computed_labels}
-        my_fn.dump_pred_dict('pred', pred, path_to_out)
+        my_fn.dump_pred_dict(filename='pred', pred=pred, path_to_out=path_to_out)
