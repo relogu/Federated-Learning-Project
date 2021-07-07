@@ -858,7 +858,7 @@ if __name__ == "__main__":
         result['lat_mse_loss'] = lat_mse_loss.item()
         result['lat_xe_loss'] = lat_xe_loss.item()
         result['round'] = epoch
-        my_fn.dump_result_dict('clustergan', path_to_out, result)
+        my_fn.dump_result_dict('clustergan', result, path_to_out)
         pred = {'ID': test_ids,
                 'label': computed_labels}
-        my_fn.dump_pred_dict('pred', path_to_out, pred)
+        my_fn.dump_pred_dict('pred', pred, path_to_out)
