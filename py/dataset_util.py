@@ -114,7 +114,7 @@ def get_euromds_ids(path_to_data: Union[Path, str] = None):
     # select the column
     main_df = main_df[main_df.columns[0]]
     main_df.replace('EUROMDS', '')
-    return main_df.asint()
+    return main_df.astype(int)
 
 
 def dump_labels_euromds(labels,
