@@ -500,7 +500,7 @@ class ClusterGANClient(NumPyClient):
         # Training loop
         print('Begin training session with %i epochs...\n' % (self.n_epochs))
         for epoch in range(self.n_epochs):
-            for i, (imgs, self.itruth_label) in enumerate(self.trainloader):
+            for i, (imgs, self.itruth_label, _, _) in enumerate(self.trainloader):
 
                 # Ensure generator/encoder are trainable
                 self.generator.train()
