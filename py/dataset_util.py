@@ -46,9 +46,9 @@ class PrepareData(Dataset):
         if not torch.is_tensor(y):
             self.y = torch.from_numpy(y)
         if not torch.is_tensor(ids):
-            self.id = torch.from_numpy(ids)
+            self.ids = ids
         if not torch.is_tensor(outcomes):
-            self.id = torch.from_numpy(outcomes)
+            self.outcomes = torch.from_numpy(outcomes)
 
     def __len__(self):
         return len(self.x)
@@ -113,8 +113,7 @@ def get_euromds_ids(path_to_data: Union[Path, str] = None):
     main_df = pd.read_csv(data_folder/'dataFrame.csv')
     # select the column
     main_df = main_df[main_df.columns[0]]
-    main_df.replace('EUROMDS', '')
-    return main_df.astype(int)
+    return main_df
 
 
 def dump_labels_euromds(labels,
