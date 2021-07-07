@@ -204,7 +204,10 @@ def dump_learning_curve(filename: str, round: int, loss: float, accuracy: float)
               ","+str(accuracy), file=outfile)
 
 
-def dump_result_dict(filename: str, result: Dict, verbose: int = 0):
+def dump_result_dict(filename: str,
+                     result: Dict,
+                     path_to_out: Union[Path, str] = None,
+                     verbose: int = 0):
     """Dump the result dictionary.
     The function dumps to the file given by complete path
     (relative or absolute) the row composed by results.values(),
@@ -219,8 +222,9 @@ def dump_result_dict(filename: str, result: Dict, verbose: int = 0):
     if result.get('round') is None:
         raise KeyError("The mandatory key \'round\' is missing.")
     # get file path
-    path_to_file = pathlib.Path(__file__).parent.parent.absolute()
-    path_to_file = path_to_file/"output"/(filename+".dat")
+    if path_to_out is None:
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()
+    path_to_file = path_to_out/"output"/(filename+".dat")
     # touching file
     path_to_file.touch()
     if verbose > 0:
@@ -232,40 +236,50 @@ def dump_result_dict(filename: str, result: Dict, verbose: int = 0):
         print(','.join(map(str, list(result.values()))), file=outfile)
 
 
-def dump_pred_dict(filename: str, pred: Dict, verbose: int = 0):
+def dump_pred_dict(filename: str,
+                   pred: Dict,
+                   path_to_out: Union[Path, str] = None,
+                   verbose: int = 0):
     # get file path
-    path_to_file = pathlib.Path(__file__).parent.parent.absolute()
-    path_to_file = path_to_file/"output"/(filename+".csv")
+    if path_to_out is None:
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()
+    path_to_file = path_to_out/"output"/(filename+".csv")
     if verbose > 0:
         print("Dumping results at "+str(path_to_file))
     df = pd.DataFrame(pred)
     df.to_csv(path_to_file)
 
 
-def plot_lifelines_pred(time, event, labels, fed_iter = None, client_id = None, path=None):
+def plot_lifelines_pred(time,
+                        event,
+                        labels,
+                        fed_iter = None,
+                        client_id = None,
+                        path_to_out: Union[Path, str] = None):
     # setting path for saving image
-    if path is None:
-        path = 'output'
+    if path_to_out is None:
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()
+    path_to_file = path_to_out/"output"
     # initialize graph
     fig, axes = plt.subplots(1, 1, figsize=(25, 15))
     # setting title and filename
     if fed_iter is None and client_id is None:
         fig.suptitle("Final lifelines for the test set", fontsize=16)
-        filename = path+'/lifelines_pred.png'
+        filename = 'lifelines_pred.png'
     elif fed_iter is None and client_id is not None:
         fig.suptitle("Actual lifelines for the test set for client {}". \
             format(client_id), fontsize=16)
-        filename = path+'/lifelines_pred_'+str(client_id)+'.png'
+        filename = 'lifelines_pred_'+str(client_id)+'.png'
     elif fed_iter is not None and client_id is None:
         fig.suptitle(
             "Lifelines for the test set at the federated round {}". \
                 format(str(fed_iter)), fontsize=16)
-        filename = path+'/lifelines_pred_e'+str(fed_iter)+'.png'
+        filename = 'lifelines_pred_e'+str(fed_iter)+'.png'
     else:
         fig.suptitle(
             "Lifelines for the test set at the federated round {} for client {}". \
                 format(str(fed_iter), client_id), fontsize=16)
-        filename = path+'/lifelines_pred_'+str(client_id)+'_e'+str(fed_iter)+'.png'
+        filename = 'lifelines_pred_'+str(client_id)+'_e'+str(fed_iter)+'.png'
     # selected fitters
     fitters = {'KaplanMeierFitter': KaplanMeierFitter(),
                #'WeibullFitter': WeibullFitter(),
@@ -292,7 +306,7 @@ def plot_lifelines_pred(time, event, labels, fed_iter = None, client_id = None, 
             j+=1
     # plt.show(block=False)
     # dump to a file
-    plt.savefig(filename)
+    plt.savefig(path_to_file/filename)
     plt.close()
 
 
@@ -369,10 +383,15 @@ def plot_decision_boundary(model, x_test, y_test, client_id=None, fed_iter=None,
     plt.close()
 
 
-def print_confusion_matrix(y, y_pred, client_id=None, fed_iter=None, path=None):
+def print_confusion_matrix(y,
+                           y_pred,
+                           client_id=None,
+                           fed_iter=None,
+                           path_to_out: Union[Path, str] = None):
     # setting path for saving image
-    if path is None:
-        path = 'output'
+    if path_to_out is None:
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()
+    path_to_file = path_to_out/"output"
     sns.set(font_scale=3)
     confusion_matrix = sklearn.metrics.confusion_matrix(y, y_pred)
     plt.figure(figsize=(16, 14))
@@ -382,12 +401,12 @@ def print_confusion_matrix(y, y_pred, client_id=None, fed_iter=None, path=None):
     plt.xlabel('Clustering label', fontsize=25)
     # dump to a file
     if client_id is None:
-        filename = path+'/conf_matrix_nofed'
+        filename = 'conf_matrix_nofed'
     else:
-        filename = path+'/conf_matrix_c'+str(client_id)
+        filename = ('conf_matrix_c'+str(client_id))
     if fed_iter is None:
         filename += '.png'
     else:
         filename += '_e'+str(fed_iter)+'.png'
-    plt.savefig(filename)
+    plt.savefig(path_to_file/filename)
     plt.close()

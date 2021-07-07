@@ -2,6 +2,8 @@
 from __future__ import print_function
 
 try:
+    import sys
+    import pathlib
     import argparse
     import os
     import numpy as np
@@ -19,6 +21,13 @@ try:
     from torchvision.utils import save_image
     
     from itertools import chain as ichain
+    
+    path = pathlib.Path(__file__).parent.absolute()
+    sys.path.append(str(path.parent))
+    
+    import clustering.py.common_fn as my_fn
+    import py.metrics as my_metrics
+    import py.dataset_util as data_util
 
 except ImportError as e:
     print(e)
@@ -28,6 +37,8 @@ network_setup_string = "Setting up {}...\n"
 
 def get_parser():
     parser = argparse.ArgumentParser(description="ClusterGAN Training Script")
+    parser.add_argument("-s", "--dataset", dest="dataset", default='mnist', choices=['mnist', 'euromds'], type=type(''), help="Dataset")
+    parser.add_argument("--save_img", dest="save_img", default=False, type=bool, help="Wheather to save images")
     parser.add_argument("-n", "--n_epochs", dest="n_epochs", default=200, type=int, help="Number of epochs")
     parser.add_argument("-b", "--batch_size", dest="batch_size", default=64, type=int, help="Batch size")
     parser.add_argument("-i", "--img_size", dest="img_size", type=int, default=28, help="Size of image dimension")
@@ -37,6 +48,13 @@ def get_parser():
     parser.add_argument("-w", "--wass_flag", dest="wass_flag", action='store_true', help="Flag for Wasserstein metric")
     parser.add_argument("-a", "--hardware_acc", dest="cuda_flag", action='store_true', help="Flag for hardware acceleration using cuda (if available)")
     parser.add_argument("-f", "--folder", dest="out_folder", type= type(str('')), help="Folder to output images")
+    parser.add_argument('-g', '--groups', dest='groups',
+                        required=False,
+                        type=int,
+                        choices=[1,2,3,4,5,6,7],
+                        default=7,
+                        action='store',
+                        help='how many groups of variables to use for EUROMDS dataset')
     return parser
 
 # Sample a random latent space vector
@@ -67,6 +85,7 @@ def sample_z(shape=64, latent_dim=10, n_c=10, fix_class=-1, req_grad=False, cuda
 
     # Return components of latent space variable
     return zn, zc, zc_idx
+
 
 def calc_gradient_penalty(net_d, real_data, generated_data, cuda=False):
     # GP strength
@@ -438,8 +457,12 @@ if __name__ == "__main__":
     args = get_parser().parse_args()
     
     # defining output folder
-    dir_to_save_images = args.out_folder
-    os.makedirs(dir_to_save_images, exist_ok=True)
+    if args.out_folder is None:
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()
+    else:
+        path_to_out = args.out_folder
+    
+    os.makedirs(path_to_out, exist_ok=True)
 
     # Training details
     n_epochs = args.n_epochs
@@ -450,11 +473,7 @@ if __name__ == "__main__":
     b2 = 0.9
     decay = 2.5*1e-5
     n_skip_iter = args.n_critic
-
-    # Data dimensions
-    img_size = args.img_size
-    channels = 1
-
+    
     # Latent space info
     latent_dim = args.latent_dim
     n_c = 10
@@ -465,11 +484,110 @@ if __name__ == "__main__":
     wass_metric = args.wass_flag
     print('Using metric {}'.format('Wassestrain' if wass_metric else 'Vanilla'))
 
-    x_shape = (channels, img_size, img_size)
-
     CUDA = True if (torch.cuda.is_available() and args.cuda_flag) else False
     device = torch.device('cuda:0' if CUDA else 'cpu')
     print('Using device {}'.format(device))
+
+    # Data dimensions
+    if args.dataset == 'mnist':
+        img_size = args.img_size
+        channels = 1
+        x_shape = (channels, img_size, img_size)
+        
+        # Initialize generator and discriminator
+        generator = ConvGeneratorCNN(latent_dim, n_c, x_shape)
+        encoder = ConvEncoderCNN(latent_dim, n_c)
+        discriminator = ConvDiscriminatorCNN(wass_metric=wass_metric)
+        
+        # Configure data loader
+        #os.makedirs("../../data/mnist", exist_ok=True)
+        dataloader = torch.utils.data.DataLoader(
+            datasets.MNIST(
+                "../../data/mnist/",
+                train=True,
+                transform=transforms.Compose(
+                    [transforms.ToTensor()]
+                ),
+            ),
+            batch_size=batch_size,
+            shuffle=True,
+        )
+
+        # Test data loader
+        testdata = torch.utils.data.DataLoader(
+            datasets.MNIST(
+                "../../data/mnist/",
+                train=False,
+                transform=transforms.Compose(
+                    [transforms.ToTensor()]
+                ),
+            ),
+            batch_size=batch_size,
+            shuffle=True,
+        )
+    
+    else:
+        groups = ['Genetics', 'CNA', 'Demographics', 'Clinical', 'GeneGene', 'CytoCyto', 'GeneCyto']
+        # getting the entire dataset
+        x = data_util.get_euromds_dataset(groups=groups[:args.groups])
+        # getting labels from HDP
+        prob = data_util.get_euromds_dataset(groups=['HDP'])
+        y = []
+        for label, row in prob.iterrows():
+            if np.sum(row) > 0:
+                y.append(row.argmax())
+            else:
+                y.append(-1)
+        y = np.array(y)
+        # getting the outcomes
+        outcomes = data_util.get_outcome_euromds_dataset()
+        # getting IDs
+        ids = data_util.get_euromds_ids()
+        n_features = len(x.columns)
+        x = np.array(x)
+        outcomes = np.array(outcomes)
+        ids = np.array(ids)
+        # cross-val
+        train_idx, test_idx = data_util.split_dataset(
+            x=x,
+            splits=5,
+            fold_n=0)
+        # dividing data
+        x_train = x[train_idx]
+        y_train = y[train_idx]
+        id_train = ids[train_idx]
+        outcomes_train = outcomes[train_idx]
+        x_test = x[test_idx]
+        y_test = y[test_idx]
+        id_test = ids[test_idx]
+        outcomes_test = outcomes[test_idx]
+        dataloader = DataLoader(
+            data_util.PrepareData(x=x_train,
+                        y=y_train,
+                        ids=id_train,
+                        outcomes=outcomes_train),
+            batch_size=batch_size)
+        testloader = DataLoader(
+            data_util.PrepareData(x=x_test,
+                        y=y_test,
+                        ids=id_test,
+                        outcomes=outcomes_test),
+            batch_size=batch_size)
+        config = {
+            'gen_dims': [int(4*n_features), int(3*n_features), int(2*n_features), x.shape[-1]],
+            'enc_dims': [int(x.shape[-1]), int(4*n_features), int(3*n_features), int(2*n_features)],
+            'disc_dims': [int(x.shape[-1]), int(2*n_features), int(3*n_features), int(4*n_features)]
+        }
+        generator = GeneratorCNN(latent_dim=latent_dim,
+                                        n_c=n_c,
+                                        gen_dims=config['gen_dims'],
+                                        x_shape=x.shape[-1])
+        encoder = EncoderCNN(latent_dim=latent_dim,
+                                    enc_dims=config['enc_dims'],
+                                    n_c=n_c)
+        discriminator = DiscriminatorCNN(
+            disc_dims=config['disc_dims'], wass_metric=wass_metric)
+
     torch.autograd.set_detect_anomaly(True)
 
     # Loss function
@@ -477,10 +595,6 @@ if __name__ == "__main__":
     xe_loss = torch.nn.CrossEntropyLoss()
     mse_loss = torch.nn.MSELoss()
 
-    # Initialize generator and discriminator
-    generator = ConvGeneratorCNN(latent_dim, n_c, x_shape)
-    encoder = ConvEncoderCNN(latent_dim, n_c)
-    discriminator = ConvDiscriminatorCNN(wass_metric=wass_metric)
 
     if CUDA:
         generator.cuda()
@@ -491,35 +605,6 @@ if __name__ == "__main__":
         mse_loss.cuda()
         
     TENSOR = torch.cuda.FloatTensor if CUDA else torch.FloatTensor
-
-    # Configure data loader
-    #os.makedirs("../../data/mnist", exist_ok=True)
-    dataloader = torch.utils.data.DataLoader(
-        datasets.MNIST(
-            "../../data/mnist/",
-            train=True,
-            transform=transforms.Compose(
-                [transforms.ToTensor()]
-            ),
-        ),
-        batch_size=batch_size,
-        shuffle=True,
-    )
-
-    # Test data loader
-    testdata = torch.utils.data.DataLoader(
-        datasets.MNIST(
-            "../../data/mnist/",
-            train=False,
-            transform=transforms.Compose(
-                [transforms.ToTensor()]
-            ),
-        ),
-        batch_size=batch_size,
-        shuffle=True,
-    )
-    test_imgs, test_labels = next(iter(testdata))
-    test_imgs = Variable(test_imgs.type(TENSOR))
 
     ge_chain = ichain(generator.parameters(),
                     encoder.parameters())
@@ -540,8 +625,13 @@ if __name__ == "__main__":
     # Training loop 
     print('\nBegin training session with %i epochs...\n'%(n_epochs))
     for epoch in range(n_epochs):
-        for i, (imgs, itruth_label) in enumerate(dataloader):
+        #for i, (imgs, itruth_label) in enumerate(dataloader):
+        for i, (data) in enumerate(dataloader):
         
+            if args.dataset == 'mnist':
+                (imgs, itruth_label) = data
+            elif args.dataset == 'euromds':
+                (imgs, itruth_label, _, _) = data
             # Ensure generator/encoder are trainable
             generator.train()
             encoder.train()
@@ -634,12 +724,61 @@ if __name__ == "__main__":
         # Set number of examples for cycle calcs
         n_sqrt_samp = 5
         n_samp = n_sqrt_samp * n_sqrt_samp
-
+        
+        if args.dataset == 'mnist':
+            test_imgs, test_labels = next(iter(testdata))
+            test_imgs = Variable(test_imgs.type(TENSOR))
+        elif args.dataset == 'euromds':        
+            test_imgs, test_labels, test_ids, test_outcomes = next(iter(testloader))
+            times = test_outcomes[:, 0]
+            events = test_outcomes[:, 1]
+            test_imgs = Variable(test_imgs.type(TENSOR))
 
         ## Cycle through test real -> enc -> gen
         t_imgs, t_label = test_imgs.data, test_labels
         # Encode sample real instances
         e_tzn, e_tzc, e_tzc_logits = encoder(t_imgs)
+        
+        computed_labels = []
+        for pred in e_tzc.detach().cpu().numpy():
+            computed_labels.append(pred.argmax())
+        computed_labels = np.array(computed_labels)
+        
+        # computing metrics
+        acc = my_metrics.acc(t_label.detach().cpu().numpy(),
+         computed_labels)
+        nmi = my_metrics.nmi(t_label.detach().cpu().numpy(),
+         computed_labels)
+        ami = my_metrics.ami(t_label.detach().cpu().numpy(),
+         computed_labels)
+        ari = my_metrics.ari(t_label.detach().cpu().numpy(),
+         computed_labels)
+        ran = my_metrics.ran(t_label.detach().cpu().numpy(),
+         computed_labels)
+        homo = my_metrics.homo(t_label.detach().cpu().numpy(),
+         computed_labels)
+        print('FedIter %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' % \
+            (epoch, acc, nmi, ami, ari, ran, homo))
+        if args.dataset == 'euromds':
+            # plotting outcomes on the labels
+            my_fn.plot_lifelines_pred(times,
+                                      events,
+                                      computed_labels,
+                                      path_to_out)
+        if epoch % 10 == 0:  # print confusion matrix
+            my_fn.print_confusion_matrix(
+                t_label.detach().cpu().numpy(),
+                computed_labels,
+                path_to_out)
+        # dumping and retrieving the results
+        metrics = {"accuracy": acc,
+                    "normalized_mutual_info_score": nmi,
+                    "adjusted_mutual_info_score": ami,
+                    "adjusted_rand_score": ari,
+                    "rand_score": ran,
+                    "homogeneity_score": homo}
+        result = metrics.copy()        
+        
         # Generate sample instances from encoding
         teg_imgs = generator(e_tzn, e_tzc)
         # Calculate cycle reconstruction loss
@@ -668,38 +807,39 @@ if __name__ == "__main__":
         c_zc.append(lat_xe_loss.item())
     
         # Save cycled and generated examples!
-        r_imgs, i_label = real_imgs.data[:n_samp], itruth_label[:n_samp]
-        e_zn, e_zc, e_zc_logits = encoder(r_imgs)
-        reg_imgs = generator(e_zn, e_zc)
-        save_image(reg_imgs.data[:n_samp],
-                dir_to_save_images+'/cycle_reg_%06i.png' %(epoch), 
-                nrow=n_sqrt_samp, normalize=True)
-        save_image(gen_imgs_samp.data[:n_samp],
-                dir_to_save_images+'/gen_%06i.png' %(epoch), 
-                nrow=n_sqrt_samp, normalize=True)
-        
-        ## Generate samples for specified classes
-        stack_imgs = []
-        for idx in range(n_c):
-            # Sample specific class
-            zn_samp, zc_samp, zc_samp_idx = sample_z(shape=n_c,
-                                                    latent_dim=latent_dim,
-                                                    n_c=n_c,
-                                                    fix_class=idx,
-                                    cuda=CUDA)
+        if args.save_img:
+            r_imgs, i_label = real_imgs.data[:n_samp], itruth_label[:n_samp]
+            e_zn, e_zc, e_zc_logits = encoder(r_imgs)
+            reg_imgs = generator(e_zn, e_zc)
+            save_image(reg_imgs.data[:n_samp],
+                    path_to_out+('cycle_reg_%06i.png' %(epoch)), 
+                    nrow=n_sqrt_samp, normalize=True)
+            save_image(gen_imgs_samp.data[:n_samp],
+                    path_to_out+('gen_%06i.png' %(epoch)), 
+                    nrow=n_sqrt_samp, normalize=True)
+            
+            ## Generate samples for specified classes
+            stack_imgs = []
+            for idx in range(n_c):
+                # Sample specific class
+                zn_samp, zc_samp, zc_samp_idx = sample_z(shape=n_c,
+                                                        latent_dim=latent_dim,
+                                                        n_c=n_c,
+                                                        fix_class=idx,
+                                        cuda=CUDA)
 
-            # Generate sample instances
-            gen_imgs_samp = generator(zn_samp, zc_samp)
+                # Generate sample instances
+                gen_imgs_samp = generator(zn_samp, zc_samp)
 
-            if (len(stack_imgs) == 0):
-                stack_imgs = gen_imgs_samp
-            else:
-                stack_imgs = torch.cat((stack_imgs, gen_imgs_samp), 0)
+                if (len(stack_imgs) == 0):
+                    stack_imgs = gen_imgs_samp
+                else:
+                    stack_imgs = torch.cat((stack_imgs, gen_imgs_samp), 0)
 
-        # Save class-specified generated examples!
-        save_image(stack_imgs,
-                dir_to_save_images+'/gen_classes_%06i.png' %(epoch),
-                nrow=n_c, normalize=True)
+            # Save class-specified generated examples!
+            save_image(stack_imgs,
+                    path_to_out/('gen_classes_%06i.png' %(epoch)),
+                    nrow=n_c, normalize=True)
     
 
         print ("[Epoch %d/%d] \n"\
@@ -713,3 +853,12 @@ if __name__ == "__main__":
                                                             lat_mse_loss.item(), 
                                                             lat_xe_loss.item())
             )
+        
+        result['img_mse_loss'] = img_mse_loss.item()
+        result['lat_mse_loss'] = lat_mse_loss.item()
+        result['lat_xe_loss'] = lat_xe_loss.item()
+        result['round'] = epoch
+        my_fn.dump_result_dict('clustergan', path_to_out, result)
+        pred = {'ID': test_ids,
+                'label': computed_labels}
+        my_fn.dump_pred_dict('pred', path_to_out, pred)
