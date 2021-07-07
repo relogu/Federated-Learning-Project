@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import pandas as pd
 import sklearn
 import tensorflow as tf
 import tensorflow.keras.backend as K
@@ -229,6 +230,16 @@ def dump_result_dict(filename: str, result: Dict, verbose: int = 0):
         if result['round'] == 1:
             print(','.join(list(result.keys())), file=outfile)
         print(','.join(map(str, list(result.values()))), file=outfile)
+
+
+def dump_pred_dict(filename: str, pred: Dict, verbose: int = 0):
+    # get file path
+    path_to_file = pathlib.Path(__file__).parent.parent.absolute()
+    path_to_file = path_to_file/"output"/(filename+".csv")
+    if verbose > 0:
+        print("Dumping results at "+str(path_to_file))
+    df = pd.DataFrame(pred)
+    df.to_csv(path_to_file)
 
 
 def plot_lifelines_pred(time, event, labels, fed_iter = None, client_id = None, path=None):

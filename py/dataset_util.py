@@ -24,7 +24,7 @@ from sklearn.model_selection import KFold
 from tensorflow.keras.datasets import mnist
 
 
-class PrepareData(Dataset):
+class PrepareData1(Dataset):
 
     def __init__(self, x, y):
         if not torch.is_tensor(x):
@@ -38,6 +38,23 @@ class PrepareData(Dataset):
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx]
 
+class PrepareData(Dataset):
+
+    def __init__(self, x, y, ids, outcomes):
+        if not torch.is_tensor(x):
+            self.x = torch.from_numpy(x)
+        if not torch.is_tensor(y):
+            self.y = torch.from_numpy(y)
+        if not torch.is_tensor(ids):
+            self.id = torch.from_numpy(ids)
+        if not torch.is_tensor(outcomes):
+            self.id = torch.from_numpy(outcomes)
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, idx):
+        return self.x[idx], self.y[idx], self.ids[idx], self.outcomes[idx]
 
 def get_euromds_dataset(accept_nan: int = 0,
                         groups: list[str] = None,
@@ -83,6 +100,20 @@ def get_euromds_dataset(accept_nan: int = 0,
     del groups
     del df_groups
     return filtered
+
+
+def get_euromds_ids(path_to_data: Union[Path, str] = None):
+    # set the path
+    if path_to_data is None:
+        parent = pathlib.Path(__file__).parent.parent.absolute()
+        data_folder = parent/'data'/'euromds'
+    else:
+        data_folder = path_to_data
+    # get the main dataframe
+    main_df = pd.read_csv(data_folder/'dataFrame.csv')
+    # select the column
+    main_df = main_df[main_df.columns[0]]
+    return main_df
 
 
 def dump_labels_euromds(labels,
@@ -151,7 +182,6 @@ def get_outcome_euromds_dataset(accept_nan: int = 0,
 
 
 def split_dataset(x,
-                  y=None,
                   splits: int = 5,
                   fold_n: int = 0,
                   shuffle: bool = False,
@@ -166,18 +196,12 @@ def split_dataset(x,
                       random_state=r_state)
     else:
         kfold = KFold(n_splits=splits)
-    if y is None:
-        train, test = next(kfold.split(x))
-        x_test = x[test].copy()
-        x_train = x[train].copy()
-        return x_train, x_test
-    else:
-        train, test = next(kfold.split(x, y))
-        x_test = x[test].copy()
-        y_test = y[test].copy()
-        x_train = x[train].copy()
-        y_train = y[train].copy()
-        return x_train, y_train, x_test, y_test
+    # get split selected
+    i = -1
+    while i < fold_n:
+        i += 1
+        train, test = next(kfold.split(x))    
+    return train, test
 
 
 def translate_2d(dx: float, dy: float, x):

@@ -248,6 +248,8 @@ if __name__ == "__main__":
         y = np.array(y)
         # getting the outcomes
         outcomes = data_util.get_outcome_euromds_dataset()
+        # getting IDs
+        ids = data_util.get_euromds_ids()
         n_features = len(x.columns)
         # dimensionality reduction through UMAP alg
         if args.dim_red:
@@ -270,6 +272,7 @@ if __name__ == "__main__":
         x = np.array(x[start:end])
         y = y[start:end]
         outcomes = outcomes[start:end].reindex()
+        ids = np.array(ids[start:end])
         # setting the autoencoder layers
         dims = [x.shape[-1], int(2*n_features), int(4*n_features), N_CLUSTERS]
 
@@ -335,6 +338,8 @@ if __name__ == "__main__":
         config = {
             'x_shape': x.shape[-1],
             'batch_size': 32,
+            'splits': 5,
+            'fold_n': 0,
             'latent_dim': 30,
             'n_clusters': 10,
             'betan': 10,
@@ -360,6 +365,7 @@ if __name__ == "__main__":
         client = clients.ClusterGANClient(x=x,
                                           y=y,
                                           outcomes=np.array(outcomes[['outcome_3', 'outcome_2']]),
+                                          ids=ids,
                                           config=config,
                                           client_id=CLIENT_ID)
     # TODO: elif args.alg == 'k-clustergan':

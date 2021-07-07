@@ -338,6 +338,7 @@ class ClusterGANClient(NumPyClient):
                  x,
                  y,
                  config,
+                 ids = None,
                  outcomes = None,
                  client_id: int = 0,
                  hardw_acc_flag: bool = False
@@ -405,16 +406,41 @@ class ClusterGANClient(NumPyClient):
 
         # Configure data loader
         self.batch_size = config['batch_size']
-        self.x_train, self.y_train, self.x_test, self.y_test = split_dataset(
-            x, y)
-        self.trainloader = DataLoader(
+        train_idx, test_idx = split_dataset(
+            x=x,
+            splits=config['splits'],
+            fold_n=config['fold_n'])
+        
+        self.x_train = x[train_idx]
+        self.y_train = y[train_idx]
+        self.id_train = ids[train_idx]
+        self.outcomes_train = outcomes[train_idx]
+        self.x_test = x[test_idx]
+        self.y_test = y[test_idx]
+        self.id_test = ids[test_idx]
+        self.outcomes_test = outcomes[test_idx]
+        '''
+        self.trainloader = DataLoader1(
             PrepareData(self.x_train, y=self.y_train),
             batch_size=self.batch_size)
-        self.testloader = DataLoader(
+        self.testloader = DataLoader1(
             PrepareData(self.x_test, y=self.y_test),
             batch_size=self.batch_size)
-        self.test_imgs, self.test_labels = next(iter(self.testloader))
-        self.test_imgs = Variable(self.test_imgs.type(self.TENSOR))
+        '''
+        self.trainloader = DataLoader(
+            PrepareData(x=self.x_train,
+                        y=self.y_train,
+                        id=self.id_train,
+                        outcomes=self.outcomes_train),
+            batch_size=self.batch_size)
+        self.trainloader = DataLoader(
+            PrepareData(x=self.x_test,
+                        y=self.y_test,
+                        id=self.id_test,
+                        outcomes=self.outcomes_test),
+            batch_size=self.batch_size)
+        
+        '''
         if outcomes is not None:
             self.outcomes_loader = DataLoader(
                 PrepareData(x=outcomes[:,0], y=outcomes[:,1]),
@@ -422,7 +448,15 @@ class ClusterGANClient(NumPyClient):
             self.times, self.events = next(iter(self.outcomes_loader))
         else:
             self.outcomes_loader = outcomes
-
+            
+        if ids is not None:
+            self.outcomes_loader = DataLoader(
+                PrepareData(x=outcomes[:,0], y=outcomes[:,1]),
+                batch_size=self.batch_size)
+            self.times, self.events = next(iter(self.outcomes_loader))
+        else:
+            self.outcomes_loader = outcomes
+        '''
         self.ge_chain = ichain(self.generator.parameters(),
                                self.encoder.parameters())
 
@@ -578,9 +612,14 @@ class ClusterGANClient(NumPyClient):
         # Set number of examples for cycle calcs
         n_sqrt_samp = 5
         n_samp = n_sqrt_samp * n_sqrt_samp
+        
+        test_imgs, test_labels, test_ids, test_outcomes = next(iter(self.testloader))
+        times = test_outcomes[:, 0]
+        events = test_outcomes[:, 1]
+        test_imgs = Variable(test_imgs.type(self.TENSOR))
 
         # Cycle through test real -> enc -> gen
-        t_imgs, t_label = self.test_imgs.data, self.test_labels
+        t_imgs, t_label = test_imgs.data, test_labels
         # Encode sample real instances
         e_tzn, e_tzc, e_tzc_logits = self.encoder(t_imgs)
         
@@ -607,7 +646,7 @@ class ClusterGANClient(NumPyClient):
         # plotting outcomes on the labels
         if self.outcomes_loader is not None:
             my_fn.plot_lifelines_pred(
-                self.times, self.events, computed_labels, client_id=self.client_id)
+                times, events, computed_labels, client_id=self.client_id)
         if self.f_epoch % 10 == 0:  # print confusion matrix
             my_fn.print_confusion_matrix(
                 t_label.detach().cpu().numpy(),
@@ -700,6 +739,9 @@ class ClusterGANClient(NumPyClient):
         result['client'] = self.client_id
         result['round'] = self.f_epoch
         my_fn.dump_result_dict('client_'+str(self.client_id), result)
+        pred = {'ID': test_ids,
+                'label': computed_labels}
+        my_fn.dump_pred_dict('pred_client_'+str(self.client_id), pred)
 
     def get_parameters(self):
         g_par = [val.cpu().numpy()
