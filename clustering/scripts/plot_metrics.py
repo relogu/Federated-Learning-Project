@@ -24,6 +24,10 @@ def parse_args():
                         type=type(''),
                         action='store',
                         help='prefix to give to output images')
+    parser.add_argument("-f", "--folder",
+                        dest="out_folder",
+                        type= type(str('')),
+                        help="Folder to output images")
     _args = parser.parse_args()
     return _args
 
@@ -36,9 +40,13 @@ if __name__ == "__main__":
     # %% plot metrics
     
     # reading output files
-    path_to_file = pathlib.Path(__file__).parent.parent.absolute()
-    output_folder = path_to_file/'output'
-    images_folder = path_to_file/'results'/prefix
+    # defining output folder
+    if args.out_folder is None:
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()
+    else:
+        path_to_out = pathlib.Path(args.out_folder)
+    output_folder = path_to_out/'output'
+    images_folder = path_to_out/'results'/prefix
     images_folder.mkdir(exist_ok=True)
     # getting autoencoder results if exist
     clients = sorted(output_folder.glob('*_ae.dat'))
@@ -49,11 +57,11 @@ if __name__ == "__main__":
         for client in clients:
             c = pd.read_csv(client)
             ae_df = ae_df.append(c)
-            client.unlink()
+            #client.unlink()
         ae_overall = ae_df.copy()
         ae_overall['client'] = 'all'
         ae_metrics = list(ae_df.columns)
-        ae_metrics.remove('client')
+        if 'client' in ae_metrics: ae_metrics.remove('client')
         ae_metrics.remove('round')
     # getting iteration results
     clients = sorted(output_folder.glob('*.dat'))
@@ -63,11 +71,11 @@ if __name__ == "__main__":
         for client in clients:
             c = pd.read_csv(client)
             df = df.append(c)
-            client.unlink()
+            #client.unlink()
         overall = df.copy()
         overall['client'] = 'all'
         metrics = list(df.columns)
-        metrics.remove('client')
+        if 'client' in metrics: metrics.remove('client')
         metrics.remove('round')
     '''
     # %%
@@ -85,6 +93,8 @@ if __name__ == "__main__":
         plt.close()
     '''
     # %%
+    if 'client' not in metrics: hue = None
+    else: 'client'
     tmp = df.copy()
     tmp = tmp.append(overall)
     for metric in metrics:
@@ -94,7 +104,7 @@ if __name__ == "__main__":
         plt.title(title)
         ax.set_ylabel(metric)
         plt.xlabel("round")
-        sns.lineplot(x='round', y=metric, hue='client', data=tmp)#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
+        sns.lineplot(x='round', y=metric, hue=hue, data=tmp)#, palette=['Blue', 'Red'])#, style=hue)#, markers=['.', '.'])
         plt.draw()
         plt.savefig(filename)
         plt.close()
@@ -109,7 +119,7 @@ if __name__ == "__main__":
             plt.title(title)
             ax.set_ylabel(metric)
             plt.xlabel("round")
-            sns.lineplot(x='round', y=metric, hue='client', data=tmp)#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
+            sns.lineplot(x='round', y=metric, hue=hue, data=tmp)#, palette=['Blue', 'Red'])#, style=hue)#, markers=['.', '.'])
             plt.draw()
             plt.savefig(filename)
             plt.close()
@@ -122,7 +132,7 @@ if __name__ == "__main__":
         plt.title(title)
         ax.set_ylabel(metric)
         plt.xlabel("round")
-        sns.lineplot(x='round', y=metric, hue='client', data=overall)#, palette=['Blue', 'Red'])#, style='client')#, markers=['.', '.'])
+        sns.lineplot(x='round', y=metric, hue=hue, data=overall)#, palette=['Blue', 'Red'])#, style=hue)#, markers=['.', '.'])
         plt.draw()
         #plt.savefig(filename)
         plt.close()
