@@ -430,13 +430,13 @@ class ClusterGANClient(NumPyClient):
         self.trainloader = DataLoader(
             PrepareData(x=self.x_train,
                         y=self.y_train,
-                        id=self.id_train,
+                        ids=self.id_train,
                         outcomes=self.outcomes_train),
             batch_size=self.batch_size)
         self.trainloader = DataLoader(
             PrepareData(x=self.x_test,
                         y=self.y_test,
-                        id=self.id_test,
+                        ids=self.id_test,
                         outcomes=self.outcomes_test),
             batch_size=self.batch_size)
         
