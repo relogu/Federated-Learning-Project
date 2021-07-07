@@ -761,10 +761,10 @@ if __name__ == "__main__":
             (epoch, acc, nmi, ami, ari, ran, homo))
         if args.dataset == 'euromds':
             # plotting outcomes on the labels
-            my_fn.plot_lifelines_pred(times,
-                                      events,
-                                      computed_labels,
-                                      path_to_out)
+            my_fn.plot_lifelines_pred(time=times,
+                                      event=events,
+                                      labels=computed_labels,
+                                      path_to_out=path_to_out)
         if epoch % 10 == 0:  # print confusion matrix
             my_fn.print_confusion_matrix(
                 t_label.detach().cpu().numpy(),
