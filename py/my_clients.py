@@ -695,7 +695,7 @@ class ClusterGANClient(NumPyClient):
               )
         
         result['img_mse_loss'] = self.img_mse_loss.item()
-        result['lat_mse_loss_mse_loss'] = self.lat_mse_loss.item()
+        result['lat_mse_loss'] = self.lat_mse_loss.item()
         result['lat_xe_loss'] = self.lat_xe_loss.item()
         result['client'] = self.client_id
         result['round'] = self.f_epoch
