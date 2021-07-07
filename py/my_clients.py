@@ -923,7 +923,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
             # plotting outcomes on the labels
             if self.outcomes is not None:
                 my_fn.plot_lifelines_pred(
-                    self.outcomes, y_pred, client_id=self.client_id)
+                    self.outcomes['outcome_3'], 
+                    self.outcomes['outcome_2'], y_pred, client_id=self.client_id)
             # evaluating metrics
             if self.y_test is not None:
                 acc = my_metrics.acc(self.y_test, y_pred)
