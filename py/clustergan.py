@@ -453,6 +453,11 @@ class ConvDiscriminatorCNN(nn.Module):
         return validity
 
 if __name__ == "__main__":
+    
+    
+    # for managing the cpu cores to use
+    torch.set_num_threads(4)
+    
     # get parameters
     args = get_parser().parse_args()
     
