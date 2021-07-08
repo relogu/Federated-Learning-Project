@@ -41,6 +41,9 @@ out_1 = 'Client %d, FedIter %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n
 out_2 = 'Client %d, FedIter %d\n\tae_loss %.5f'
 clustering_eval_string = 'Client %d, Acc = %.5f, nmi = %.5f, ari = %.5f ; loss = %.5f'
 
+import warnings
+warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning) 
+
 
 class KFEDClusteringClient(NumPyClient):
     """Client object, to set client performed operations."""
