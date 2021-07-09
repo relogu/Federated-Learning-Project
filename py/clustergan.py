@@ -463,10 +463,10 @@ if __name__ == "__main__":
     
     # defining output folder
     if args.out_folder is None:
-        path_to_out = pathlib.Path(__file__).parent.parent.absolute()
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
     else:
         path_to_out = args.out_folder
-    
+    print('Output folder {}'.format(path_to_out))
     os.makedirs(path_to_out, exist_ok=True)
 
     # Training details

@@ -224,8 +224,10 @@ def dump_result_dict(filename: str,
         raise KeyError("The mandatory key \'round\' is missing.")
     # get file path
     if path_to_out is None:
-        path_to_out = pathlib.Path(__file__).parent.parent.absolute()
-    path_to_file = path_to_out/"output"/(filename+".dat")
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
+    else:
+        path_to_out = pathlib.Path(path_to_out)
+    path_to_file = path_to_out/(filename+".dat")
     # touching file
     path_to_file.touch()
     if verbose > 0:
@@ -243,8 +245,10 @@ def dump_pred_dict(filename: str,
                    verbose: int = 0):
     # get file path
     if path_to_out is None:
-        path_to_out = pathlib.Path(__file__).parent.parent.absolute()
-    path_to_file = path_to_out/"output"/(filename+".csv")
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
+    else:
+        path_to_out = pathlib.Path(path_to_out)
+    path_to_file = path_to_out/(filename+".csv")
     if verbose > 0:
         print("Dumping results at "+str(path_to_file))
     df = pd.DataFrame(pred)
@@ -259,8 +263,9 @@ def plot_lifelines_pred(time,
                         path_to_out: Union[Path, str] = None):
     # setting path for saving image
     if path_to_out is None:
-        path_to_out = pathlib.Path(__file__).parent.parent.absolute()
-    path_to_file = path_to_out/"output"
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
+    else:
+        path_to_out = pathlib.Path(path_to_out)
     # initialize graph
     fig, axes = plt.subplots(1, 1, figsize=(25, 15))
     # setting title and filename
@@ -307,7 +312,7 @@ def plot_lifelines_pred(time,
             j+=1
     # plt.show(block=False)
     # dump to a file
-    plt.savefig(path_to_file/filename)
+    plt.savefig(path_to_out/filename)
     plt.close()
 
 
@@ -392,7 +397,8 @@ def print_confusion_matrix(y,
     # setting path for saving image
     if path_to_out is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()
-    path_to_file = path_to_out/"output"
+    else:
+        path_to_out = pathlib.Path(path_to_out)
     sns.set(font_scale=3)
     confusion_matrix = sklearn.metrics.confusion_matrix(y, y_pred)
     plt.figure(figsize=(16, 14))
@@ -409,5 +415,5 @@ def print_confusion_matrix(y,
         filename += '.png'
     else:
         filename += '_e'+str(fed_iter)+'.png'
-    plt.savefig(path_to_file/filename)
+    plt.savefig(path_to_out/filename)
     plt.close()

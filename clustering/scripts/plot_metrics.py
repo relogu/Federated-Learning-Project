@@ -24,10 +24,14 @@ def parse_args():
                         type=type(''),
                         action='store',
                         help='prefix to give to output images')
-    parser.add_argument("-f", "--folder",
+    parser.add_argument("-f", "--out_folder",
                         dest="out_folder",
                         type= type(str('')),
                         help="Folder to output images")
+    parser.add_argument("-i", "--in_folder",
+                        dest="in_folder",
+                        type= type(str('')),
+                        help="Folder where to find the output of learning")
     _args = parser.parse_args()
     return _args
 
@@ -45,11 +49,19 @@ if __name__ == "__main__":
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()
     else:
         path_to_out = pathlib.Path(args.out_folder)
-    output_folder = path_to_out/'output'
-    images_folder = path_to_out/'results'/prefix
-    images_folder.mkdir(exist_ok=True)
+    # defining input folder
+    if args.in_folder is None:
+        path_to_in = pathlib.Path(__file__).parent.parent.absolute()
+        path_to_in = path_to_in/'output'
+    else:
+        path_to_in = pathlib.Path(args.in_folder)
+    print('In folder {}'.format(args.in_folder))
+    path_to_out = path_to_out/'results'/prefix
+    path_to_out.mkdir(exist_ok=True)
+    print('In folder {}'.format(path_to_in))
+    print('Out folder {}'.format(path_to_out))
     # getting autoencoder results if exist
-    clients = sorted(output_folder.glob('*_ae.dat'))
+    clients = sorted(path_to_in.glob('*_ae.dat'))
     ae_df = None
     if len(clients) > 0:
         # building dataframe of results
@@ -64,7 +76,7 @@ if __name__ == "__main__":
         if 'client' in ae_metrics: ae_metrics.remove('client')
         ae_metrics.remove('round')
     # getting iteration results
-    clients = sorted(output_folder.glob('*.dat'))
+    clients = sorted(path_to_in.glob('*.dat'))
     if len(clients) > 0:
         # building dataframe of results
         df = pd.DataFrame()
@@ -82,7 +94,7 @@ if __name__ == "__main__":
     sns.set_style('whitegrid')
     for metric in metrics:
         title = metric.replace('_', ' ')
-        filename = images_folder/metric
+        filename = path_to_out/metric
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
         plt.title(title)
         ax.set_ylabel(metric)
@@ -99,7 +111,7 @@ if __name__ == "__main__":
     tmp = tmp.append(overall)
     for metric in metrics:
         title = metric.replace('_', ' ')
-        filename = images_folder/metric
+        filename = path_to_out/metric
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
         plt.title(title)
         ax.set_ylabel(metric)
@@ -114,7 +126,7 @@ if __name__ == "__main__":
         tmp = tmp.append(ae_overall)
         for metric in ae_metrics:
             title = 'autoencoder '+metric
-            filename = images_folder/str('autoencoder_'+metric)
+            filename = path_to_out/str('autoencoder_'+metric)
             fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
             plt.title(title)
             ax.set_ylabel(metric)
@@ -127,7 +139,7 @@ if __name__ == "__main__":
     # %%
     for metric in metrics:
         title = metric.replace('_', ' ')
-        filename = images_folder/metric
+        filename = path_to_out/metric
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
         plt.title(title)
         ax.set_ylabel(metric)
@@ -138,7 +150,7 @@ if __name__ == "__main__":
         plt.close()
     '''
     # moving other images
-    imgs = sorted(output_folder.glob('*'))
+    imgs = sorted(path_to_in.glob('*'))
     for img in imgs:
         filename = img.name
-        img.rename(images_folder/filename)
+        img.rename(path_to_out/filename)
