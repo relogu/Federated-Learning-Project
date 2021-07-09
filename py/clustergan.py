@@ -505,10 +505,10 @@ if __name__ == "__main__":
         discriminator = ConvDiscriminatorCNN(wass_metric=wass_metric)
         
         # Configure data loader
-        #os.makedirs("../../data/mnist", exist_ok=True)
+        #os.makedirs("data/mnist", exist_ok=True)
         dataloader = torch.utils.data.DataLoader(
             datasets.MNIST(
-                "../../data/mnist/",
+                "data/mnist/",
                 train=True,
                 transform=transforms.Compose(
                     [transforms.ToTensor()]
@@ -521,7 +521,7 @@ if __name__ == "__main__":
         # Test data loader
         testdata = torch.utils.data.DataLoader(
             datasets.MNIST(
-                "../../data/mnist/",
+                "data/mnist/",
                 train=False,
                 transform=transforms.Compose(
                     [transforms.ToTensor()]
@@ -864,6 +864,7 @@ if __name__ == "__main__":
         result['lat_xe_loss'] = lat_xe_loss.item()
         result['round'] = epoch+1
         my_fn.dump_result_dict(filename='clustergan', result=result, path_to_out=path_to_out)
-        pred = {'ID': test_ids,
-                'label': computed_labels}
-        my_fn.dump_pred_dict(filename='pred', pred=pred, path_to_out=path_to_out)
+        if args.dataset == 'euromds':
+            pred = {'ID': test_ids,
+                    'label': computed_labels}
+            my_fn.dump_pred_dict(filename='pred', pred=pred, path_to_out=path_to_out)
