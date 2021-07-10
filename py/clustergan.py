@@ -716,19 +716,6 @@ if __name__ == "__main__":
             d_loss.backward(inputs=list(discriminator.parameters()))
             optimizer_D.step()
 
-
-        print ("[Epoch %d/%d] \n"\
-            "\tModel Losses: [D: %f] [GE: %f]" % (epoch+1, 
-                                                    n_epochs, 
-                                                    d_loss.item(),
-                                                    ge_loss.item())
-            )
-        
-        print("\tCycle Losses: [x: %f] [z_n: %f] [z_c: %f]"%(img_mse_loss.item(), 
-                                                            lat_mse_loss.item(), 
-                                                            lat_xe_loss.item())
-            )
-        
         # Save training losses
         d_l.append(d_loss.item())
         ge_l.append(ge_loss.item())
@@ -774,8 +761,6 @@ if __name__ == "__main__":
          computed_labels)
         homo = my_metrics.homo(t_label.detach().cpu().numpy(),
          computed_labels)
-        print('Epoch %d/%d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' % \
-            (epoch+1, n_epochs, acc, nmi, ami, ari, ran, homo))
         if args.dataset == 'euromds':
             # plotting outcomes on the labels
             my_fn.plot_lifelines_pred(time=times,
@@ -867,3 +852,18 @@ if __name__ == "__main__":
             pred = {'ID': test_ids,
                     'label': computed_labels}
             my_fn.dump_pred_dict(filename='pred', pred=pred, path_to_out=path_to_out)
+
+        print ("[Epoch %d/%d] \n"\
+            "\tModel Losses: [D: %f] [GE: %f]" % (epoch+1, 
+                                                    n_epochs, 
+                                                    d_loss.item(),
+                                                    ge_loss.item())
+            )
+        
+        print("\tCycle Losses: [x: %f] [z_n: %f] [z_c: %f]"%(img_mse_loss.item(), 
+                                                            lat_mse_loss.item(), 
+                                                            lat_xe_loss.item())
+            )
+        
+        print('Epoch %d/%d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' % \
+            (epoch+1, n_epochs, acc, nmi, ami, ari, ran, homo))
