@@ -41,8 +41,6 @@ if __name__ == "__main__":
     args = parse_args()
     prefix = args.prefix
     
-    # %% plot metrics
-    
     # reading output files
     # defining output folder
     if args.out_folder is None:
@@ -60,8 +58,15 @@ if __name__ == "__main__":
     path_to_out.mkdir(exist_ok=True)
     print('In folder {}'.format(path_to_in))
     print('Out folder {}'.format(path_to_out))
+    
+    # moving all the files
+    files = sorted(path_to_in.glob('*'))
+    for file in files:
+        filename = file.name
+        file.rename(path_to_out/filename)
+    
     # getting autoencoder results if exist
-    clients = sorted(path_to_in.glob('*_ae.dat'))
+    clients = sorted(path_to_out.glob('*_ae.dat'))
     ae_df = None
     if len(clients) > 0:
         # building dataframe of results
@@ -75,8 +80,9 @@ if __name__ == "__main__":
         ae_metrics = list(ae_df.columns)
         if 'client' in ae_metrics: ae_metrics.remove('client')
         ae_metrics.remove('round')
+        
     # getting iteration results
-    clients = sorted(path_to_in.glob('*.dat'))
+    clients = sorted(path_to_out.glob('*.dat'))
     if len(clients) > 0:
         # building dataframe of results
         df = pd.DataFrame()
@@ -149,8 +155,3 @@ if __name__ == "__main__":
         #plt.savefig(filename)
         plt.close()
     '''
-    # moving other images
-    imgs = sorted(path_to_in.glob('*'))
-    for img in imgs:
-        filename = img.name
-        img.rename(path_to_out/filename)
