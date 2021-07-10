@@ -112,7 +112,7 @@ if __name__ == "__main__":
     '''
     # %%
     if 'client' not in metrics: hue = None
-    else: 'client'
+    else: hue = 'client'
     tmp = df.copy()
     tmp = tmp.append(overall)
     for metric in metrics:
