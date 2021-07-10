@@ -396,7 +396,7 @@ def print_confusion_matrix(y,
                            path_to_out: Union[Path, str] = None):
     # setting path for saving image
     if path_to_out is None:
-        path_to_out = pathlib.Path(__file__).parent.parent.absolute()
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
     else:
         path_to_out = pathlib.Path(path_to_out)
     sns.set(font_scale=3)
