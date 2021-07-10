@@ -717,6 +717,18 @@ if __name__ == "__main__":
             optimizer_D.step()
 
 
+        print ("[Epoch %d/%d] \n"\
+            "\tModel Losses: [D: %f] [GE: %f]" % (epoch+1, 
+                                                    n_epochs, 
+                                                    d_loss.item(),
+                                                    ge_loss.item())
+            )
+        
+        print("\tCycle Losses: [x: %f] [z_n: %f] [z_c: %f]"%(img_mse_loss.item(), 
+                                                            lat_mse_loss.item(), 
+                                                            lat_xe_loss.item())
+            )
+        
         # Save training losses
         d_l.append(d_loss.item())
         ge_l.append(ge_loss.item())
@@ -762,8 +774,8 @@ if __name__ == "__main__":
          computed_labels)
         homo = my_metrics.homo(t_label.detach().cpu().numpy(),
          computed_labels)
-        print('FedIter %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' % \
-            (epoch+1, acc, nmi, ami, ari, ran, homo))
+        print('Epoch %d/%d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' % \
+            (epoch+1, n_epochs, acc, nmi, ami, ari, ran, homo))
         if args.dataset == 'euromds':
             # plotting outcomes on the labels
             my_fn.plot_lifelines_pred(time=times,
@@ -845,19 +857,6 @@ if __name__ == "__main__":
             save_image(stack_imgs,
                     path_to_out/('gen_classes_%06i.png' %(epoch+1)),
                     nrow=n_c, normalize=True)
-    
-
-        print ("[Epoch %d/%d] \n"\
-            "\tModel Losses: [D: %f] [GE: %f]" % (epoch+1, 
-                                                    n_epochs, 
-                                                    d_loss.item(),
-                                                    ge_loss.item())
-            )
-        
-        print("\tCycle Losses: [x: %f] [z_n: %f] [z_c: %f]"%(img_mse_loss.item(), 
-                                                            lat_mse_loss.item(), 
-                                                            lat_xe_loss.item())
-            )
         
         result['img_mse_loss'] = img_mse_loss.item()
         result['lat_mse_loss'] = lat_mse_loss.item()
