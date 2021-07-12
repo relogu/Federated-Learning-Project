@@ -14,7 +14,7 @@ The following graphs represents the losses of the ClusterGAN.
 
 ![lat_mse_loss](lat_mse_loss.png?raw=true)
 ![lat_xe_loss](lat_xe_loss.png?raw=true)
-![img_xe_loss](img_xe_loss.png?raw=true)
+![img_xe_loss](img_mse_loss.png?raw=true)
 
 The confusion matrices for each client are printed
 

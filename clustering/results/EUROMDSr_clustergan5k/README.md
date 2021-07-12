@@ -1,6 +1,6 @@
 # ClusterGAN
 
-In this simulation the unsupervised deep embedding for clustering is used on the EUROMDS dataset reduced, i.e. without 'GeneGene', 'CytoCyto', 'GeneCyto' columns.
+In this simulation the unsupervised deep embedding for clustering is used on the EUROMDS dataset.
 The following graphs represents the metrics used to evaluate the performance of clustering.
 
 ![accuracy](accuracy.png?raw=true)
@@ -14,7 +14,7 @@ The following graphs represents the losses of the ClusterGAN.
 
 ![lat_mse_loss](lat_mse_loss.png?raw=true)
 ![lat_xe_loss](lat_xe_loss.png?raw=true)
-![img_xe_loss](img_xe_loss.png?raw=true)
+![img_xe_loss](img_mse_loss.png?raw=true)
 
 The confusion matrices for each client are printed
 
