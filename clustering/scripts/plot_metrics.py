@@ -74,7 +74,7 @@ if __name__ == "__main__":
         for client in clients:
             c = pd.read_csv(client)
             ae_df = ae_df.append(c)
-            #client.unlink()
+            client.rename(client.with_suffix('.csv'))
         ae_overall = ae_df.copy()
         ae_overall['client'] = 'all'
         ae_metrics = list(ae_df.columns)
@@ -83,13 +83,14 @@ if __name__ == "__main__":
         
     # getting iteration results
     clients = sorted(path_to_out.glob('*.dat'))
+    df = None
     if len(clients) > 0:
         # building dataframe of results
         df = pd.DataFrame()
         for client in clients:
             c = pd.read_csv(client)
             df = df.append(c)
-            #client.unlink()
+            client.rename(client.with_suffix('.csv'))
         overall = df.copy()
         overall['client'] = 'all'
         metrics = list(df.columns)
@@ -113,6 +114,7 @@ if __name__ == "__main__":
     # %%
     if 'client' not in metrics: hue = None
     else: hue = 'client'
+    print('Hue identified {}'.format(hue))
     tmp = df.copy()
     tmp = tmp.append(overall)
     for metric in metrics:
