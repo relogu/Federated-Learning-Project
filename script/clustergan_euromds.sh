@@ -5,7 +5,7 @@ echo $PWD
 # entire dataset
 python3 py/clustergan.py -g=1 -s=euromds -n=5000 -a
 wait
-python3 clustering/scripts/plot_metrics.py  -f="$PWD" --in_folder="$PWD/output" --prefix=EUROMDS_clustergan_rrrr5k
+python3 clustering/scripts/plot_metrics.py -f="$PWD" --in_folder="$PWD/output" --prefix=EUROMDS_clustergan_rrrr5k
 sleep 10
 
 # entire dataset

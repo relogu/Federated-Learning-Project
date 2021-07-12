@@ -5,10 +5,12 @@ Created on Fri May 14 13:55:15 2021
 
 @author: relogu
 """
+import warnings
 import math
 import os
 from itertools import chain as ichain
 from typing import OrderedDict, Dict
+import pathlib
 
 import clustering.py.common_fn as my_fn
 import flwr as fl
@@ -41,8 +43,7 @@ out_1 = 'Client %d, FedIter %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n
 out_2 = 'Client %d, FedIter %d\n\tae_loss %.5f'
 clustering_eval_string = 'Client %d, Acc = %.5f, nmi = %.5f, ari = %.5f ; loss = %.5f'
 
-import warnings
-warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning) 
+warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
 
 class KFEDClusteringClient(NumPyClient):
@@ -341,10 +342,11 @@ class ClusterGANClient(NumPyClient):
                  x,
                  y,
                  config,
-                 ids = None,
-                 outcomes = None,
+                 ids=None,
+                 outcomes=None,
                  client_id: int = 0,
-                 hardw_acc_flag: bool = False
+                 hardw_acc_flag: bool = False,
+                 output_folder=None
                  ):
         # Training details
         self.n_epochs = config['n_local_epochs']
@@ -413,12 +415,12 @@ class ClusterGANClient(NumPyClient):
             x=x,
             splits=config['splits'],
             fold_n=config['fold_n'])
-        
+
         self.x_train = x[train_idx]
         self.y_train = y[train_idx]
         self.x_test = x[test_idx]
         self.y_test = y[test_idx]
-        
+
         if outcomes is None or ids is None:
             self.trainloader = DataLoader(
                 PrepareDataSimple(self.x_train, y=self.y_train),
@@ -443,7 +445,7 @@ class ClusterGANClient(NumPyClient):
                             ids=self.id_test,
                             outcomes=self.outcomes_test),
                 batch_size=self.batch_size)
-        
+
         self.ge_chain = ichain(self.generator.parameters(),
                                self.encoder.parameters())
 
@@ -480,8 +482,12 @@ class ClusterGANClient(NumPyClient):
         # for saving images
         self.save_images = config['save_images']
         self.client_id = client_id
-        self.dir_to_save_images = 'client_%d_images' % (self.client_id)
-        os.makedirs(self.dir_to_save_images, exist_ok=True)
+        if output_folder is None:
+            self.out_dir = output_folder
+            self.img_dir = 'client_%d_images' % (self.client_id)
+        else:
+            self.out_dir = pathlib.Path(output_folder)
+        os.makedirs(self.out_dir, exist_ok=True)
 
     def train(self, config):
         # Training loop
@@ -599,8 +605,9 @@ class ClusterGANClient(NumPyClient):
         # Set number of examples for cycle calcs
         n_sqrt_samp = 5
         n_samp = n_sqrt_samp * n_sqrt_samp
-        
-        test_imgs, test_labels, test_ids, test_outcomes = next(iter(self.testloader))
+
+        test_imgs, test_labels, test_ids, test_outcomes = next(
+            iter(self.testloader))
         times = test_outcomes[:, 0]
         events = test_outcomes[:, 1]
         test_imgs = Variable(test_imgs.type(self.TENSOR))
@@ -609,45 +616,47 @@ class ClusterGANClient(NumPyClient):
         t_imgs, t_label = test_imgs.data, test_labels
         # Encode sample real instances
         e_tzn, e_tzc, e_tzc_logits = self.encoder(t_imgs)
-        
+
         computed_labels = []
         for pred in e_tzc.detach().cpu().numpy():
             computed_labels.append(pred.argmax())
         computed_labels = np.array(computed_labels)
-        
+
         # computing metrics
         acc = my_metrics.acc(t_label.detach().cpu().numpy(),
-         computed_labels)
+                             computed_labels)
         nmi = my_metrics.nmi(t_label.detach().cpu().numpy(),
-         computed_labels)
+                             computed_labels)
         ami = my_metrics.ami(t_label.detach().cpu().numpy(),
-         computed_labels)
+                             computed_labels)
         ari = my_metrics.ari(t_label.detach().cpu().numpy(),
-         computed_labels)
+                             computed_labels)
         ran = my_metrics.ran(t_label.detach().cpu().numpy(),
-         computed_labels)
+                             computed_labels)
         homo = my_metrics.homo(t_label.detach().cpu().numpy(),
-         computed_labels)
+                               computed_labels)
         print(out_1 % (self.client_id, self.f_epoch,
-                acc, nmi, ami, ari, ran, homo))
+                       acc, nmi, ami, ari, ran, homo))
         # plotting outcomes on the labels
-        #if self.outcomes_loader is not None:
+        # if self.outcomes_loader is not None:
         my_fn.plot_lifelines_pred(
-            times, events, computed_labels, client_id=self.client_id)
+            times, events, computed_labels, client_id=self.client_id,
+            path_to_out=self.out_dir)
         if self.f_epoch % 10 == 0:  # print confusion matrix
             my_fn.print_confusion_matrix(
                 t_label.detach().cpu().numpy(),
                 computed_labels,
-                client_id=self.client_id)
+                client_id=self.client_id,
+                path_to_out=self.out_dir)
         # dumping and retrieving the results
         metrics = {"accuracy": acc,
-                    "normalized_mutual_info_score": nmi,
-                    "adjusted_mutual_info_score": ami,
-                    "adjusted_rand_score": ari,
-                    "rand_score": ran,
-                    "homogeneity_score": homo}
+                   "normalized_mutual_info_score": nmi,
+                   "adjusted_mutual_info_score": ami,
+                   "adjusted_rand_score": ari,
+                   "rand_score": ran,
+                   "homogeneity_score": homo}
         result = metrics.copy()
-        
+
         # Generate sample instances from encoding
         teg_imgs = self.generator(e_tzn, e_tzc)
         # Calculate cycle reconstruction loss
@@ -681,12 +690,10 @@ class ClusterGANClient(NumPyClient):
             e_zn, e_zc, e_zc_logits = self.encoder(r_imgs)
             reg_imgs = self.generator(e_zn, e_zc)
             save_image(reg_imgs.data[:n_samp],
-                       self.dir_to_save_images +
-                       '/cycle_reg_%06i.png' % (self.f_epoch),
+                       self.img_dir/'cycle_reg_%06i.png' % (self.f_epoch),
                        nrow=n_sqrt_samp, normalize=True)
             save_image(gen_imgs_samp.data[:n_samp],
-                       self.dir_to_save_images +
-                       '/gen_%06i.png' % (self.f_epoch),
+                       self.img_dir/'gen_%06i.png' % (self.f_epoch),
                        nrow=n_sqrt_samp, normalize=True)
             # Generate samples for specified classes
             stack_imgs = []
@@ -706,8 +713,7 @@ class ClusterGANClient(NumPyClient):
                     stack_imgs = torch.cat((stack_imgs, gen_imgs_samp), 0)
             # Save class-specified generated examples!
             save_image(stack_imgs,
-                       self.dir_to_save_images +
-                       '/gen_classes_%06i.png' % (self.f_epoch),
+                       self.img_dir/'gen_classes_%06i.png' % (self.f_epoch),
                        nrow=self.n_c, normalize=True)
 
         print("[Federated Epoch %d/%d] [Client ID %d] \n"
@@ -719,16 +725,18 @@ class ClusterGANClient(NumPyClient):
                self.lat_mse_loss.item(),
                self.lat_xe_loss.item())
               )
-        
+
         result['img_mse_loss'] = self.img_mse_loss.item()
         result['lat_mse_loss'] = self.lat_mse_loss.item()
         result['lat_xe_loss'] = self.lat_xe_loss.item()
         result['client'] = self.client_id
         result['round'] = self.f_epoch
-        my_fn.dump_result_dict('client_'+str(self.client_id), result)
+        my_fn.dump_result_dict('client_'+str(self.client_id), result,
+                               path_to_out=self.out_dir)
         pred = {'ID': test_ids,
                 'label': computed_labels}
-        my_fn.dump_pred_dict('pred_client_'+str(self.client_id), pred)
+        my_fn.dump_pred_dict('pred_client_'+str(self.client_id), pred,
+                             path_to_out=self.out_dir)
 
     def get_parameters(self):
         g_par = [val.cpu().numpy()
@@ -952,7 +960,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             # plotting outcomes on the labels
             if self.outcomes is not None:
                 my_fn.plot_lifelines_pred(
-                    self.outcomes['outcome_3'], 
+                    self.outcomes['outcome_3'],
                     self.outcomes['outcome_2'], y_pred, client_id=self.client_id)
             # evaluating metrics
             if self.y_test is not None:

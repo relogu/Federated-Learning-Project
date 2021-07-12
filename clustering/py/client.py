@@ -157,6 +157,13 @@ def parse_args():
                         default=7,
                         action='store',
                         help='how many groups of variables to use for EUROMDS dataset')
+    parser.add_argument('--out_fol',
+                        dest='out_fol',
+                        required=False,
+                        type=type(''),
+                        default=None,
+                        action='store',
+                        help='select the output folder')
     _args = parser.parse_args()
     return _args
 
@@ -375,7 +382,8 @@ if __name__ == "__main__":
                                           outcomes=np.array(outcomes[['outcome_3', 'outcome_2']]),
                                           ids=ids,
                                           config=config,
-                                          client_id=CLIENT_ID)
+                                          client_id=CLIENT_ID,
+                                          output_folder=args.out_fol)
     # TODO: elif args.alg == 'k-clustergan':
     # Start Flower client
     fl.client.start_numpy_client(SERVER, client=client)
