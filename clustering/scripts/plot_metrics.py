@@ -64,6 +64,8 @@ if __name__ == "__main__":
     for file in files:
         filename = file.name
         file.rename(path_to_out/filename)
+        
+    hue = None
     
     # getting autoencoder results if exist
     clients = sorted(path_to_out.glob('*_ae.dat'))
@@ -94,7 +96,9 @@ if __name__ == "__main__":
         overall = df.copy()
         overall['client'] = 'all'
         metrics = list(df.columns)
-        if 'client' in metrics: metrics.remove('client')
+        if 'client' in metrics:
+            hue = 'client'
+            metrics.remove('client')
         metrics.remove('round')
     '''
     # %%
@@ -112,8 +116,6 @@ if __name__ == "__main__":
         plt.close()
     '''
     # %%
-    if 'client' not in metrics: hue = None
-    else: hue = 'client'
     print('Hue identified {}'.format(hue))
     tmp = df.copy()
     tmp = tmp.append(overall)

@@ -874,7 +874,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 # update the auxiliary target distribution p
                 self.p = target_distribution(q)
             self.clustering_model.fit(x=self.x_train, y=self.p, verbose=0)
-            self.local_iter += 1
+        self.local_iter += 1
 
     def fit(self, parameters, config):  # type: ignore
         """Perform the fit step after having assigned new weights."""
