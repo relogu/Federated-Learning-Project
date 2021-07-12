@@ -1,6 +1,6 @@
 # ClusterGAN
 
-In this simulation the unsupervised deep embedding for clustering is used on the EUROMDS dataset.
+In this simulation the unsupervised deep embedding for clustering is used on the EUROMDS dataset, exploting only 'Genetics', 'CNA', 'Demographics', 'Clinical' data.
 The following graphs represents the metrics used to evaluate the performance of clustering.
 
 ![accuracy](accuracy.png?raw=true)
