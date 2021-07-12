@@ -11,6 +11,7 @@ This project aims to present the application of the Federated Learning (FL) appr
     - [Blobs](#blobs)
     - [Moons](#moons)
     - [MNIST](#mnist)
+  - [EUROMDS](#euromds)
   - [Models and algorithms](#models-and-algorithms)
     - [Simple k-means](#simple-k-means)
     - [Simplified k-FED](#simplified-k-fed)
@@ -61,6 +62,10 @@ The random state is tunable in the program.
 
 This is the old-fashioned but widely used handwritten digits dataset.
 For those who are not familiar with this data, [this page](https://it.wikipedia.org/wiki/MNIST_database) provide many useful information.
+
+## EUROMDS
+
+TODO
 
 ## Models and algorithms
 
@@ -278,6 +283,11 @@ Every folder in [results](https://github.com/relogu/Federated-Learning-Project/t
 |Blobs|no|k-FED + Unsupervised Deep Embedding|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/k-fed_ae)|
 |MNIST|yes|ClusterGAN|TODO|
 |MNIST|no|ClusterGAN|TODO|
+|EUROMDS|no|ClusterGAN|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDS_clustergan5k)|
+|EUROMDSr|no|ClusterGAN|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSr_clustergan5k)|
+|EUROMDSrr|no|ClusterGAN|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrr_clustergan5k)|
+|EUROMDSrrr|no|ClusterGAN|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrr_clustergan5k)|
+|EUROMDSrrrr|no|ClusterGAN|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrrr_clustergan5k)|
 
 ### Metrics
 
