@@ -189,6 +189,8 @@ if __name__ == "__main__":
     # initializing common configuration dict
     config = {
         'batch_size': 32,
+        'splits': 5,
+        'fold_n': 0,
         'n_clusters': N_CLUSTERS,
         'kmeans_local_epochs': 300,
         'kmeans_n_init': 25,
@@ -287,6 +289,7 @@ if __name__ == "__main__":
         x = np.array(x[start:end])
         y = y[start:end]
         outcomes = outcomes[start:end].reindex()
+        outcomes = np.array(outcomes[['outcome_3', 'outcome_2']])
         ids = np.array(ids[start:end])
         # setting the autoencoder layers
         dims = [x.shape[-1], int(2*n_features), int(4*n_features), N_CLUSTERS]
@@ -347,8 +350,10 @@ if __name__ == "__main__":
         client = clients.KMeansEmbedClusteringClient(x=x,
                                                      y=y,
                                                      outcomes=outcomes,
+                                                     ids=ids,
                                                      client_id=CLIENT_ID,
-                                                     config=config)
+                                                     config=config,
+                                                     output_folder=args.out_fol)
     elif args.alg == 'clustergan':
         config = {
             'x_shape': x.shape[-1],
@@ -379,7 +384,7 @@ if __name__ == "__main__":
             config['conv_net'] = True
         client = clients.ClusterGANClient(x=x,
                                           y=y,
-                                          outcomes=np.array(outcomes[['outcome_3', 'outcome_2']]),
+                                          outcomes=outcomes,
                                           ids=ids,
                                           config=config,
                                           client_id=CLIENT_ID,

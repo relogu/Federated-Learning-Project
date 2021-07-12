@@ -797,6 +797,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
                  client_id,  # id of the client
                  config,  # configuration dictionary
                  outcomes=None,  # outcomes for lifelines
+                 ids=None,  # ids of data
+                 output_folder=None,
                  seed: int = 51550):  # see for random gen
         # set
         self.n_clusters = config['n_clusters']
@@ -814,16 +816,36 @@ class KMeansEmbedClusteringClient(NumPyClient):
         self.update_interval = config['update_interval']
         self.kmeans_n_init = config['kmeans_n_init']
         self.kmeans_local_epochs = config['kmeans_local_epochs']
-        if y is None:
-            self.x_train, self.x_test = split_dataset(x)
-            self.y_train = self.y_test = None
-        else:
-            self.x_train, self.y_train, self.x_test, self.y_test = split_dataset(
-                x, y)
-        self.outcomes = outcomes[len(self.x_train):]
+
+        train_idx, test_idx = split_dataset(
+            x=x,
+            splits=config['splits'],
+            fold_n=config['fold_n'])
+        self.x_train = x[train_idx]
+        self.x_test = x[test_idx]
+        self.y_train = self.y_test = None
+        self.outcomes_train = self.outcomes_test = None
+        self.id_train = self.id_test = None
+        if y is not None:
+            self.y_test = y[test_idx]
+            self.y_train = y[train_idx]
+        if outcomes is not None:
+            self.outcomes_train = outcomes[train_idx]
+            self.outcomes_test = outcomes[test_idx]
+        if ids is not None:
+            self.id_train = ids[train_idx]
+            self.id_test = ids[test_idx]
+
         self.batch_size = config['batch_size']
         self.client_id = client_id
         self.seed = seed
+
+        if output_folder is None:
+            self.out_dir = output_folder
+        else:
+            self.out_dir = pathlib.Path(output_folder)
+            os.makedirs(self.out_dir, exist_ok=True)
+
         # default
         self.autoencoder = None
         self.encoder = None
@@ -927,7 +949,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
             result = metrics.copy()
             result['client'] = self.client_id
             result['round'] = self.f_round
-            my_fn.dump_result_dict('client_'+str(self.client_id)+'_ae', result)
+            my_fn.dump_result_dict('client_'+str(self.client_id)+'_ae', result,
+                                   path_to_out=self.out_dir)
             print(out_2 % (self.client_id, self.f_round, loss))
             result = (loss, len(self.x_test), {})
         elif self.step == 'k-means':
@@ -945,7 +968,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
                   acc, nmi, ami, ari, ran, homo))
             if self.f_round % 10 == 0:  # print confusion matrix
                 my_fn.print_confusion_matrix(
-                    self.y_test, y_pred_kmeans, client_id=self.client_id)
+                    self.y_test, y_pred_kmeans, client_id=self.client_id,
+                    path_to_out=self.out_dir)
             # retrieving the results
             result = (loss, len(self.x_test), metrics)
         elif self.step == 'clustering':
@@ -958,10 +982,12 @@ class KMeansEmbedClusteringClient(NumPyClient):
             # evaluate the clustering performance using some metrics
             y_pred = q.argmax(1)
             # plotting outcomes on the labels
-            if self.outcomes is not None:
+            if self.outcomes_test is not None:
+                times = self.outcomes_test[:, 0]
+                events = self.outcomes_test[:, 1]
                 my_fn.plot_lifelines_pred(
-                    self.outcomes['outcome_3'],
-                    self.outcomes['outcome_2'], y_pred, client_id=self.client_id)
+                    times, events, y_pred, client_id=self.client_id,
+                    path_to_out=self.out_dir)
             # evaluating metrics
             if self.y_test is not None:
                 acc = my_metrics.acc(self.y_test, y_pred)
@@ -972,7 +998,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 homo = my_metrics.homo(self.y_test, y_pred)
                 if self.f_round % 10 == 0:  # print confusion matrix
                     my_fn.print_confusion_matrix(
-                        self.y_test, y_pred, client_id=self.client_id)
+                        self.y_test, y_pred, client_id=self.client_id,
+                        path_to_out=self.out_dir)
                 print(out_1 % (self.client_id, self.f_round,
                                acc, nmi, ami, ari, ran, homo))
                 # dumping and retrieving the results
@@ -986,6 +1013,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 result['loss'] = loss
                 result['client'] = self.client_id
                 result['round'] = self.local_iter
-                my_fn.dump_result_dict('client_'+str(self.client_id), result)
+                my_fn.dump_result_dict('client_'+str(self.client_id), result,
+                                       path_to_out=self.out_dir)
             result = (loss, len(self.x_test), metrics)
         return result
