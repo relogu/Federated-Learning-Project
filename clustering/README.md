@@ -15,7 +15,7 @@ This project aims to present the application of the Federated Learning (FL) appr
   - [Models and algorithms](#models-and-algorithms)
     - [Simple k-means](#simple-k-means)
     - [Simplified k-FED](#simplified-k-fed)
-    - [Unsupervised deep embedding for clustering](#unsupervised-deep-embedding-for-clustering)
+    - [Unsupervised deep embedding for clustering (UDE)](#unsupervised-deep-embedding-for-clustering-ude)
     - [ClusterGAN](#clustergan)
   - [FL Framework](#fl-framework)
   - [Usage](#usage)
@@ -84,7 +84,7 @@ This new algorithm has been proposed in [3].
 It is based on a strict definition of heterogeneity of the distributed data.
 The implementation in this work exploits simple k-means as baseline algorithm and then following the same reasoning of [3] to built the centroids of clusters.
 
-### Unsupervised deep embedding for clustering
+### Unsupervised deep embedding for clustering (UDE)
 
 The implementation of this model is based on the paper [4].
 It exploits the use of an autoencoder (AE), a Neural Network (NN) that tries to map the data into themselves, to make a dimensionality reduction.
@@ -279,15 +279,20 @@ Every folder in [results](https://github.com/relogu/Federated-Learning-Project/t
 |:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:|
 |Blobs|yes|k-means|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/lda_k-means)|
 |Blobs|no|k-means|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/k-means)|
-|Blobs|yes|k-FED + Unsupervised Deep Embedding|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/lda_k-fed_ae)|
-|Blobs|no|k-FED + Unsupervised Deep Embedding|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/k-fed_ae)|
+|Blobs|yes|k-FED + UDE|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/lda_k-fed_ae)|
+|Blobs|no|k-FED + UDE|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/k-fed_ae)|
 |MNIST|yes|ClusterGAN|TODO|
 |MNIST|no|ClusterGAN|TODO|
-|EUROMDS|no|ClusterGAN|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDS_clustergan5k)|
-|EUROMDSr|no|ClusterGAN|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSr_clustergan5k)|
-|EUROMDSrr|no|ClusterGAN|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrr_clustergan5k)|
-|EUROMDSrrr|no|ClusterGAN|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrr_clustergan5k)|
-|EUROMDSrrrr|no|ClusterGAN|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrrr_clustergan5k)|
+|EUROMDS|no|ClusterGAN|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDS_clustergan5k)<br/>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDS_clustergan10k)|
+|EUROMDSr|no|ClusterGAN|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSr_clustergan5k)<br/>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSr_clustergan10k)|
+|EUROMDSrr|no|ClusterGAN|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrr_clustergan5k)<br>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrr_clustergan10k)|
+|EUROMDSrrr|no|ClusterGAN|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrr_clustergan5k)<br>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrr_clustergan10k)|
+|EUROMDSrrrr|no|ClusterGAN|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrrr_clustergan5k)<br>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrrr_clustergan10k)|
+|EUROMDS|no|k-means + UDE|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDS_ude1k5d2k)<br/>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDS_ude2k1u4k)|
+|EUROMDSr|no|k-means + UDE|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSr_ude1k5d2k)<br/>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSr_ude2k1u4k)|
+|EUROMDSrr|no|k-means + UDE|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrr_ude1k5d2k)<br>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrr_ude2k1u4k)|
+|EUROMDSrrr|no|k-means + UDE|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrr_ude1k5d2k)<br>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrr_ude2k1u4k)|
+|EUROMDSrrrr|no|k-means + UDE|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrrr_ude1k5d2k)<br>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrrr_ude2k1u4k)|
 
 ### Metrics
 
