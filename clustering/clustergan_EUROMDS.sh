@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+'''
 # clustergan with ae clustering using EUROMDS reduced twice
 python3 py/server.py --strategy=clustergan --total_epochs=10000 --n_clients=8 & 
 sleep 2 # Sleep for 2s to give the server enough time to start
@@ -18,7 +18,7 @@ trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
 python3 scripts/plot_metrics.py --prefix=EUROMDS-rrrr_clustergan10k
 sleep 10
-
+'''
 # clustergan with ae clustering using EUROMDS reduced twice
 python3 py/server.py --strategy=clustergan --total_epochs=10000 --n_clients=8 & 
 sleep 2 # Sleep for 2s to give the server enough time to start

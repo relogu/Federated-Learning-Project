@@ -485,9 +485,10 @@ class ClusterGANClient(NumPyClient):
         if output_folder is None:
             self.out_dir = output_folder
             self.img_dir = 'client_%d_images' % (self.client_id)
+            os.makedirs(self.img_dir, exist_ok=True)
         else:
             self.out_dir = pathlib.Path(output_folder)
-        os.makedirs(self.out_dir, exist_ok=True)
+            os.makedirs(self.out_dir, exist_ok=True)
 
     def train(self, config):
         # Training loop
