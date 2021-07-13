@@ -341,8 +341,8 @@ class SimpleKMeansClient(NumPyClient):
                 my_fn.plot_lifelines_pred(
                     times, events, y_pred_kmeans, client_id=self.client_id,
                     path_to_out=self.out_dir)
-            if self.id_test is not None:
-                pred = {'ID': self.id_test,
+            if self.ids_test is not None:
+                pred = {'ID': self.ids_test,
                         'label': y_pred_kmeans}
                 my_fn.dump_pred_dict('pred_client_'+str(self.client_id), pred,
                                     path_to_out=self.out_dir)
