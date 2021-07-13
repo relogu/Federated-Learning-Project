@@ -94,6 +94,13 @@ def parse_args():
                         default='[::]:51550',
                         action='store',
                         help='complete address to launch server, e.g. 127.0.0.1:8081')
+    parser.add_argument('--out_fol',
+                        dest='out_fol',
+                        required=False,
+                        type=type(''),
+                        default=None,
+                        action='store',
+                        help='select the output folder')
 
     _args = parser.parse_args()
 
@@ -116,7 +123,8 @@ if __name__ == "__main__":
                               kmeans_epochs=args.kmeans_epochs,
                               cl_epochs=args.cluster_epochs)
         n_rounds = args.ae_epochs+args.kmeans_epochs+args.cluster_epochs
-        strategy = strategies.FedAvg(
+        strategy = strategies.SaveModelStrategy(
+            out_dir=args.out_fol,
             min_available_clients=args.clients,
             min_fit_clients=args.clients,
             min_eval_clients=args.clients,
@@ -128,7 +136,8 @@ if __name__ == "__main__":
             return {'total_epochs': args.total_epochs}
         
         n_rounds = args.total_epochs
-        strategy = strategies.FedAvg(
+        strategy = strategies.SaveModelStrategy(
+            out_dir=args.out_fol,
             min_available_clients=args.clients,
             min_fit_clients=args.clients,
             min_eval_clients=args.clients,
@@ -139,7 +148,8 @@ if __name__ == "__main__":
         on_fit_conf = partial(simple_kmeans_on_fit_config,
                               kmeans_epochs=args.kmeans_epochs)
         n_rounds = args.kmeans_epochs
-        strategy = strategies.FedAvg(
+        strategy = strategies.SaveModelStrategy(
+            out_dir=args.out_fol,
             min_available_clients=args.clients,
             min_fit_clients=args.clients,
             min_eval_clients=args.clients,
