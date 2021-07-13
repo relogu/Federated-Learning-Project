@@ -249,9 +249,9 @@ class SimpleKMeansClient(NumPyClient):
                  y,
                  client_id,
                  config,
-                 outcomes = None,
-                 ids = None,
-                 output_folder = None,
+                 outcomes=None,
+                 ids=None,
+                 output_folder=None,
                  seed: int = 51550):
         # set
         train_idx, test_idx = split_dataset(x)
@@ -333,7 +333,8 @@ class SimpleKMeansClient(NumPyClient):
                   acc, nmi, ami, ari, ran, homo))
             if self.f_round % 10 == 0:  # print confusion matrix
                 my_fn.print_confusion_matrix(
-                    self.y_test, y_pred_kmeans, client_id=self.client_id)
+                    self.y_test, y_pred_kmeans, client_id=self.client_id,
+                    path_to_out=self.out_dir)
             # plotting outcomes on the labels
             if self.outcomes_test is not None:
                 times = self.outcomes_test[:, 0]
@@ -345,7 +346,7 @@ class SimpleKMeansClient(NumPyClient):
                 pred = {'ID': self.ids_test,
                         'label': y_pred_kmeans}
                 my_fn.dump_pred_dict('pred_client_'+str(self.client_id), pred,
-                                    path_to_out=self.out_dir)
+                                     path_to_out=self.out_dir)
             # dumping and retrieving the results
             metrics = {"accuracy": acc,
                        "normalized_mutual_info_score": nmi,
@@ -356,7 +357,8 @@ class SimpleKMeansClient(NumPyClient):
             result = metrics.copy()
             result['client'] = self.client_id
             result['round'] = self.f_round
-            my_fn.dump_result_dict('client_'+str(self.client_id), result)
+            my_fn.dump_result_dict('client_'+str(self.client_id), result,
+                                   path_to_out=self.out_dir)
             result = (loss, len(self.x_test), metrics)
         return result
 
@@ -1045,6 +1047,6 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 pred = {'ID': self.id_test,
                         'label': y_pred}
                 my_fn.dump_pred_dict('pred_client_'+str(self.client_id), pred,
-                                    path_to_out=self.out_dir)
+                                     path_to_out=self.out_dir)
             result = (loss, len(self.x_test), metrics)
         return result
