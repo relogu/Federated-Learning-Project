@@ -339,9 +339,12 @@ if __name__ == "__main__":
         config['kmeans_local_epochs'] = 1
         client = clients.SimpleKMeansClient(x=x,
                                             y=y,
+                                            ids=ids,
+                                            outcomes=outcomes,
                                             client_id=CLIENT_ID,
                                             seed=SEED,
-                                            config=config)
+                                            config=config,
+                                            output_folder=args.out_fol)
     elif args.alg == 'k_fed-ae_clust':
         client = clients.KFEDClusteringClient(x=x,
                                               y=y,

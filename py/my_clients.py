@@ -249,14 +249,22 @@ class SimpleKMeansClient(NumPyClient):
                  y,
                  client_id,
                  config,
+                 outcomes = None,
+                 ids = None,
+                 output_folder = None,
                  seed: int = 51550):
         # set
-        if y is None:
-            self.x_train, self.x_test = split_dataset(x)
-            self.y_train = self.y_test = None
-        else:
-            self.x_train, self.y_train, self.x_test, self.y_test = split_dataset(
-                x, y)
+        train_idx, test_idx = split_dataset(x)
+        self.x_train, self.x_test = x[train_idx], x[test_idx]
+        self.y_train = self.y_test = None
+        self.outcomes_train = self.outcomes_test = None
+        self.ids_train = self.ids_test = None
+        if y is not None:
+            self.y_train, self.y_test = y[train_idx], y[test_idx]
+        if outcomes is not None:
+            self.outcomes_train, self.outcomes_test = outcomes[train_idx], outcomes[test_idx]
+        if ids is not None:
+            self.ids_train, self.ids_test = ids[train_idx], ids[test_idx]
         self.client_id = client_id
         self.seed = seed
         self.kmeans_local_epochs = config['kmeans_local_epochs']
@@ -267,6 +275,11 @@ class SimpleKMeansClient(NumPyClient):
         self.f_round = 0
         self.p = None
         self.step = None
+        if output_folder is None:
+            self.out_dir = output_folder
+        else:
+            self.out_dir = pathlib.Path(output_folder)
+            os.makedirs(self.out_dir, exist_ok=True)
 
     def get_parameters(self):  # type: ignore
         """Get the model weights by model object."""
@@ -321,6 +334,18 @@ class SimpleKMeansClient(NumPyClient):
             if self.f_round % 10 == 0:  # print confusion matrix
                 my_fn.print_confusion_matrix(
                     self.y_test, y_pred_kmeans, client_id=self.client_id)
+            # plotting outcomes on the labels
+            if self.outcomes_test is not None:
+                times = self.outcomes_test[:, 0]
+                events = self.outcomes_test[:, 1]
+                my_fn.plot_lifelines_pred(
+                    times, events, y_pred_kmeans, client_id=self.client_id,
+                    path_to_out=self.out_dir)
+            if self.id_test is not None:
+                pred = {'ID': self.id_test,
+                        'label': y_pred_kmeans}
+                my_fn.dump_pred_dict('pred_client_'+str(self.client_id), pred,
+                                    path_to_out=self.out_dir)
             # dumping and retrieving the results
             metrics = {"accuracy": acc,
                        "normalized_mutual_info_score": nmi,
@@ -1016,5 +1041,10 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 result['round'] = self.local_iter
                 my_fn.dump_result_dict('client_'+str(self.client_id), result,
                                        path_to_out=self.out_dir)
+            if self.id_test is not None:
+                pred = {'ID': self.id_test,
+                        'label': y_pred}
+                my_fn.dump_pred_dict('pred_client_'+str(self.client_id), pred,
+                                    path_to_out=self.out_dir)
             result = (loss, len(self.x_test), metrics)
         return result
