@@ -2,7 +2,7 @@
 
 
 # unsupervosed deep embedding using EUROMDS
-python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=4000 --n_clients=8 & 
+python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=4000 --n_clients=8 --out_fol="$PWD/output1" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
 python3 py/client.py --server=[::]:51551 --client_id=0 --alg=k-ae_clust --n_clients=8 --groups=1 --n_clusters=10 --dataset=EUROMDS --out_fol="$PWD/output1" &
 python3 py/client.py --server=[::]:51551 --client_id=1 --alg=k-ae_clust --n_clients=8 --groups=1 --n_clusters=10 --dataset=EUROMDS --out_fol="$PWD/output1" &
@@ -20,7 +20,7 @@ python3 scripts/plot_metrics.py --prefix=EUROMDS-rrrr_ude2k1u4k --in_folder="$PW
 sleep 10
 
 # unsupervosed deep embedding using EUROMDS
-python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=4000 --n_clients=8 & 
+python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=4000 --n_clients=8 --out_fol="$PWD/output1" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
 python3 py/client.py --server=[::]:51551 --client_id=0 --alg=k-ae_clust --n_clients=8 --groups=2 --n_clusters=10 --dataset=EUROMDS --out_fol="$PWD/output1" &
 python3 py/client.py --server=[::]:51551 --client_id=1 --alg=k-ae_clust --n_clients=8 --groups=2 --n_clusters=10 --dataset=EUROMDS --out_fol="$PWD/output1" &
@@ -38,7 +38,7 @@ python3 scripts/plot_metrics.py --prefix=EUROMDS-rrr_ude2k1u4k --in_folder="$PWD
 sleep 10
 
 # unsupervosed deep embedding using EUROMDS
-python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=4000 --n_clients=8 & 
+python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=4000 --n_clients=8 --out_fol="$PWD/output1" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
 python3 py/client.py --server=[::]:51551 --client_id=0 --alg=k-ae_clust --n_clients=8 --groups=3 --n_clusters=10 --dataset=EUROMDS --out_fol="$PWD/output1" &
 python3 py/client.py --server=[::]:51551 --client_id=1 --alg=k-ae_clust --n_clients=8 --groups=3 --n_clusters=10 --dataset=EUROMDS --out_fol="$PWD/output1" &
@@ -56,7 +56,7 @@ python3 scripts/plot_metrics.py --prefix=EUROMDS-rr_ude2k1u4k --in_folder="$PWD/
 sleep 10
 
 # unsupervosed deep embedding using EUROMDS
-python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=4000 --n_clients=8 & 
+python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=4000 --n_clients=8 --out_fol="$PWD/output1" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
 python3 py/client.py --server=[::]:51551 --client_id=0 --alg=k-ae_clust --n_clients=8 --groups=4 --n_clusters=10 --dataset=EUROMDS --out_fol="$PWD/output1" &
 python3 py/client.py --server=[::]:51551 --client_id=1 --alg=k-ae_clust --n_clients=8 --groups=4 --n_clusters=10 --dataset=EUROMDS --out_fol="$PWD/output1" &
@@ -75,7 +75,7 @@ sleep 10
 
 
 # unsupervosed deep embedding using EUROMDS
-python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=4000 --n_clients=8 & 
+python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=4000 --n_clients=8 --out_fol="$PWD/output1" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
 python3 py/client.py --server=[::]:51551 --client_id=0 --alg=k-ae_clust --n_clients=8 --n_clusters=10 --dataset=EUROMDS --out_fol="$PWD/output1" &
 python3 py/client.py --server=[::]:51551 --client_id=1 --alg=k-ae_clust --n_clients=8 --n_clusters=10 --dataset=EUROMDS --out_fol="$PWD/output1" &
