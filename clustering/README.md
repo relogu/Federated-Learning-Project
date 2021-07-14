@@ -11,11 +11,11 @@ This project aims to present the application of the Federated Learning (FL) appr
     - [Blobs](#blobs)
     - [Moons](#moons)
     - [MNIST](#mnist)
-  - [EUROMDS](#euromds)
+    - [EUROMDS](#euromds)
   - [Models and algorithms](#models-and-algorithms)
     - [Simple k-means](#simple-k-means)
     - [Simplified k-FED](#simplified-k-fed)
-    - [Unsupervised deep embedding for clustering (UDE)](#unsupervised-deep-embedding-for-clustering-ude)
+    - [Unsupervised Deep Embedding for clustering (UDE)](#unsupervised-deep-embedding-for-clustering-ude)
     - [ClusterGAN](#clustergan)
   - [FL Framework](#fl-framework)
   - [Usage](#usage)
@@ -63,7 +63,7 @@ The random state is tunable in the program.
 This is the old-fashioned but widely used handwritten digits dataset.
 For those who are not familiar with this data, [this page](https://it.wikipedia.org/wiki/MNIST_database) provide many useful information.
 
-## EUROMDS
+### EUROMDS
 
 TODO
 
@@ -84,7 +84,7 @@ This new algorithm has been proposed in [3].
 It is based on a strict definition of heterogeneity of the distributed data.
 The implementation in this work exploits simple k-means as baseline algorithm and then following the same reasoning of [3] to built the centroids of clusters.
 
-### Unsupervised deep embedding for clustering (UDE)
+### Unsupervised Deep Embedding for clustering (UDE)
 
 The implementation of this model is based on the paper [4].
 It exploits the use of an autoencoder (AE), a Neural Network (NN) that tries to map the data into themselves, to make a dimensionality reduction.
