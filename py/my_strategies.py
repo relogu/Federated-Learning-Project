@@ -54,6 +54,7 @@ class SaveModelStrategy(FedAvg):
             self.out_dir = agg_weights_filename
         else:
             self.out_dir = Path(out_dir)/agg_weights_filename
+        print("Strategy output filename: {}".format(self.out_dir))
 
     def aggregate_fit(
         self,

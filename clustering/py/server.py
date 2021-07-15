@@ -116,6 +116,7 @@ SEED = 51550
 if __name__ == "__main__":
     # parsing arguments
     args = parse_args()
+    print("Output folder: {}".format(args.out_fol))
     # instantiating the strategy
     if args.strategy == 'fed_avg':
         on_fit_conf = partial(simple_clustering_on_fit_config,
