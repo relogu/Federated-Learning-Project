@@ -66,7 +66,8 @@ class SaveModelStrategy(FedAvg):
         if aggregated_weights is not None:
             # Save aggregated_weights
             print("Saving aggregated_weights...")
-            np.savez(self.out_dir, *aggregated_weights)
+            parameters = np.array(parameters_to_weights(aggregated_weights[0]), dtype=object)
+            np.savez(self.out_dir, parameters)
         return aggregated_weights
 
 class AggregateCustomMetricStrategy(FedAvg):
