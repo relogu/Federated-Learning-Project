@@ -6,6 +6,7 @@ Created on Wed Mar 10 14:25:15 2021
 @author: relogu
 """
 
+import sys
 import math
 import pathlib
 from pathlib import Path
@@ -34,8 +35,9 @@ from torch.utils.data import Dataset
 import lifelines
 from lifelines import KaplanMeierFitter, WeibullFitter, ExponentialFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitter, GeneralizedGammaFitter, SplineFitter
 
+sys.path.append(Path(__file__).parent.parent)
 
-from py.dataset_util import plot_points_2d
+from dataset_util import plot_points_2d
 
 
 def create_autoencoder(dims, act='relu', init='glorot_uniform'):
