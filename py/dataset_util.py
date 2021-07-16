@@ -198,11 +198,11 @@ def split_dataset(x,
     else:
         kfold = KFold(n_splits=splits)
     # get split selected
-    i = -1
-    while i < fold_n:
-        i += 1
-        train, test = next(kfold.split(x))    
-    return train, test
+    for i, (train, test) in enumerate(kfold.split(x)):
+        print('Current split {}'.format(i))
+        if i == fold_n:
+            print('Selected split {}'.format(i))
+            return train, test
 
 
 def translate_2d(dx: float, dy: float, x):
