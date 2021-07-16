@@ -37,7 +37,7 @@ from lifelines import KaplanMeierFitter, WeibullFitter, ExponentialFitter, LogNo
 
 sys.path.append(Path(__file__).parent.parent)
 
-from dataset_util import plot_points_2d
+from py.dataset_util import plot_points_2d
 
 
 def create_autoencoder(dims, act='relu', init='glorot_uniform'):
