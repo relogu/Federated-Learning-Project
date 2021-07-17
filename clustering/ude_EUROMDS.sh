@@ -16,7 +16,7 @@ python3 py/client.py --server=[::]:51551 --client_id=7 --alg=k-ae_clust --n_clie
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDS-rrrr_ude2k1u4k --in_folder="$PWD/output1" 
+python3 scripts/plot_metrics.py --prefix=EUROMDSrrrr_ude4k1u8k --in_folder="$PWD/output1" 
 sleep 10
 
 # unsupervosed deep embedding using EUROMDS
@@ -34,7 +34,7 @@ python3 py/client.py --server=[::]:51551 --client_id=7 --alg=k-ae_clust --n_clie
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDS-rrr_ude2k1u4k --in_folder="$PWD/output1"
+python3 scripts/plot_metrics.py --prefix=EUROMDSrrr_ude4k1u8k --in_folder="$PWD/output1"
 sleep 10
 
 # unsupervosed deep embedding using EUROMDS
@@ -52,7 +52,7 @@ python3 py/client.py --server=[::]:51551 --client_id=7 --alg=k-ae_clust --n_clie
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDS-rr_ude2k1u4k --in_folder="$PWD/output1"
+python3 scripts/plot_metrics.py --prefix=EUROMDSrr_ude4k1u8k --in_folder="$PWD/output1"
 sleep 10
 
 # unsupervosed deep embedding using EUROMDS
@@ -70,7 +70,7 @@ python3 py/client.py --server=[::]:51551 --client_id=7 --alg=k-ae_clust --n_clie
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDS-r_ude2k1u4k --in_folder="$PWD/output1"
+python3 scripts/plot_metrics.py --prefix=EUROMDSr_ude4k1u8k --in_folder="$PWD/output1"
 sleep 10
 
 
@@ -89,5 +89,5 @@ python3 py/client.py --server=[::]:51551 --client_id=7 --alg=k-ae_clust --n_clie
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDS_ude2k1u4k --in_folder="$PWD/output1"
+python3 scripts/plot_metrics.py --prefix=EUROMDS_ude4k1u8k --in_folder="$PWD/output1"
 sleep 10
