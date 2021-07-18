@@ -1,5 +1,5 @@
 #!/bin/bash
-
+'''
 # clustergan with ae clustering using EUROMDS reduced twice
 python3 py/server.py --strategy=clustergan --total_epochs=5000 --n_clients=8 --out_fol="$PWD/output" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
@@ -15,7 +15,7 @@ python3 py/client.py --client_id=7 --alg=clustergan --n_clients=8 --groups=1 --n
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDSrrrr_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSrrrr_clustergan5k
 sleep 10
 
 # clustergan with ae clustering using EUROMDS reduced twice
@@ -33,9 +33,9 @@ python3 py/client.py --client_id=7 --alg=clustergan --n_clients=8 --groups=2 --n
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDSrrr_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSrrr_clustergan5k
 sleep 10
-
+'''
 # clustergan with ae clustering using EUROMDS reduced twice
 python3 py/server.py --strategy=clustergan --total_epochs=5000 --n_clients=8 --out_fol="$PWD/output" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
@@ -51,7 +51,7 @@ python3 py/client.py --client_id=7 --alg=clustergan --n_clients=8 --groups=3 --n
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDSrr_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSrr_clustergan5k
 sleep 10
 
 # clustergan with ae clustering using EUROMDS reduced once
@@ -69,7 +69,7 @@ python3 py/client.py --client_id=7 --alg=clustergan --n_clients=8 --groups=4 --n
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDSr_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSr_clustergan5k
 sleep 10
 
 
@@ -88,5 +88,5 @@ python3 py/client.py --client_id=7 --alg=clustergan --n_clients=8 --n_clusters=1
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDS_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDS_clustergan5k
 sleep 10
