@@ -15,7 +15,7 @@ python3 py/client.py --client_id=7 --alg=clustergan --n_clients=8 --groups=1 --n
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDS-rrrr_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSrrrr_clustergan10k
 sleep 10
 
 # clustergan with ae clustering using EUROMDS reduced twice
@@ -33,7 +33,7 @@ python3 py/client.py --client_id=7 --alg=clustergan --n_clients=8 --groups=2 --n
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDS-rrr_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSrrr_clustergan10k
 sleep 10
 
 # clustergan with ae clustering using EUROMDS reduced twice
@@ -51,7 +51,7 @@ python3 py/client.py --client_id=7 --alg=clustergan --n_clients=8 --groups=3 --n
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDS-rr_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSrr_clustergan10k
 sleep 10
 
 # clustergan with ae clustering using EUROMDS reduced once
@@ -69,7 +69,7 @@ python3 py/client.py --client_id=7 --alg=clustergan --n_clients=8 --groups=4 --n
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDS-r_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSr_clustergan10k
 sleep 10
 
 
