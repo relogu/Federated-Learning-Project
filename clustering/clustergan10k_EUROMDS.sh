@@ -15,7 +15,7 @@ python3 py/client.py --server=[::]:51552 --client_id=7 --alg=clustergan --n_clie
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDSrrrr_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSrrrr_clustergan10k --in_folder="$PWD/output2"
 sleep 10
 
 # clustergan with ae clustering using EUROMDS reduced twice
@@ -33,7 +33,7 @@ python3 py/client.py --server=[::]:51552 --client_id=7 --alg=clustergan --n_clie
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDSrrr_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSrrr_clustergan10k --in_folder="$PWD/output2"
 sleep 10
 
 # clustergan with ae clustering using EUROMDS reduced twice
@@ -51,7 +51,7 @@ python3 py/client.py --server=[::]:51552 --client_id=7 --alg=clustergan --n_clie
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDSrr_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSrr_clustergan10k --in_folder="$PWD/output2"
 sleep 10
 
 # clustergan with ae clustering using EUROMDS reduced once
@@ -69,7 +69,7 @@ python3 py/client.py --server=[::]:51552 --client_id=7 --alg=clustergan --n_clie
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDSr_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDSr_clustergan10k --in_folder="$PWD/output2"
 sleep 10
 
 
@@ -88,5 +88,5 @@ python3 py/client.py --server=[::]:51552 --client_id=7 --alg=clustergan --n_clie
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDS_clustergan10k
+python3 scripts/plot_metrics.py --prefix=EUROMDS_clustergan10k --in_folder="$PWD/output2"
 sleep 10
