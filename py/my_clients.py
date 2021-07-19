@@ -254,7 +254,12 @@ class SimpleKMeansClient(NumPyClient):
                  output_folder=None,
                  seed: int = 51550):
         # set
-        train_idx, test_idx = split_dataset(x)
+        train_idx, test_idx = split_dataset(
+            x=x,
+            splits=config['splits'],
+            shuffle=config['shuffle'],
+            fold_n=config['fold_n'])
+        
         self.x_train, self.x_test = x[train_idx], x[test_idx]
         self.y_train = self.y_test = None
         self.outcomes_train = self.outcomes_test = None
@@ -441,6 +446,7 @@ class ClusterGANClient(NumPyClient):
         train_idx, test_idx = split_dataset(
             x=x,
             splits=config['splits'],
+            shuffle=config['shuffle'],
             fold_n=config['fold_n'])
 
         self.x_train = x[train_idx]
@@ -848,7 +854,9 @@ class KMeansEmbedClusteringClient(NumPyClient):
         train_idx, test_idx = split_dataset(
             x=x,
             splits=config['splits'],
+            shuffle=config['shuffle'],
             fold_n=config['fold_n'])
+        
         self.x_train = x[train_idx]
         self.x_test = x[test_idx]
         self.y_train = self.y_test = None
