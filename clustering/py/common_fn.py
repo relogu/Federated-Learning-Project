@@ -38,6 +38,7 @@ from lifelines import KaplanMeierFitter, WeibullFitter, ExponentialFitter, LogNo
 sys.path.append(Path(__file__).parent.parent)
 
 from py.dataset_util import plot_points_2d
+#from dataset_util import plot_points_2d
 
 
 def create_autoencoder(dims, act='relu', init='glorot_uniform'):
@@ -305,7 +306,9 @@ def plot_lifelines_pred(time,
         # loop on labels
         for label in np.unique(labels):
             idx = (labels == label)
-            if len(idx) > 5:
+            unique, counts = np.unique(idx, return_counts=True)
+            #print('Label {} has {} samples'.format(label, counts[unique==True]))
+            if counts[unique==True] > 5:
                 fitters[key].fit(time[idx], event[idx], label='f_{} l_{}'.format(key, label))
                 fitters[key].plot_survival_function(ax=ax)
         i+=1
