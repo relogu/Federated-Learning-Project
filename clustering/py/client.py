@@ -192,6 +192,7 @@ if __name__ == "__main__":
         'splits': 5,
         'fold_n': 0,
         'n_clusters': N_CLUSTERS,
+        'shuffle': False,
         'kmeans_local_epochs': 300,
         'kmeans_n_init': 25,
         'ae_local_epochs': 5,
@@ -362,6 +363,7 @@ if __name__ == "__main__":
         config = {
             'x_shape': x.shape[-1],
             'batch_size': 32,
+            'shuffle': False,
             'splits': 5,
             'fold_n': 0,
             'latent_dim': 30,
