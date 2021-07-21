@@ -15,6 +15,16 @@
 
 *.dat
 
+# latex
+*.bbl
+*.blg
+*.nav
+*.pdfpc
+*.snm
+
+# onedrive issues
+*-relogu-XPS-15-9500*
+
 papers
 blocknotes.md
 *.tar
