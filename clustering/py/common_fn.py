@@ -30,7 +30,7 @@ from sklearn.metrics import (adjusted_mutual_info_score, adjusted_rand_score,
 from sklearn.model_selection import KFold
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.layers import Dense, Input, InputSpec, Layer
-from tensorflow.keras.models import Model
+from tensorflow.keras.models import Model, Sequential
 from torch.utils.data import Dataset
 import lifelines
 from lifelines import KaplanMeierFitter, WeibullFitter, ExponentialFitter, LogNormalFitter, LogLogisticFitter, PiecewiseExponentialFitter, GeneralizedGammaFitter, SplineFitter
@@ -52,28 +52,41 @@ def create_autoencoder(dims, act='relu', init='glorot_uniform'):
         (ae_model, encoder_model), Model of autoencoder and model of encoder
     """
     n_stacks = len(dims) - 1
-    # input
-    input_img = Input(shape=(dims[0],), name='input')
-    x = input_img
+    # input data
+    input_img = Input(shape=(dims[0],), name='input_img')
+    # input labels
+    input_lbl = Input(shape=(dims[-1],), name='input_lbl')
+    encoder_layers = []
+    encoder_layers.append(input_img)
     # internal layers in encoder
     for i in range(n_stacks-1):
         x = Dense(dims[i + 1], activation=act,
-                  kernel_initializer=init, name='encoder_%d' % i)(x)
+                  kernel_initializer=init, name='encoder_%d' % i)#(x)
+        encoder_layers.append(x)
 
     # hidden layer
     encoded = Dense(dims[-1], kernel_initializer=init, name='encoder_%d' %
-                    (n_stacks - 1))(x)  # hidden layer, features are extracted from here
-
-    x = encoded
+                    (n_stacks - 1)) # hidden layer, features are extracted from here
+    encoder_layers.append(encoded)
+    
+    decoder_layers = []
+    decoder_layers.append(input_lbl)
     # internal layers in decoder
     for i in range(n_stacks-1, 0, -1):
         x = Dense(dims[i], activation=act,
-                  kernel_initializer=init, name='decoder_%d' % i)(x)
-
-    # output
-    x = Dense(dims[0], kernel_initializer=init, name='decoder_0')(x)
-    decoded = x
-    return Model(inputs=input_img, outputs=decoded, name='AE'), Model(inputs=input_img, outputs=encoded, name='encoder')
+                kernel_initializer=init, name='decoder_%d' % i)#(x)
+        decoder_layers.append(x)
+        
+    x = Dense(dims[0], kernel_initializer=init, name='decoder_0')
+    decoder_layers.append(x)
+    autoencoder_layers = []
+    autoencoder_layers = autoencoder_layers + encoder_layers
+    autoencoder_layers = autoencoder_layers + decoder_layers[1:]
+    
+    autoencoder = Sequential(autoencoder_layers, name='AE')
+    encoder =  Sequential(encoder_layers, name='encoder')
+    decoder =  Sequential(decoder_layers, name='decoder')
+    return (autoencoder, encoder, decoder)
 
 
 def create_clustering_model(n_clusters, encoder):

@@ -904,12 +904,28 @@ class KMeansEmbedClusteringClient(NumPyClient):
             return self.clustering_model.get_weights()
 
     def _fit_clustering_model(self):
+        self.encoder.trainable = True
+        # compiling the clustering model
+        self.clustering_model.compile(
+            optimizer=self.cl_optimizer,
+            loss=self.cl_loss)
         for _ in range(int(self.cl_local_epochs)):
             if self.local_iter % self.update_interval == 0:
                 q = self.clustering_model.predict(self.x_train, verbose=0)
                 # update the auxiliary target distribution p
                 self.p = target_distribution(q)
             self.clustering_model.fit(x=self.x_train, y=self.p, verbose=0)
+        self.encoder.trainable = False
+        self.autoencoder.compile(
+            optimizer=self.ae_optimizer,
+            loss=self.ae_loss
+        )
+        # fitting the autoencoder
+        self.autoencoder.fit(x=self.x_train,
+                                y=self.x_train,
+                                batch_size=self.batch_size,
+                                epochs=self.ae_local_epochs,
+                                verbose=0)
         self.local_iter += 1
 
     def fit(self, parameters, config):  # type: ignore
@@ -924,7 +940,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         if self.step == 'pretrain_ae':  # ae pretrain step
             if config['first']:
                 # building and compiling autoencoder
-                self.autoencoder, self.encoder = my_fn.create_autoencoder(
+                self.autoencoder, self.encoder, self.decoder = my_fn.create_autoencoder(
                     self.ae_dims)
                 self.autoencoder.compile(
                     optimizer=self.ae_optimizer,
