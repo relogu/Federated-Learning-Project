@@ -72,7 +72,7 @@
 	Uso:
 	\begin{itemize}
 		\item addestrare un autoencoder per la riduzione della dimensionalità
-		\item estrarre l'encoder
+		\item estrarre l'encoder addestrato
 		\item costituire in cima all'encoder un particolare Layer di Clustering
 	\end{itemize}
 \end{frame}
@@ -106,7 +106,7 @@
 
 \begin{frame}{ClusterGAN}
 	\centering
-	\includegraphics[width=0.6\textwidth, keepaspectratio]{./images/ClusterGAN_model.png}
+	\includegraphics[width=0.55\textwidth, keepaspectratio]{./images/ClusterGAN_model.png}
 	\begin{itemize}
 		\item campionare casualmente variabili latenti da un mix tra vettori "one-hot" $z_c$ e valori continui $z_n$
 		\item "dare in pasto" i valori campionati alla GAN e i dati reali $x_r$ al discriminatore
