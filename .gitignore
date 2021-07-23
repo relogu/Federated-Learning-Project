@@ -25,6 +25,9 @@
 # onedrive issues
 *-relogu-XPS-15-9500*
 
+# model weights
+*.npz
+
 papers
 blocknotes.md
 *.tar
