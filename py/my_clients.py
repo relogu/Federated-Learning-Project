@@ -928,6 +928,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 self.autoencoder, self.encoder, self.decoder = create_autoencoder(
                     self.ae_dims)
                 self.autoencoder.compile(
+                    metrics=["accuracy"],
                     optimizer=self.ae_optimizer,
                     loss=self.ae_loss
                 )
@@ -980,9 +981,10 @@ class KMeansEmbedClusteringClient(NumPyClient):
         metrics = {}
         if self.step == 'pretrain_ae':
             # evaluation
-            loss = self.autoencoder.evaluate(
+            loss, accuracy = self.autoencoder.evaluate(
                 self.x_test, self.x_test, verbose=0)
-            metrics = {"loss": loss}
+            metrics = {"loss": loss,
+                       "accuracy": accuracy}
             result = metrics.copy()
             result['client'] = self.client_id
             result['round'] = self.f_round
