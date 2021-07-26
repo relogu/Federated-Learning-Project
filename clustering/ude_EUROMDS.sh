@@ -2,7 +2,7 @@
 
 
 # unsupervosed deep embedding using EUROMDS
-python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=10000 --cluster_epochs=10000 --n_clients=8 --out_fol="$PWD/output1" & 
+python3 py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=20000 --cluster_epochs=10000 --n_clients=8 --out_fol="$PWD/output1" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
 python3 py/client_euromds.py --server=[::]:51551 --client_id=0 --alg=k-ae_clust --n_clients=8 --groups=1 --shuffle=True --fold_n=0 --n_clusters=6 --out_fol="$PWD/output1" &
 python3 py/client_euromds.py --server=[::]:51551 --client_id=1 --alg=k-ae_clust --n_clients=8 --groups=1 --shuffle=True --fold_n=0 --n_clusters=6 --out_fol="$PWD/output1" &
@@ -16,7 +16,7 @@ python3 py/client_euromds.py --server=[::]:51551 --client_id=7 --alg=k-ae_clust 
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 scripts/plot_metrics.py --prefix=EUROMDSrrrr_ude4k1u8k --in_folder="$PWD/output1" 
+python3 scripts/plot_metrics.py --prefix=EUROMDSrrrr_ude20k1u10k --in_folder="$PWD/output1" 
 sleep 10
 '''
 # unsupervosed deep embedding using EUROMDS

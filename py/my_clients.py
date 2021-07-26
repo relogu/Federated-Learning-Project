@@ -992,7 +992,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             my_fn.dump_result_dict('client_'+str(self.client_id)+'_ae', result,
                                    path_to_out=self.out_dir)
             print(out_3 % (self.client_id, self.f_round, loss, accuracy))
-            result = (loss, len(self.x_test), {accuracy})
+            result = (loss, len(self.x_test), {"accuracy": accuracy})
         elif self.step == 'k-means':
             # predicting labels
             y_pred_kmeans = self.kmeans.predict(
