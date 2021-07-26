@@ -36,6 +36,7 @@ from torchvision.utils import save_image
 import py.metrics as my_metrics
 from py.dataset_util import split_dataset, PrepareData, PrepareDataSimple
 from py.util import check_weights_dict, target_distribution
+from py.ude import create_autoencoder, create_clustering_model
 
 k_means_initializer = 'k-means++'
 k_means_eval_string = 'Client %d, updated real accuracy of k-Means: %.5f'
@@ -904,28 +905,12 @@ class KMeansEmbedClusteringClient(NumPyClient):
             return self.clustering_model.get_weights()
 
     def _fit_clustering_model(self):
-        self.encoder.trainable = True
-        # compiling the clustering model
-        self.clustering_model.compile(
-            optimizer=self.cl_optimizer,
-            loss=self.cl_loss)
         for _ in range(int(self.cl_local_epochs)):
             if self.local_iter % self.update_interval == 0:
                 q = self.clustering_model.predict(self.x_train, verbose=0)
                 # update the auxiliary target distribution p
                 self.p = target_distribution(q)
             self.clustering_model.fit(x=self.x_train, y=self.p, verbose=0)
-        self.encoder.trainable = False
-        self.autoencoder.compile(
-            optimizer=self.ae_optimizer,
-            loss=self.ae_loss
-        )
-        # fitting the autoencoder
-        self.autoencoder.fit(x=self.x_train,
-                                y=self.x_train,
-                                batch_size=self.batch_size,
-                                epochs=self.ae_local_epochs,
-                                verbose=0)
         self.local_iter += 1
 
     def fit(self, parameters, config):  # type: ignore
@@ -940,14 +925,14 @@ class KMeansEmbedClusteringClient(NumPyClient):
         if self.step == 'pretrain_ae':  # ae pretrain step
             if config['first']:
                 # building and compiling autoencoder
-                self.autoencoder, self.encoder, self.decoder = my_fn.create_autoencoder(
+                self.autoencoder, self.encoder, self.decoder = create_autoencoder(
                     self.ae_dims)
                 self.autoencoder.compile(
                     optimizer=self.ae_optimizer,
                     loss=self.ae_loss
                 )
             else:  # getting new weights
-                self.autoencoder.set_weights(parameters)
+                self.encoder.set_weights(parameters)
             # fitting the autoencoder
             self.autoencoder.fit(x=self.x_train,
                                  y=self.x_train,
@@ -955,7 +940,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                                  epochs=self.ae_local_epochs,
                                  verbose=0)
             # returning the parameters necessary for FedAvg
-            return self.autoencoder.get_weights(), len(self.x_train), {}
+            return self.encoder.get_weights(), len(self.x_train), {}
         elif self.step == 'k-means':  # k-Means step
             parameters = k_means_initializer  # k++ is used
             self.kmeans = KMeans(init=parameters,
@@ -972,7 +957,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 # getting final clusters centers
                 self.cluster_centers = parameters
                 # initializing clustering model
-                self.clustering_model = my_fn.create_clustering_model(
+                self.clustering_model = create_clustering_model(
                     self.n_clusters,
                     self.encoder)
                 # compiling the clustering model

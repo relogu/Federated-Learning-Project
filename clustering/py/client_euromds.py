@@ -171,14 +171,15 @@ if __name__ == "__main__":
         'kmeans_local_epochs': 300,
         'kmeans_n_init': 25,
         'ae_local_epochs': 5,
-        'ae_lr': 0.01,
+        'ae_lr': 0.001,
         'ae_momentum': 0.9,
         'cl_lr': 0.01,
         'cl_momentum': 0.9,
         'cl_local_epochs': 5,
         'update_interval': 55,
         'ae_loss': 'mse',
-        'cl_loss': 'kld'}
+        'cl_loss': 'kld',
+        'seed': args.seed}
 
     # dataset, building the whole one and get the local
     groups = ['Genetics', 'CNA', 'Demographics', 'Clinical', 'GeneGene', 'CytoCyto', 'GeneCyto']
