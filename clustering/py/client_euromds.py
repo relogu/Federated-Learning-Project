@@ -223,7 +223,7 @@ if __name__ == "__main__":
     outcomes = np.array(outcomes[['outcome_3', 'outcome_2']])
     ids = np.array(ids[start:end])
     # setting the autoencoder layers
-    dims = [x.shape[-1], int(2*n_features), int(4*n_features), N_CLUSTERS]
+    dims = [x.shape[-1], int((n_features+N_CLUSTERS)/2), int((n_features+N_CLUSTERS)/2), N_CLUSTERS]
 
     '''
     TODO: compatibility with create_partitions methods
