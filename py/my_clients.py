@@ -42,6 +42,7 @@ k_means_initializer = 'k-means++'
 k_means_eval_string = 'Client %d, updated real accuracy of k-Means: %.5f'
 out_1 = 'Client %d, FedIter %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f'
 out_2 = 'Client %d, FedIter %d\n\tae_loss %.5f'
+out_3 = 'Client %d, FedIter %d\n\tae_loss %.5f\n\taccuracy %.5f'
 clustering_eval_string = 'Client %d, Acc = %.5f, nmi = %.5f, ari = %.5f ; loss = %.5f'
 
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
@@ -990,8 +991,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
             result['round'] = self.f_round
             my_fn.dump_result_dict('client_'+str(self.client_id)+'_ae', result,
                                    path_to_out=self.out_dir)
-            print(out_2 % (self.client_id, self.f_round, loss))
-            result = (loss, len(self.x_test), {})
+            print(out_3 % (self.client_id, self.f_round, loss, accuracy))
+            result = (loss, len(self.x_test), {accuracy})
         elif self.step == 'k-means':
             # predicting labels
             y_pred_kmeans = self.kmeans.predict(
