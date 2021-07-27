@@ -43,6 +43,7 @@ def get_parser():
     parser.add_argument("-b", "--batch_size", dest="batch_size", default=64, type=int, help="Batch size")
     parser.add_argument("-i", "--img_size", dest="img_size", type=int, default=28, help="Size of image dimension")
     parser.add_argument("-d", "--latent_dim", dest="latent_dim", default=30, type=int, help="Dimension of latent space")
+    parser.add_argument("--n_clusters", dest="n_clusters", default=10, type=int, help="Dimension of label space")
     parser.add_argument("-l", "--lr", dest="learning_rate", type=float, default=0.0001, help="Learning rate")
     parser.add_argument("-c", "--n_critic", dest="n_critic", type=int, default=5, help="Number of training steps for discriminator per iter")
     parser.add_argument("-w", "--wass_flag", dest="wass_flag", action='store_true', help="Flag for Wasserstein metric")
@@ -452,6 +453,7 @@ class ConvDiscriminatorCNN(nn.Module):
         validity = self.model(img)
         return validity
 
+
 if __name__ == "__main__":
     
     
@@ -481,7 +483,7 @@ if __name__ == "__main__":
     
     # Latent space info
     latent_dim = args.latent_dim
-    n_c = 10
+    n_c = args.n_clusters
     betan = 10
     betac = 10
 
@@ -867,3 +869,12 @@ if __name__ == "__main__":
         
         print('Epoch %d/%d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' % \
             (epoch+1, n_epochs, acc, nmi, ami, ari, ran, homo))
+    
+        g_par = [val.cpu().numpy()
+                for _, val in generator.state_dict().items()]
+        d_par = [val.cpu().numpy()
+                    for _, val in discriminator.state_dict().items()]
+        e_par = [val.cpu().numpy()
+                    for _, val in encoder.state_dict().items()]
+        parameters = np.concatenate([g_par, d_par, e_par], axis=0)
+        np.savez(path_to_out/'clustergan', parameters)
