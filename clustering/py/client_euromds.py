@@ -170,7 +170,7 @@ if __name__ == "__main__":
         'shuffle': SHUFFLE,
         'kmeans_local_epochs': 300,
         'kmeans_n_init': 25,
-        'ae_local_epochs': 5,
+        'ae_local_epochs': 100,
         'ae_lr': 0.001,
         'ae_momentum': 0.9,
         'cl_lr': 0.01,
