@@ -384,7 +384,7 @@ if __name__ == "__main__":
     if args.out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
     else:
-        path_to_out = args.out_folder
+        path_to_out = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
     os.makedirs(path_to_out, exist_ok=True)
     # initializing common configuration dict
@@ -397,7 +397,7 @@ if __name__ == "__main__":
         'kmeans_epochs': 300,
         'kmeans_n_init': 25,
         'ae_epochs': args.ae_epochs,
-        'ae_lr': 0.001,
+        'ae_lr': 0.01,
         'ae_momentum': 0.9,
         'cl_lr': 0.01,
         'cl_momentum': 0.9,
@@ -408,8 +408,7 @@ if __name__ == "__main__":
         'seed': args.seed}
 
     # preparing dataset
-    groups = ['Genetics', 'CNA', 'Demographics',
-              'Clinical', 'GeneGene', 'CytoCyto', 'GeneCyto']
+    groups = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto', 'GeneCyto', 'Demographics', 'Clinical']
     # getting the entire dataset
     x = data_util.get_euromds_dataset(groups=groups[:args.groups])
     # getting the number of features
@@ -430,7 +429,11 @@ if __name__ == "__main__":
     # getting IDs
     ids = data_util.get_euromds_ids()
     # setting the autoencoder layers
+    #dims = [x.shape[-1], x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters]
+    #dims = [x.shape[-1], x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters]
     dims = [x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters]
+    
+    config['ae_lr'] = 0.1
     config['ae_dims'] = dims
     # define the splitting
     train_idx, test_idx = data_util.split_dataset(
@@ -457,7 +460,7 @@ if __name__ == "__main__":
     # pre-train the autoencoder
     autoencoder, encoder, decoder = create_autoencoder(
         config['ae_dims'], act='relu')#, init='glorot_normal')#, act='linear')
-    ae_optimizer = SGD( lr=config['ae_lr'], momentum=config['ae_momentum'])
+    ae_optimizer = SGD( lr=config['ae_lr'], decay=(config['ae_lr']-0.001)/config['ae_epochs'], momentum=config['ae_momentum'])
     autoencoder.compile(
         metrics=['accuracy'],
         optimizer=ae_optimizer,
