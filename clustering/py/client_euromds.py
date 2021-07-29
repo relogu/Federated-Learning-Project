@@ -182,7 +182,7 @@ if __name__ == "__main__":
         'seed': args.seed}
 
     # dataset, building the whole one and get the local
-    groups = ['Genetics', 'CNA', 'Demographics', 'Clinical', 'GeneGene', 'CytoCyto', 'GeneCyto']
+    groups = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto', 'GeneCyto', 'Demographics', 'Clinical']
     # getting the entire dataset
     x = data_util.get_euromds_dataset(groups=groups[:args.groups])
     # getting labels from HDP

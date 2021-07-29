@@ -252,7 +252,7 @@ if __name__ == "__main__":
         dims = [x.shape[-1], 500, 500, 2000, N_CLUSTERS]
         del X, Y
     elif DATASET == 'EUROMDS':
-        groups = ['Genetics', 'CNA', 'Demographics', 'Clinical', 'GeneGene', 'CytoCyto', 'GeneCyto']
+        groups = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto', 'GeneCyto', 'Demographics', 'Clinical']
         # getting the entire dataset
         x = data_util.get_euromds_dataset(groups=groups[:args.groups])
         # getting labels from HDP
