@@ -19,9 +19,6 @@ from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy import FedAvg
 from sklearn.cluster import KMeans
 
-path = pathlib.Path(__file__).parent.absolute()
-sys.path.append(str(path.parent.parent))
-
 import py.my_strategies as strategies
 from py.server_fit_config import (clustergan_on_fit_config,
                                   kfed_clustering_on_fit_config,
@@ -56,7 +53,8 @@ def parse_args():
                         required=False,
                         type=type(''),
                         default='fed_avg',
-                        choices=['fed_avg', 'k-fed', 'fed_avg_k-means', 'clustergan'],
+                        choices=['fed_avg', 'k-fed',
+                                 'fed_avg_k-means', 'clustergan'],
                         action='store',
                         help='strategy for the server')
     parser.add_argument('--ae_epochs',
@@ -132,10 +130,10 @@ if __name__ == "__main__":
             on_fit_config_fn=on_fit_conf
         )
     elif args.strategy == 'clustergan':
-        
+
         def clustergan_on_fit_config(rnd):
             return {'total_epochs': args.total_epochs}
-        
+
         n_rounds = args.total_epochs
         strategy = strategies.SaveModelStrategy(
             out_dir=args.out_fol,

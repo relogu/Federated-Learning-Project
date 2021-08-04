@@ -21,6 +21,7 @@ ari = adjusted_rand_score
 ran = rand_score
 homo = homogeneity_score
 
+
 def acc(y_true, y_pred):
     """
     Calculate clustering accuracy. Require scikit-learn installed

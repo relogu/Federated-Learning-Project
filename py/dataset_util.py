@@ -38,6 +38,7 @@ class PrepareDataSimple(Dataset):
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx]
 
+
 class PrepareData(Dataset):
 
     def __init__(self, x, y, ids, outcomes):
@@ -55,6 +56,7 @@ class PrepareData(Dataset):
 
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx], self.ids[idx], self.outcomes[idx]
+
 
 def get_euromds_dataset(accept_nan: int = 0,
                         groups: list[str] = None,
@@ -82,9 +84,9 @@ def get_euromds_dataset(accept_nan: int = 0,
     # check for the excluded columns
     if exclude_cols != None:
         if not set(exclude_cols).issubset(set(selected_cols)):
-            warnings.warn('The list \'exclude_cols\' contains some values that are not in the selected groups\' columns.\n'+\
-                'These values will be removed from the list.',
-                        Warning)
+            warnings.warn('The list \'exclude_cols\' contains some values that are not in the selected groups\' columns.\n' +
+                          'These values will be removed from the list.',
+                          Warning)
         selected_cols = list(set(selected_cols)-set(exclude_cols))
     # get the main dataframe
     main_df = pd.read_csv(data_folder/'dataFrame.csv')
@@ -116,32 +118,6 @@ def get_euromds_ids(path_to_data: Union[Path, str] = None):
     return main_df
 
 
-def dump_labels_euromds(labels,
-                        name: str = None,
-                        path_to_data: Union[Path, str] = None):
-    # set the path
-    if path_to_data is None:
-        parent = pathlib.Path(__file__).parent.parent.absolute()
-        data_folder = parent/'data'/'euromds'
-    else:
-        data_folder = path_to_data
-    # set the filename
-    if name is None:
-        filename = 'labels.csv'
-    else:
-        filename = 'labels_'+name+'.csv'
-    # get the main dataframe
-    main_df = pd.read_csv(data_folder/'dataFrame.csv')
-    # selected the IDs
-    main_df = main_df[main_df.columns[0]]
-    main_df.replace('EUROMDS', '')
-    # building the dataframe
-    main_df = pd.DataFrame({'ID': main_df.asint(),
-                            'label': labels})
-    # saving the file
-    main_df.to_csv(data_folder/filename)
-
-
 def get_outcome_euromds_dataset(accept_nan: int = 0,
                                 groups: list[str] = None,
                                 exclude_cols: list[str] = None,
@@ -155,7 +131,7 @@ def get_outcome_euromds_dataset(accept_nan: int = 0,
     # get the groups dataframe
     raw_cat = pd.read_csv(data_folder/'dataRawCategories.csv')
     # get the groups of columns/variables
-    out_cat = raw_cat[raw_cat['category']=='Outcome Data']
+    out_cat = raw_cat[raw_cat['category'] == 'Outcome Data']
     # get columns' names
     cols = out_cat['data']
     # raw df
@@ -173,13 +149,12 @@ def get_outcome_euromds_dataset(accept_nan: int = 0,
     for col in prev.columns:
         ret['outcome_{}'.format(i)] = prev[col]
         i += 1
-    ret = pd.DataFrame(ret)#.astype(float)
+    ret = pd.DataFrame(ret)  # .astype(float)
     # modifying zeros to avoid statistical problems while using lifelines
-    ret.loc[ret['outcome_1']==0, 'outcome_1'] = 1e-7
-    ret.loc[ret['outcome_3']==0, 'outcome_3'] = 1e-7
-    ret.loc[ret['outcome_5']==0, 'outcome_5'] = 1e-7
+    ret.loc[ret['outcome_1'] == 0, 'outcome_1'] = 1e-7
+    ret.loc[ret['outcome_3'] == 0, 'outcome_3'] = 1e-7
+    ret.loc[ret['outcome_5'] == 0, 'outcome_5'] = 1e-7
     return ret
-    
 
 
 def split_dataset(x,
@@ -252,48 +227,6 @@ def rotate_2d(theta: float, x):
         # error msg
         raise TypeError("the input x has not the correct shape")
     return xc
-
-
-def plot_points_2d(x, y):
-    """Plot the points x coloring them by the labels in vector y
-
-    Args:
-        x (ndarray of shape (n_samples, 2)): vector of 2-D points to plot
-        y (ndarray of shape (n_samples)): vector of numerical labels
-
-    Returns:
-        (matplotlib.pyplot.PathCollection)
-    """
-    return plt.scatter(x[:, 0], x[:, 1], c=y, cmap=plt.cm.Spectral)
-
-
-def plot_client_dataset_2d(client_id, x_train, y_train, x_test, y_test, path=None):
-    """Plot and dump to a file the data samples given the specified client id and dataset.
-
-    Args:
-        client_id (str or int or cast to str): identifier for the client
-        x_train (ndarray of shape (n_samples, 2)): vector of 2-D points to plot for the train set
-        y_train (ndarray of shape (n_samples)): vector of numerical labels for the train set
-        x_test (ndarray of shape (n_samples, 2)): vector of 2-D points to plot for the test set
-        y_test (ndarray of shape (n_samples)): vector of numerical labels for the test set
-    """
-    # setting path for saving image
-    if path is None:
-        path = 'output'
-    # initialize graph
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(18, 9))
-    ax.set_title("Data samples for the client " + str(client_id))
-    ax.set_xlabel('x')
-    ax.set_ylabel('Y')
-    # Plot the samples
-    plot_points_2d(x_train, y_train)
-    # augment test to be colored differently
-    y_test = y_test+2
-    plot_points_2d(x_test, y_test)
-    plt.draw()
-    # plt.show(block=False)
-    plt.savefig(path+'/data_client_'+str(client_id)+'.png')
-    plt.close()
 
 
 def build_dataset(n_clients: int, total_samples: int, noise: float, seed: int = 51550):

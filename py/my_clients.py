@@ -12,15 +12,14 @@ from itertools import chain as ichain
 from typing import OrderedDict, Dict
 import pathlib
 
-import clustering.py.common_fn as my_fn
 import flwr as fl
 import numpy as np
 import torch
 import torchvision
-from py.clustergan import (ConvDiscriminatorCNN, ConvEncoderCNN,
-                           ConvGeneratorCNN, DiscriminatorCNN, EncoderCNN,
-                           GeneratorCNN, calc_gradient_penalty,
-                           sample_z)
+from py.clustergan.dense_model import DiscriminatorDense, EncoderDense, GeneratorDense
+from py.clustergan.cnn_model import DiscriminatorCNN, EncoderCNN, GeneratorCNN
+from py.clustergan.util import calc_gradient_penalty, sample_z
+
 from flwr.client import NumPyClient
 from flwr.common import (FitRes, Parameters, Scalar, Weights,
                          parameters_to_weights)
@@ -35,8 +34,10 @@ from torchvision.utils import save_image
 
 import py.metrics as my_metrics
 from py.dataset_util import split_dataset, PrepareData, PrepareDataSimple
-from py.util import check_weights_dict, target_distribution
-from py.ude import create_autoencoder, create_clustering_model
+from py.util import check_weights_dict
+from py.udec.util import create_autoencoder, create_clustering_model, target_distribution
+from py.dumping.output import dump_pred_dict, dump_result_dict
+from py.dumping.plots import print_confusion_matrix, plot_lifelines_pred
 
 k_means_initializer = 'k-means++'
 k_means_eval_string = 'Client %d, updated real accuracy of k-Means: %.5f'
@@ -122,7 +123,7 @@ class KFEDClusteringClient(NumPyClient):
         if self.step == 'pretrain_ae':  # ae pretrain step
             if config['first']:
                 # building and compiling autoencoder
-                self.autoencoder, self.encoder = my_fn.create_autoencoder(
+                self.autoencoder, self.encoder = create_autoencoder(
                     self.ae_dims)
                 self.autoencoder.compile(
                     optimizer=self.ae_optimizer,
@@ -156,7 +157,7 @@ class KFEDClusteringClient(NumPyClient):
                 # getting final clusters centers
                 self.cluster_centers = parameters
                 # initializing clustering model
-                self.clustering_model = my_fn.create_clustering_model(
+                self.clustering_model = create_clustering_model(
                     self.n_clusters,
                     self.encoder)
                 # compiling the clustering model
@@ -185,7 +186,7 @@ class KFEDClusteringClient(NumPyClient):
             result = metrics.copy()
             result['client'] = self.client_id
             result['round'] = self.f_round
-            my_fn.dump_result_dict('client_'+str(self.client_id)+'_ae', result)
+            dump_result_dict('client_'+str(self.client_id)+'_ae', result)
             print(out_2 % (self.client_id, self.f_round, loss))
             result = (loss, len(self.x_test), {})
         elif self.step == 'k-FED':
@@ -202,7 +203,7 @@ class KFEDClusteringClient(NumPyClient):
             print(out_1 % (self.client_id, self.f_round,
                   acc, nmi, ami, ari, ran, homo))
             if self.f_round % 10 == 0:  # print confusion matrix
-                my_fn.print_confusion_matrix(
+                print_confusion_matrix(
                     self.y_test, y_pred_kmeans, client_id=self.client_id)
             # retrieving the results
             result = (loss, len(self.x_test), metrics)
@@ -223,7 +224,7 @@ class KFEDClusteringClient(NumPyClient):
                 ran = my_metrics.ran(self.y_test, y_pred)
                 homo = my_metrics.homo(self.y_test, y_pred)
                 if self.f_round % 10 == 0:  # print confusion matrix
-                    my_fn.print_confusion_matrix(
+                    print_confusion_matrix(
                         self.y_test, y_pred, client_id=self.client_id)
                 print(out_1 % (self.client_id, self.f_round,
                                acc, nmi, ami, ari, ran, homo))
@@ -238,7 +239,7 @@ class KFEDClusteringClient(NumPyClient):
                 result['loss'] = loss
                 result['client'] = self.client_id
                 result['round'] = self.local_iter
-                my_fn.dump_result_dict('client_'+str(self.client_id), result)
+                dump_result_dict('client_'+str(self.client_id), result)
             result = (loss, len(self.x_test), metrics)
         return result
 
@@ -261,7 +262,7 @@ class SimpleKMeansClient(NumPyClient):
             splits=config['splits'],
             shuffle=config['shuffle'],
             fold_n=config['fold_n'])
-        
+
         self.x_train, self.x_test = x[train_idx], x[test_idx]
         self.y_train = self.y_test = None
         self.outcomes_train = self.outcomes_test = None
@@ -339,21 +340,21 @@ class SimpleKMeansClient(NumPyClient):
             print(out_1 % (self.client_id, self.f_round,
                   acc, nmi, ami, ari, ran, homo))
             if self.f_round % 10 == 0:  # print confusion matrix
-                my_fn.print_confusion_matrix(
+                print_confusion_matrix(
                     self.y_test, y_pred_kmeans, client_id=self.client_id,
                     path_to_out=self.out_dir)
             # plotting outcomes on the labels
             if self.outcomes_test is not None:
                 times = self.outcomes_test[:, 0]
                 events = self.outcomes_test[:, 1]
-                my_fn.plot_lifelines_pred(
+                plot_lifelines_pred(
                     times, events, y_pred_kmeans, client_id=self.client_id,
                     path_to_out=self.out_dir)
             if self.ids_test is not None:
                 pred = {'ID': self.ids_test,
                         'label': y_pred_kmeans}
-                my_fn.dump_pred_dict('pred_client_'+str(self.client_id), pred,
-                                     path_to_out=self.out_dir)
+                dump_pred_dict('pred_client_'+str(self.client_id), pred,
+                               path_to_out=self.out_dir)
             # dumping and retrieving the results
             metrics = {"accuracy": acc,
                        "normalized_mutual_info_score": nmi,
@@ -364,8 +365,8 @@ class SimpleKMeansClient(NumPyClient):
             result = metrics.copy()
             result['client'] = self.client_id
             result['round'] = self.f_round
-            my_fn.dump_result_dict('client_'+str(self.client_id), result,
-                                   path_to_out=self.out_dir)
+            dump_result_dict('client_'+str(self.client_id), result,
+                             path_to_out=self.out_dir)
             result = (loss, len(self.x_test), metrics)
         return result
 
@@ -416,22 +417,22 @@ class ClusterGANClient(NumPyClient):
 
         # Initialize NNs
         if config['conv_net']:
-            self.generator = ConvGeneratorCNN(self.latent_dim,
-                                              self.n_c,
-                                              self.x_shape)
-            self.encoder = ConvEncoderCNN(self.latent_dim,
-                                          self.n_c)
-            self.discriminator = ConvDiscriminatorCNN(
+            self.generator = GeneratorCNN(self.latent_dim,
+                                          self.n_c,
+                                          self.x_shape)
+            self.encoder = EncoderCNN(self.latent_dim,
+                                      self.n_c)
+            self.discriminator = DiscriminatorCNN(
                 wass_metric=self.wass_metric)
         else:
-            self.generator = GeneratorCNN(latent_dim=self.latent_dim,
-                                          n_c=self.n_c,
-                                          gen_dims=config['gen_dims'],
-                                          x_shape=self.x_shape)
-            self.encoder = EncoderCNN(latent_dim=self.latent_dim,
-                                      enc_dims=config['enc_dims'],
-                                      n_c=self.n_c)
-            self.discriminator = DiscriminatorCNN(
+            self.generator = GeneratorDense(latent_dim=self.latent_dim,
+                                            n_c=self.n_c,
+                                            gen_dims=config['gen_dims'],
+                                            x_shape=self.x_shape)
+            self.encoder = EncoderDense(latent_dim=self.latent_dim,
+                                        enc_dims=config['enc_dims'],
+                                        n_c=self.n_c)
+            self.discriminator = DiscriminatorDense(
                 disc_dims=config['disc_dims'], wass_metric=self.wass_metric)
 
         if self.cuda:
@@ -675,11 +676,11 @@ class ClusterGANClient(NumPyClient):
                        acc, nmi, ami, ari, ran, homo))
         # plotting outcomes on the labels
         # if self.outcomes_loader is not None:
-        my_fn.plot_lifelines_pred(
+        plot_lifelines_pred(
             times, events, computed_labels, client_id=self.client_id,
             path_to_out=self.out_dir)
         if self.f_epoch % 10 == 0:  # print confusion matrix
-            my_fn.print_confusion_matrix(
+            print_confusion_matrix(
                 t_label.detach().cpu().numpy(),
                 computed_labels,
                 client_id=self.client_id,
@@ -767,12 +768,12 @@ class ClusterGANClient(NumPyClient):
         result['lat_xe_loss'] = self.lat_xe_loss.item()
         result['client'] = self.client_id
         result['round'] = self.f_epoch
-        my_fn.dump_result_dict('client_'+str(self.client_id), result,
-                               path_to_out=self.out_dir)
+        dump_result_dict('client_'+str(self.client_id), result,
+                         path_to_out=self.out_dir)
         pred = {'ID': test_ids,
                 'label': computed_labels}
-        my_fn.dump_pred_dict('pred_client_'+str(self.client_id), pred,
-                             path_to_out=self.out_dir)
+        dump_pred_dict('pred_client_'+str(self.client_id), pred,
+                       path_to_out=self.out_dir)
 
     def get_parameters(self):
         g_par = [val.cpu().numpy()
@@ -858,7 +859,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             splits=config['splits'],
             shuffle=config['shuffle'],
             fold_n=config['fold_n'])
-        
+
         self.x_train = x[train_idx]
         self.x_test = x[test_idx]
         self.y_train = self.y_test = None
@@ -989,8 +990,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
             result = metrics.copy()
             result['client'] = self.client_id
             result['round'] = self.f_round
-            my_fn.dump_result_dict('client_'+str(self.client_id)+'_ae', result,
-                                   path_to_out=self.out_dir)
+            dump_result_dict('client_'+str(self.client_id)+'_ae', result,
+                             path_to_out=self.out_dir)
             print(out_3 % (self.client_id, self.f_round, loss, accuracy))
             result = (loss, len(self.x_test), {"accuracy": accuracy})
         elif self.step == 'k-means':
@@ -1007,7 +1008,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             print(out_1 % (self.client_id, self.f_round,
                   acc, nmi, ami, ari, ran, homo))
             if self.f_round % 10 == 0:  # print confusion matrix
-                my_fn.print_confusion_matrix(
+                print_confusion_matrix(
                     self.y_test, y_pred_kmeans, client_id=self.client_id,
                     path_to_out=self.out_dir)
             # retrieving the results
@@ -1025,7 +1026,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             if self.outcomes_test is not None:
                 times = self.outcomes_test[:, 0]
                 events = self.outcomes_test[:, 1]
-                my_fn.plot_lifelines_pred(
+                plot_lifelines_pred(
                     times, events, y_pred, client_id=self.client_id,
                     path_to_out=self.out_dir)
             # evaluating metrics
@@ -1037,7 +1038,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 ran = my_metrics.ran(self.y_test, y_pred)
                 homo = my_metrics.homo(self.y_test, y_pred)
                 if self.f_round % 10 == 0:  # print confusion matrix
-                    my_fn.print_confusion_matrix(
+                    print_confusion_matrix(
                         self.y_test, y_pred, client_id=self.client_id,
                         path_to_out=self.out_dir)
                 print(out_1 % (self.client_id, self.f_round,
@@ -1053,12 +1054,12 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 result['loss'] = loss
                 result['client'] = self.client_id
                 result['round'] = self.local_iter
-                my_fn.dump_result_dict('client_'+str(self.client_id), result,
-                                       path_to_out=self.out_dir)
+                dump_result_dict('client_'+str(self.client_id), result,
+                                 path_to_out=self.out_dir)
             if self.id_test is not None:
                 pred = {'ID': self.id_test,
                         'label': y_pred}
-                my_fn.dump_pred_dict('pred_client_'+str(self.client_id), pred,
-                                     path_to_out=self.out_dir)
+                dump_pred_dict('pred_client_'+str(self.client_id), pred,
+                               path_to_out=self.out_dir)
             result = (loss, len(self.x_test), metrics)
         return result

@@ -19,8 +19,9 @@ from py.util import distance_from_centroids
 
 agg_weights_filename = "aggregated_weights.npz"
 
+
 class SaveModelStrategy(FedAvg):
-    
+
     def __init__(self,
                  out_dir: Union[Path, str] = None,
                  seed: int = 51550,
@@ -61,14 +62,16 @@ class SaveModelStrategy(FedAvg):
         rnd: int,
         results: List[Tuple[ClientProxy, FitRes]],
         failures: List[BaseException],
-    ):# -> Optional[Weights]:
+    ):  # -> Optional[Weights]:
         aggregated_weights = super().aggregate_fit(rnd, results, failures)
         if aggregated_weights is not None:
             # Save aggregated_weights
             print("Saving aggregated_weights...")
-            parameters = np.array(parameters_to_weights(aggregated_weights[0]), dtype=object)
+            parameters = np.array(parameters_to_weights(
+                aggregated_weights[0]), dtype=object)
             np.savez(self.out_dir, parameters)
         return aggregated_weights
+
 
 class AggregateCustomMetricStrategy(FedAvg):
     def aggregate_evaluate(
@@ -76,7 +79,7 @@ class AggregateCustomMetricStrategy(FedAvg):
         rnd: int,
         results: List[Tuple[ClientProxy, EvaluateRes]],
         failures: List[BaseException],
-    ):# -> Optional[float]:
+    ):  # -> Optional[float]:
         """Aggregate evaluation losses using weighted average."""
         if not results:
             return None
@@ -96,26 +99,26 @@ class AggregateCustomMetricStrategy(FedAvg):
 
 
 class MyStrategy(FedAvg):
-    
+
     def aggregate_fit(
         self,
         rnd: int,
         results: List[Tuple[ClientProxy, FitRes]],
         failures: List[BaseException],
-    ):# -> Optional[Weights]:
+    ):  # -> Optional[Weights]:
         aggregated_weights = super().aggregate_fit(rnd, results, failures)
         if aggregated_weights is not None:
             # Save aggregated_weights
             print("Saving aggregated weights...")
             np.savez(agg_weights_filename, *aggregated_weights)
         return aggregated_weights
-    
+
     def aggregate_evaluate(
         self,
         rnd: int,
         results: List[Tuple[ClientProxy, EvaluateRes]],
         failures: List[BaseException],
-    ):# -> Optional[float]:
+    ):  # -> Optional[float]:
         """Aggregate evaluation losses using weighted average."""
         if not results:
             return None
@@ -132,6 +135,7 @@ class MyStrategy(FedAvg):
 
         # Call aggregate_evaluate from base class (FedAvg)
         return super().aggregate_evaluate(rnd, results, failures)
+
 
 class KFEDStrategy(FedAvg):
 

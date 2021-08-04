@@ -28,17 +28,10 @@ from sklearn.model_selection import KFold
 from tensorflow.keras.initializers import VarianceScaling
 from tensorflow.keras.optimizers import SGD
 
-matplotlib.use('Agg')
-path = pathlib.Path(__file__).parent.absolute()
-sys.path.append(str(path.parent.parent))
-
 import py.my_clients as clients
 import py.metrics as my_metrics
 import py.dataset_util as data_util
-import clustering.py.common_fn as my_fn
 
-# disable possible gpu devices
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # for debug connection
@@ -47,6 +40,7 @@ os.environ["GRPC_VERBOSITY"] = "debug"
 torch.set_num_threads(1)
 tf.config.threading.set_inter_op_parallelism_threads(1)
 tf.config.threading.set_intra_op_parallelism_threads(1)
+
 
 def parse_args():
     """Parse the arguments passed."""
@@ -64,7 +58,7 @@ def parse_args():
                         required=True,
                         type=type(''),
                         default='k-means',
-                        choices=['k-means', 'k_fed-ae_clust',
+                        choices=['k-means', 'udec',
                                  'k-ae_clust', 'clustergan'],
                         action='store',
                         help='algorithm identifier')
@@ -130,7 +124,7 @@ def parse_args():
                         dest='groups',
                         required=False,
                         type=int,
-                        choices=[1,2,3,4,5,6,7],
+                        choices=[1, 2, 3, 4, 5, 6, 7],
                         default=7,
                         action='store',
                         help='how many groups of variables to use for EUROMDS dataset')
@@ -171,7 +165,7 @@ if __name__ == "__main__":
         'kmeans_local_epochs': 300,
         'kmeans_n_init': 25,
         'ae_local_epochs': 100,
-        'ae_lr': 0.001,
+        'ae_lr': 0.01,
         'ae_momentum': 0.9,
         'cl_lr': 0.01,
         'cl_momentum': 0.9,
@@ -182,7 +176,8 @@ if __name__ == "__main__":
         'seed': args.seed}
 
     # dataset, building the whole one and get the local
-    groups = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto', 'GeneCyto', 'Demographics', 'Clinical']
+    groups = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto',
+              'GeneCyto', 'Demographics', 'Clinical']
     # getting the entire dataset
     x = data_util.get_euromds_dataset(groups=groups[:args.groups])
     # getting labels from HDP
@@ -223,7 +218,8 @@ if __name__ == "__main__":
     outcomes = np.array(outcomes[['outcome_3', 'outcome_2']])
     ids = np.array(ids[start:end])
     # setting the autoencoder layers
-    dims = [x.shape[-1], int((n_features+N_CLUSTERS)/2), int((n_features+N_CLUSTERS)/2), N_CLUSTERS]
+    dims = [x.shape[-1], int((n_features+N_CLUSTERS)/2),
+            int((n_features+N_CLUSTERS)/2), N_CLUSTERS]
 
     '''
     TODO: compatibility with create_partitions methods
@@ -239,7 +235,7 @@ if __name__ == "__main__":
     '''
 
     config['ae_dims'] = dims
-    
+
     # algorithm choice
     if args.alg == 'k-means':
         config['kmeans_local_epochs'] = 1
@@ -256,7 +252,7 @@ if __name__ == "__main__":
                                               y=y,
                                               client_id=CLIENT_ID,
                                               config=config)
-    elif args.alg == 'k-ae_clust':
+    elif args.alg == 'udec':
         client = clients.KMeansEmbedClusteringClient(x=x,
                                                      y=y,
                                                      outcomes=outcomes,
@@ -265,7 +261,7 @@ if __name__ == "__main__":
                                                      config=config,
                                                      output_folder=args.out_fol)
     elif args.alg == 'clustergan':
-        
+
         config = {
             'x_shape': x.shape[-1],
             'batch_size': 32,
@@ -273,7 +269,7 @@ if __name__ == "__main__":
             'fold_n': FOLD_N,
             'n_clusters': N_CLUSTERS,
             'shuffle': SHUFFLE,
-            'latent_dim': 30,
+            'latent_dim': int(3*N_CLUSTERS),
             'betan': 10,
             'betac': 10,
             'n_local_epochs': 5,
@@ -289,7 +285,7 @@ if __name__ == "__main__":
             'enc_dims': [int(x.shape[-1]), int(4*n_features), int(3*n_features), int(2*n_features)],
             'disc_dims': [int(x.shape[-1]), int(2*n_features), int(3*n_features), int(4*n_features)]
         }
-        
+
         client = clients.ClusterGANClient(x=x,
                                           y=y,
                                           outcomes=outcomes,

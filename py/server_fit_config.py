@@ -6,6 +6,7 @@ Created on Tue Jun 22 19:11:01 2021
 @author: relogu
 """
 
+
 def simple_clustering_on_fit_config(rnd: int,
                                     ae_epochs: int = 300,
                                     kmeans_epochs: int = 20,
