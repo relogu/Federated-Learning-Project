@@ -428,7 +428,8 @@ class ClusterGANClient(NumPyClient):
             self.generator = GeneratorDense(latent_dim=self.latent_dim,
                                             n_c=self.n_c,
                                             gen_dims=config['gen_dims'],
-                                            x_shape=self.x_shape)
+                                            x_shape=self.x_shape,
+                                            use_binary=config['use_binary'])
             self.encoder = EncoderDense(latent_dim=self.latent_dim,
                                         enc_dims=config['enc_dims'],
                                         n_c=self.n_c)
