@@ -51,7 +51,7 @@ warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
 class KFEDClusteringClient(NumPyClient):
     """Client object, to set client performed operations."""
-
+    
     def __init__(self,
                  x,  # data
                  y,  # labels
