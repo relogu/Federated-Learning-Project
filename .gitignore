@@ -28,6 +28,9 @@
 # model weights
 *.npz
 
+# conf
+*.env
+
 papers
 blocknotes.md
 *.tar
