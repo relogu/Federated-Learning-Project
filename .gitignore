@@ -4,6 +4,7 @@
 *.pyc
 
 *output*
+!output.py
 *cycle_reg_*
 *gen_*
 *gen_classes_*
