@@ -18,7 +18,7 @@ python3 clustering/py/client_euromds.py --server=[::]:51551 --client_id=7 --alg=
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSrrrr_ude20k1u10k --in_folder="$PWD/output1" 
+python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSrrrr_ude20k1u40k --in_folder="$PWD/output1" 
 sleep 10
 
 # unsupervosed deep embedding using EUROMDS
@@ -36,7 +36,7 @@ python3 clustering/py/client_euromds.py --server=[::]:51551 --client_id=7 --alg=
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSrrr_ude4k1u8k --in_folder="$PWD/output1"
+python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSrrr_ude20k1u40k --in_folder="$PWD/output1"
 sleep 10
 
 # unsupervosed deep embedding using EUROMDS
@@ -54,7 +54,7 @@ python3 clustering/py/client_euromds.py --server=[::]:51551 --client_id=7 --alg=
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSrr_ude4k1u8k --in_folder="$PWD/output1"
+python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSrr_ude20k1u40k --in_folder="$PWD/output1"
 sleep 10
 
 # unsupervosed deep embedding using EUROMDS
@@ -72,7 +72,7 @@ python3 clustering/py/client_euromds.py --server=[::]:51551 --client_id=7 --alg=
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSr_ude4k1u8k --in_folder="$PWD/output1"
+python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSr_ude20k1u40k --in_folder="$PWD/output1"
 sleep 10
 
 
@@ -91,5 +91,5 @@ python3 clustering/py/client_euromds.py --server=[::]:51551 --client_id=7 --alg=
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDS_ude4k1u8k --in_folder="$PWD/output1"
+python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDS_ude20k1u40k --in_folder="$PWD/output1"
 sleep 10
