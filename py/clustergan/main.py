@@ -55,9 +55,9 @@ def get_parser():
                         type=type(str('')), help="Folder to output images")
     parser.add_argument('-g', '--groups', dest='groups', required=False, type=int, choices=[
                         1, 2, 3, 4, 5, 6, 7], default=1, action='store', help='how many groups of variables to use for EUROMDS dataset')
-    '''
     parser.add_argument('--binary', action='store_true', default=False,
-                        help='Use binary activations instead of float')
+                        help='Use BSN')
+    '''
     parser.add_argument('--stochastic', action='store_true', default=False,
                         help='Use stochastic activations instead of deterministic [active iff `--binary`]')
     parser.add_argument('--reinforce', action='store_true', default=False,
@@ -114,6 +114,9 @@ if __name__ == "__main__":
         get_slope = lambda epoch : 1.0 * (1.005 ** (epoch - 1))
     else:
         get_slope = lambda epoch : 1.0'''
+    # BSN
+    bsn = args.binary
+    print('Using {} network'.format('BSN' if bsn else 'Standard'))
 
     # Wasserstein+GP metric flag
     wass_metric = args.wass_flag
@@ -218,7 +221,7 @@ if __name__ == "__main__":
                                    n_c=n_c,
                                    gen_dims=config['gen_dims'],
                                    x_shape=x.shape[-1],
-                                   use_binary=True)
+                                   use_binary=bsn)
         encoder = EncoderDense(latent_dim=latent_dim,
                                enc_dims=config['enc_dims'],
                                n_c=n_c)
