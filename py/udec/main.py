@@ -88,7 +88,7 @@ if __name__ == "__main__":
     # disable possible gpu devices (add hard acc, selection)
     if not args.cuda_flag:
         print('No CUDA')
-        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+        tf.config.set_visible_devices([], 'GPU')
     elif args.lim_cores:
         print('Limiting CPU')
         tf.config.threading.set_inter_op_parallelism_threads(1)
