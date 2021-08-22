@@ -135,6 +135,8 @@ def parse_args():
                         default=None,
                         action='store',
                         help='select the output folder')
+    parser.add_argument("--hardware_acc", dest="cuda_flag", action='store_true',
+                        help="Flag for hardware acceleration using cuda (if available)")
     _args = parser.parse_args()
     return _args
 
@@ -143,6 +145,10 @@ if __name__ == "__main__":
 
     # parsing arguments
     args = parse_args()
+    # disable possible gpu devices (add hard acc, selection)
+    if not args.cuda_flag:
+        print('No CUDA')
+        tf.config.set_visible_devices([], 'GPU')
 
     # managing parameters
     CLIENT_ID = args.client_id
