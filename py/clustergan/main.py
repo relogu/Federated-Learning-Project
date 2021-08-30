@@ -57,6 +57,8 @@ def get_parser():
                         1, 2, 3, 4, 5, 6, 7], default=1, action='store', help='how many groups of variables to use for EUROMDS dataset')
     parser.add_argument('--binary', action='store_true', default=False,
                         help='Use BSN')
+    parser.add_argument('--limit_cores', action='store_true', default=False,
+                        help='Limiting the number of cores used')
     '''
     parser.add_argument('--stochastic', action='store_true', default=False,
                         help='Use stochastic activations instead of deterministic [active iff `--binary`]')
