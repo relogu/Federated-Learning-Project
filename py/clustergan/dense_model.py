@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 
 from py.clustergan.util import initialize_weights, softmax
-from py.clustergan.bsn import BinaryNet
+from py.clustergan.bsn import BinaryNet, StochasticBinaryActivation, DeterministicBinaryActivation
 
 network_setup_string = "Setting up {}...\n"
 
@@ -25,6 +25,12 @@ class GeneratorDense(nn.Module):
         self.gen_dims = gen_dims
         self.x_shape = x_shape
         self.verbose = verbose
+        
+        if use_binary:
+            self.act = StochasticBinaryActivation
+        else:
+            self.act = nn.Sigmoid
+        
 
         self.model = nn.Sequential(
             # Fully connected layers
@@ -37,18 +43,10 @@ class GeneratorDense(nn.Module):
 
             torch.nn.Linear(self.gen_dims[1], self.gen_dims[2]),
             nn.BatchNorm1d(self.gen_dims[2]),
-            #nn.LeakyReLU(0.2, inplace=True),
-            #torch.nn.Linear(self.gen_dims[2], self.gen_dims[3]),
-            # nn.Sigmoid()
+            nn.LeakyReLU(0.2, inplace=True),
+            torch.nn.Linear(self.gen_dims[2], self.gen_dims[3]),
+            self.act(),
         )
-        if use_binary:
-            self.model.add_module("binary", BinaryNet(
-                self.gen_dims[2], self.gen_dims[3], 'Stochastic'))
-        else:
-            self.model.add_module("leaky_reu", nn.LeakyReLU(0.2, inplace=True))
-            self.model.add_module("out_lin", torch.nn.Linear(
-                self.gen_dims[2], self.gen_dims[3]))
-            self.model.add_module("out_sigm", nn.Sigmoid())
 
         initialize_weights(self)
 
@@ -60,7 +58,7 @@ class GeneratorDense(nn.Module):
         z = torch.cat((zn, zc), 1)
         x_gen = self.model(z)
         # Reshape for output
-        x_gen = x_gen.view(x_gen.size(0), self.x_shape)
+        #x_gen = x_gen.view(x_gen.size(0), self.x_shape)
         return x_gen
 
 

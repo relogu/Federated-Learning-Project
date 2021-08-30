@@ -55,12 +55,13 @@ class DeterministicBinaryActivation(nn.Module):
             self.binarizer = RoundREINFORCE
 
     def forward(self, input):
-        x, slope = input
-        x = self.act(slope * x)
-        x = self.binarizer(x)
+        #x, slope = input
+        #probs = self.act(slope * x)
+        probs = self.act(input)
+        out = self.binarizer(probs)
         if self.estimator == 'REINFORCE':
-            x = x.sample()
-        return x
+            out = out.sample()
+        return out
 
 
 class StochasticBinaryActivation(nn.Module):
