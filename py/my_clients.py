@@ -1008,10 +1008,10 @@ class KMeansEmbedClusteringClient(NumPyClient):
             homo = my_metrics.homo(self.y_test, y_pred_kmeans)
             print(out_1 % (self.client_id, self.f_round,
                   acc, nmi, ami, ari, ran, homo))
-            # if self.f_round % 10 == 0:  # print confusion matrix
-                # print_confusion_matrix(
-                #     self.y_test, y_pred_kmeans, client_id=self.client_id,
-                #     path_to_out=self.out_dir)
+            # if self.f_round % 10 == 0:
+            #     print_confusion_matrix(
+            #         self.y_test, y_pred_kmeans, client_id=self.client_id,
+            #         path_to_out=self.out_dir)
             # retrieving the results
             result = (loss, len(self.x_test), metrics)
         elif self.step == 'clustering':
@@ -1038,7 +1038,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 ari = my_metrics.ari(self.y_test, y_pred)
                 ran = my_metrics.ran(self.y_test, y_pred)
                 homo = my_metrics.homo(self.y_test, y_pred)
-                # if self.f_round % 10 == 0:  # print confusion matrix
+                # if self.f_round % 10 == 0:
                 #     print_confusion_matrix(
                 #         self.y_test, y_pred, client_id=self.client_id,
                 #         path_to_out=self.out_dir)
