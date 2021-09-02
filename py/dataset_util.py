@@ -24,6 +24,10 @@ from sklearn.model_selection import KFold
 from tensorflow.keras.datasets import mnist
 
 
+EUROMDS_GROUPS = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto',
+                  'GeneCyto', 'Demographics', 'Clinical']
+
+
 class PrepareDataSimple(Dataset):
 
     def __init__(self, x, y):
