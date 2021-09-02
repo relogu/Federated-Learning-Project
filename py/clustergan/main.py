@@ -53,8 +53,8 @@ def get_parser():
                         help="Flag for hardware acceleration using cuda (if available)")
     parser.add_argument("-f", "--folder", dest="out_folder",
                         type=type(str('')), help="Folder to output images")
-    parser.add_argument('-g', '--groups', dest='groups', required=False, type=int, choices=[
-                        1, 2, 3, 4, 5, 6, 7], default=1, action='store', help='how many groups of variables to use for EUROMDS dataset')
+    parser.add_argument('--groups', dest='groups', required=True,
+                        action='append', help='which groups of variables to use for EUROMDS dataset')
     parser.add_argument('--binary', action='store_true', default=False,
                         help='Use BSN')
     parser.add_argument('--limit_cores', action='store_true', default=False,
@@ -167,10 +167,13 @@ if __name__ == "__main__":
         )
 
     else:
-        groups = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto',
-                  'GeneCyto', 'Demographics', 'Clinical']
+        for g in args.groups:
+            if g not in data_util.EUROMDS_GROUPS:
+                print('One of the given groups is not allowed.\nAllowed groups: {}'.\
+                    format(data_util.EUROMDS_GROUPS))
+                sys.exit()
         # getting the entire dataset
-        x = data_util.get_euromds_dataset(groups=groups[:args.groups])
+        x = data_util.get_euromds_dataset(groups=args.groups)
         # getting labels from HDP
         prob = data_util.get_euromds_dataset(groups=['HDP'])
         y = []
