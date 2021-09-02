@@ -122,12 +122,9 @@ def parse_args():
                         help='wheater to apply LDA partitioning to the entire dataset')
     parser.add_argument('--groups',
                         dest='groups',
-                        required=False,
-                        type=int,
-                        choices=[1, 2, 3, 4, 5, 6, 7],
-                        default=7,
-                        action='store',
-                        help='how many groups of variables to use for EUROMDS dataset')
+                        required=True,
+                        action='append',
+                        help='which groups of variables to use for EUROMDS dataset')
     parser.add_argument('--out_fol',
                         dest='out_fol',
                         required=False,
@@ -181,11 +178,14 @@ if __name__ == "__main__":
         'cl_loss': 'kld',
         'seed': args.seed}
 
-    # dataset, building the whole one and get the local
-    groups = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto',
-              'GeneCyto', 'Demographics', 'Clinical']
+    # preparing dataset
+    for g in args.groups:
+        if g not in data_util.EUROMDS_GROUPS:
+            print('One of the given groups is not allowed.\nAllowed groups: {}'.\
+                format(data_util.EUROMDS_GROUPS))
+            sys.exit()
     # getting the entire dataset
-    x = data_util.get_euromds_dataset(groups=groups[:args.groups])
+    x = data_util.get_euromds_dataset(groups=args.groups)
     # getting labels from HDP
     prob = data_util.get_euromds_dataset(groups=['HDP'])
     y = []
