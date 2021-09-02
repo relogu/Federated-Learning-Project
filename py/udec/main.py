@@ -9,6 +9,8 @@ import argparse
 import os
 import pathlib
 import numpy as np
+import sys
+import pickle
 
 import tensorflow as tf
 from tensorflow.keras.optimizers import SGD
@@ -16,7 +18,7 @@ from sklearn.cluster import KMeans
 
 import py.dataset_util as data_util
 import py.metrics as my_metrics
-from py.udec.util import create_autoencoder, create_clustering_model, target_distribution
+from py.udec.util import create_autoencoder, create_prob_autoencoder, create_clustering_model, target_distribution
 from py.dumping.plots import print_confusion_matrix
 from py.dumping.output import dump_pred_dict, dump_result_dict
 
@@ -34,12 +36,9 @@ def get_parser():
     parser.add_argument("--folder", dest="out_folder",
                         type=type(str('')), help="Folder to output images")
     parser.add_argument('--groups', dest='groups',
-                        required=False,
-                        type=int,
-                        choices=[1, 2, 3, 4, 5, 6, 7],
-                        default=7,
-                        action='store',
-                        help='how many groups of variables to use for EUROMDS dataset')
+                        required=True,
+                        action='append',
+                        help='which groups of variables to use for EUROMDS dataset')
     parser.add_argument("--n_clusters", dest="n_clusters", default=10,
                         type=int, help="Define the number of clusters to identify")
     parser.add_argument('--fold_n',
@@ -71,6 +70,11 @@ def get_parser():
                         default=1000,
                         action='store',
                         help='number of epochs for the clustering step')
+    parser.add_argument('--prob',
+                        dest='prob',
+                        required=False,
+                        action='store_true',
+                        help='to use the probability layer in the decoder')
     parser.add_argument('--seed',
                         dest='seed',
                         required=False,
@@ -121,10 +125,13 @@ if __name__ == "__main__":
         'seed': args.seed}
 
     # preparing dataset
-    groups = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto',
-              'GeneCyto', 'Demographics', 'Clinical']
+    for g in args.groups:
+        if g not in data_util.EUROMDS_GROUPS:
+            print('One of the given groups is not allowed.\nAllowed groups: {}'.\
+                format(data_util.EUROMDS_GROUPS))
+            sys.exit()
     # getting the entire dataset
-    x = data_util.get_euromds_dataset(groups=groups[:args.groups])
+    x = data_util.get_euromds_dataset(groups=args.groups)
     # getting the number of features
     n_features = len(x.columns)
     x = np.array(x)
@@ -173,9 +180,13 @@ if __name__ == "__main__":
         id_test = ids[test_idx]
 
     # pre-train the autoencoder
-    autoencoder, encoder, decoder = create_autoencoder(
-        config['ae_dims'], act='relu')  # , init='glorot_normal')#, act='linear')
-    ae_optimizer = SGD(lr=config['ae_lr'], decay=(
+    if args.prob:
+        autoencoder, encoder, decoder = create_prob_autoencoder(
+            config['ae_dims'])
+    else:
+        autoencoder, encoder, decoder = create_autoencoder(
+            config['ae_dims'], act='relu')  # , init='glorot_normal')#, act='linear')
+    ae_optimizer = SGD(learning_rate=config['ae_lr'], decay=(
         config['ae_lr']-0.001)/config['ae_epochs'], momentum=config['ae_momentum'])
     autoencoder.compile(
         metrics=['accuracy'],
@@ -183,21 +194,15 @@ if __name__ == "__main__":
         loss=config['ae_loss']
     )
     # fitting the autoencoder
-    for i in range(int(config['ae_epochs'])):
-        autoencoder.fit(x=x_train,
-                        y=x_train,
-                        batch_size=config['batch_size'],
-                        verbose=1)
-        # evaluation of the autoencoder
-        loss, accuracy = autoencoder.evaluate(
-            x_test, x_test, verbose=2)
-
-        metrics = {"loss": loss,
-                   "accuracy": accuracy}
-        result = metrics.copy()
-        result['round'] = i+1
-        dump_result_dict('pretrain_ae', result,
-                         path_to_out=path_to_out)
+    #for i in range(int(config['ae_epochs'])):
+    history = autoencoder.fit(x=x_train,
+                              y=x_train,
+                              batch_size=config['batch_size'],
+                              validation_data=(x_test, x_test),
+                              epochs=int(config['ae_epochs']),
+                              verbose=1)
+    with open(path_to_out/'ae_history', 'wb') as file_pi:
+        pickle.dump(history.history, file_pi)
 
     # get an estimate for clusters centers using k-means
     kmeans = KMeans(init='k-means++',
@@ -214,7 +219,7 @@ if __name__ == "__main__":
         encoder)
     # compiling the clustering model
     cl_optimizer = SGD(
-        lr=config['cl_lr'], momentum=config['cl_momentum'])
+        learning_rate=config['cl_lr'], momentum=config['cl_momentum'])
     clustering_model.compile(
         optimizer=cl_optimizer,
         loss=config['cl_loss'])
@@ -265,30 +270,8 @@ if __name__ == "__main__":
                     'label': y_pred}
             dump_pred_dict('pred', pred,
                            path_to_out=path_to_out)
-    '''
-    # freeze the encoder to train the decoder to be used then
-    encoder.trainable = False
-    # re-compiling to fiz the freezing
-    autoencoder.compile(
-        optimizer=ae_optimizer,
-        loss=config['ae_loss']
-    )
-    
-    # fitting the autoencoder again
-    for i in range(int(config['ae_epochs'])):
-        autoencoder.fit(x=x_train,
-                        y=x_train,
-                        batch_size=config['batch_size'],
-                        verbose=2)
-        # evaluation of the autoencoder
-        loss = autoencoder.evaluate(
-            x_test, x_test, verbose=2)
-        metrics = {"loss": loss}
-        result = metrics.copy()
-        result['round'] = i+1
-        dump_result_dict('retrain_ae', result,
-                               path_to_out=path_to_out)'''
 
+    # saving the model weights
     parameters = np.array(clustering_model.get_weights(), dtype=object)
     np.savez(path_to_out/'clustering_model', parameters)
     parameters = np.array(decoder.get_weights(), dtype=object)
