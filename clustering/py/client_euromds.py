@@ -125,6 +125,11 @@ def parse_args():
                         required=True,
                         action='append',
                         help='which groups of variables to use for EUROMDS dataset')
+    parser.add_argument('--ex_col',
+                        dest='ex_col',
+                        required=True,
+                        action='append',
+                        help='which columns to exclude for EUROMDS dataset')
     parser.add_argument('--out_fol',
                         dest='out_fol',
                         required=False,
@@ -188,8 +193,13 @@ if __name__ == "__main__":
             print('One of the given groups is not allowed.\nAllowed groups: {}'.\
                 format(data_util.EUROMDS_GROUPS))
             sys.exit()
+    for c in args.ex_col:
+        if c not in data_util.get_euromds_cols():
+            print('One of the given columns is not allowed.\nAllowed columns: {}'.\
+                format(data_util.get_euromds_cols()))
+            sys.exit()
     # getting the entire dataset
-    x = data_util.get_euromds_dataset(groups=args.groups)
+    x = data_util.get_euromds_dataset(groups=args.groups, exclude_cols=args.ex_cols)
     # getting labels from HDP
     prob = data_util.get_euromds_dataset(groups=['HDP'])
     y = []
