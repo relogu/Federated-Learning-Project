@@ -61,6 +61,8 @@ def get_parser():
                         help='Use BSN')
     parser.add_argument('--limit_cores', action='store_true', default=False,
                         help='Limiting the number of cores used')
+    parser.add_argument('--plotting', action='store_true', default=False,
+                        help='Flag for plottin confusion matrix')
     '''
     parser.add_argument('--stochastic', action='store_true', default=False,
                         help='Use stochastic activations instead of deterministic [active iff `--binary`]')
@@ -399,7 +401,7 @@ if __name__ == "__main__":
         computed_labels = []
         for pred in e_tzc.detach().cpu().numpy():
             computed_labels.append(pred.argmax())
-        computed_labels = np.array(computed_labels)
+        computed_labels = np.array(computed_labels, dtype=object)
 
         # computing metrics
         acc = my_metrics.acc(t_label.detach().cpu().numpy(),
@@ -414,13 +416,13 @@ if __name__ == "__main__":
                              computed_labels)
         homo = my_metrics.homo(t_label.detach().cpu().numpy(),
                                computed_labels)
-        if args.dataset == 'euromds':
+        if args.plotting and args.dataset == 'euromds':
             # plotting outcomes on the labels
             plot_lifelines_pred(time=times,
                                 event=events,
                                 labels=computed_labels,
                                 path_to_out=path_to_out)
-        if epoch % 10 == 0:  # print confusion matrix
+        if args.plotting and epoch % 10 == 0:  # print confusion matrix
             print_confusion_matrix(
                 y=t_label.detach().cpu().numpy(),
                 y_pred=computed_labels,
@@ -522,11 +524,11 @@ if __name__ == "__main__":
         print('Epoch %d/%d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' %
               (epoch+1, n_epochs, acc, nmi, ami, ari, ran, homo))
 
-        g_par = [val.cpu().numpy()
-                 for _, val in generator.state_dict().items()]
-        d_par = [val.cpu().numpy()
-                 for _, val in discriminator.state_dict().items()]
-        e_par = [val.cpu().numpy()
-                 for _, val in encoder.state_dict().items()]
+        g_par = np.array([val.cpu().numpy()
+                 for _, val in generator.state_dict().items()], dtype=object)
+        d_par = np.array([val.cpu().numpy()
+                 for _, val in discriminator.state_dict().items()], dtype=object)
+        e_par = np.array([val.cpu().numpy()
+                 for _, val in encoder.state_dict().items()], dtype=object)
         parameters = np.concatenate([g_par, d_par, e_par], axis=0)
         np.savez(path_to_out/'clustergan', parameters)
