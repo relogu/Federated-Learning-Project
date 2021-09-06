@@ -53,7 +53,7 @@ def get_parser():
                         help="Flag for hardware acceleration using cuda (if available)")
     parser.add_argument("-f", "--folder", dest="out_folder",
                         type=type(str('')), help="Folder to output images")
-    parser.add_argument('--groups', dest='groups', required=True,
+    parser.add_argument('-g', '--groups', dest='groups', required=True,
                         action='append', help='which groups of variables to use for EUROMDS dataset')
     parser.add_argument('--ex_col', dest='ex_col', required=True,
                         action='append', help='which columns to exclude for EUROMDS dataset')
