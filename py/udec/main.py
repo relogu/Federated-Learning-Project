@@ -70,11 +70,11 @@ def get_parser():
                         default=1000,
                         action='store',
                         help='number of epochs for the clustering step')
-    parser.add_argument('--prob',
-                        dest='prob',
+    parser.add_argument('--binary',
+                        dest='binary',
                         required=False,
                         action='store_true',
-                        help='to use the probability layer in the decoder')
+                        help='Flag for using probabilistic binary neurons')
     parser.add_argument('--seed',
                         dest='seed',
                         required=False,
@@ -180,7 +180,7 @@ if __name__ == "__main__":
         id_test = ids[test_idx]
 
     # pre-train the autoencoder
-    if args.prob:
+    if args.binary:
         autoencoder, encoder, decoder = create_prob_autoencoder(
             config['ae_dims'])
     else:

@@ -35,7 +35,7 @@ from torchvision.utils import save_image
 import py.metrics as my_metrics
 from py.dataset_util import split_dataset, PrepareData, PrepareDataSimple
 from py.util import check_weights_dict
-from py.udec.util import create_autoencoder, create_clustering_model, target_distribution
+from py.udec.util import create_autoencoder, create_prob_autoencoder, create_clustering_model, target_distribution
 from py.dumping.output import dump_pred_dict, dump_result_dict
 from py.dumping.plots import print_confusion_matrix, plot_lifelines_pred
 
@@ -890,6 +890,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         self.autoencoder = None
         self.encoder = None
         self.clustering_model = None
+        self.binary = config['binary']
         self.f_round = 0
         self.p = None
         self.local_iter = 0
@@ -928,8 +929,12 @@ class KMeansEmbedClusteringClient(NumPyClient):
         if self.step == 'pretrain_ae':  # ae pretrain step
             if config['first']:
                 # building and compiling autoencoder
-                self.autoencoder, self.encoder, self.decoder = create_autoencoder(
-                    self.ae_dims)
+                if self.binary:
+                    self.autoencoder, self.encoder, self.decoder = create_prob_autoencoder(
+                        self.ae_dims)
+                else:
+                    self.autoencoder, self.encoder, self.decoder = create_autoencoder(
+                        self.ae_dims)
                 self.autoencoder.compile(
                     metrics=["accuracy"],
                     optimizer=self.ae_optimizer,

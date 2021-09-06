@@ -134,6 +134,8 @@ def parse_args():
                         help='select the output folder')
     parser.add_argument("--hardware_acc", dest="cuda_flag", action='store_true',
                         help="Flag for hardware acceleration using cuda (if available)")
+    parser.add_argument("--binary", dest="binary", action='store_true',
+                        help="Flag for using binary neurons in the network")
     _args = parser.parse_args()
     return _args
 
@@ -176,7 +178,8 @@ if __name__ == "__main__":
         'update_interval': 55,
         'ae_loss': 'mse',
         'cl_loss': 'kld',
-        'seed': args.seed}
+        'seed': args.seed,
+        'binary': args.binary}
 
     # preparing dataset
     for g in args.groups:
@@ -290,7 +293,7 @@ if __name__ == "__main__":
             'gen_dims': [int(4*n_features), int(3*n_features), int(2*n_features), x.shape[-1]],
             'enc_dims': [int(x.shape[-1]), int(4*n_features), int(3*n_features), int(2*n_features)],
             'disc_dims': [int(x.shape[-1]), int(2*n_features), int(3*n_features), int(4*n_features)],
-            'use_binary': True
+            'use_binary': args.binary
         }
 
         client = clients.ClusterGANClient(x=x,
