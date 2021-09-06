@@ -3,11 +3,15 @@
 echo $PWD
 export PYTHONPATH="$PWD:$PYTHONPATH"
 
+mkdir "$PWD/output_clustergan"
 # entire dataset
-python3 py/clustergan/main.py -g Genetics -g CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D -s=euromds -e=10000 -a -d=18 --n_clusters=6 --folder="$PWD/output" --binary
+python3 py/clustergan/main.py -g Genetics -g CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D -s=euromds -e=10000 -a -d=18 --n_clusters=6 --folder="$PWD/output_clustergan" --binary
 wait
-python3 clustering/scripts/plot_metrics.py -f="$PWD" --in_folder="$PWD/output" --prefix=EUROMDSrrrr_single_clustergan10k
+mkdir "$PWD/results/EUROMDSrrrr_single_clustergan10k"
+mv "$PWD/output_clustergan"/* "$PWD/results/EUROMDSrrrr_single_clustergan10k"/
+#python3 clustering/scripts/plot_metrics.py -f="$PWD" --in_folder="$PWD/output_clustergan" --prefix=EUROMDSrrrr_single_clustergan10k
 sleep 10
+rm "$PWD/output_clustergan"
 
 # # entire dataset
 # python3 py/clustergan/main.py -g=2 -s=euromds -e=10000 -a -d=18 --n_clusters=6 --folder="$PWD/output" --binary
