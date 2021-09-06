@@ -199,7 +199,7 @@ if __name__ == "__main__":
                 format(data_util.get_euromds_cols()))
             sys.exit()
     # getting the entire dataset
-    x = data_util.get_euromds_dataset(groups=args.groups, exclude_cols=args.ex_cols)
+    x = data_util.get_euromds_dataset(groups=args.groups, exclude_cols=args.ex_col)
     # getting labels from HDP
     prob = data_util.get_euromds_dataset(groups=['HDP'])
     y = []
