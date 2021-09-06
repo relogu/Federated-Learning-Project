@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -5,6 +6,7 @@ Created on Tue Jun 15 12:41:54 2021
 
 @author: relogu
 """
+import multiprocessing
 import pathlib
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -118,7 +120,8 @@ if __name__ == "__main__":
     print('Hue identified {}'.format(hue))
     tmp = df.copy()
     tmp = tmp.append(overall)
-    for metric in metrics:
+
+    def plot(metric):
         title = metric.replace('_', ' ')
         filename = path_to_out/metric
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
@@ -129,11 +132,16 @@ if __name__ == "__main__":
         plt.draw()
         plt.savefig(filename)
         plt.close()
+        print(metric+" plot completed!")
+        
+    pool = multiprocessing.Pool()
+    pool.map(plot, metrics)
     
     if ae_df is not None:
         tmp = ae_df.copy()
         tmp = tmp.append(ae_overall)
-        for metric in ae_metrics:
+
+        def ae_plot(metric):
             title = 'autoencoder '+metric
             filename = path_to_out/str('autoencoder_'+metric)
             fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(20,10))
@@ -144,6 +152,11 @@ if __name__ == "__main__":
             plt.draw()
             plt.savefig(filename)
             plt.close()
+            print("Autoencoder "+metric+" plot completed!")
+        
+        pool = multiprocessing.Pool()
+        pool.map(ae_plot, ae_metrics)
+        
     '''
     # %%
     for metric in metrics:
