@@ -179,7 +179,8 @@ if __name__ == "__main__":
         'ae_loss': 'mse',
         'cl_loss': 'kld',
         'seed': args.seed,
-        'binary': args.binary}
+        'binary': args.binary,
+        'plotting': False}
 
     # preparing dataset
     for g in args.groups:
