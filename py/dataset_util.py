@@ -27,7 +27,6 @@ from tensorflow.keras.datasets import mnist
 EUROMDS_GROUPS = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto',
                   'GeneCyto', 'Demographics', 'Clinical']
 
-
 class PrepareDataSimple(Dataset):
 
     def __init__(self, x, y):
@@ -60,6 +59,21 @@ class PrepareData(Dataset):
 
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx], self.ids[idx], self.outcomes[idx]
+
+
+def get_euromds_cols(accept_nan: int = 0,
+                     path_to_data: Union[Path, str] = None):
+    # set the path
+    if path_to_data is None:
+        parent = pathlib.Path(__file__).parent.parent.absolute()
+        data_folder = parent/'data'/'euromds'
+    else:
+        data_folder = path_to_data
+    # get the groups dataframe
+    df_groups = pd.read_csv(data_folder/'dataFrameGroups.csv')
+    # get the selected columns
+    cols = df_groups['data']
+    return list(cols)
 
 
 def get_euromds_dataset(accept_nan: int = 0,
