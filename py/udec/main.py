@@ -77,6 +77,11 @@ def get_parser():
                         required=False,
                         action='store_true',
                         help='Flag for using probabilistic binary neurons')
+    parser.add_argument('--plotting',
+                        dest='plotting',
+                        required=False,
+                        action='store_true',
+                        help='Flag for plotting confusion matrix')
     parser.add_argument('--seed',
                         dest='seed',
                         required=False,
@@ -255,7 +260,7 @@ if __name__ == "__main__":
             ari = my_metrics.ari(y_test, y_pred)
             ran = my_metrics.ran(y_test, y_pred)
             homo = my_metrics.homo(y_test, y_pred)
-            if i % 10 == 0:  # print confusion matrix
+            if args.plotting and i % 10 == 0:  # print confusion matrix
                 print_confusion_matrix(
                     y_test, y_pred,
                     path_to_out=path_to_out)
