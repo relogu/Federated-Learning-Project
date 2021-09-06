@@ -4,7 +4,7 @@ echo $PWD
 export PYTHONPATH="$PWD:$PYTHONPATH"
 
 # entire dataset
-python3 py/clustergan/main.py  -g Genetics -g CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D -s=euromds -e=10000 -a -d=18 --n_clusters=6 --folder="$PWD/output" --binary
+python3 py/clustergan/main.py -g Genetics -g CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D -s=euromds -e=10000 -a -d=18 --n_clusters=6 --folder="$PWD/output" --binary
 wait
 python3 clustering/scripts/plot_metrics.py -f="$PWD" --in_folder="$PWD/output" --prefix=EUROMDSrrrr_single_clustergan10k
 sleep 10
