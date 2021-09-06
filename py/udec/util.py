@@ -17,13 +17,15 @@ from py.udec.net import DenseTied, ClusteringLayer
 
 def create_autoencoder(dims, act='relu', init='glorot_uniform', verbose=False):
     """
-    Fully connected auto-encoder model, symmetric.
+    Fully connected auto-encoder model, symmetric, using DenseTied layers.
     Arguments:
         dims: list of number of units in each layer of encoder. dims[0] is input dim, dims[-1] is units in hidden layer.
             The decoder is symmetric with encoder. So number of layers of the auto-encoder is 2*len(dims)-1
         act: activation, not applied to Input, Hidden and Output layers
+        init: initializator of the layers' weights
+        verbose: print some useful information on the layers' complexity
     return:
-        (ae_model, encoder_model), Model of autoencoder and model of encoder
+        (autoencoder, encoder, decoder), Model of autoencoder, Model of encoder, Model of decoder
     """
     # getting encoder and decoder layers output dim
     encoder_dims = dims[1:]
@@ -100,7 +102,17 @@ def create_prob_autoencoder(dims,
                             init='glorot_uniform',
                             verbose=False):
     """
-    TODO
+    Fully connected auto-encoder model, symmetric, using DenseTied layers with a probabilistic layer on top of the decoder.
+    Arguments:
+        dims: list of number of units in each layer of encoder. dims[0] is input dim, dims[-1] is units in hidden layer.
+            The decoder is symmetric with encoder. So number of layers of the auto-encoder is 2*len(dims)-1
+        prob_layer: probabilistic layer from tensorflow probability to put on top of the decoder
+        distr: probability distribution onto which the probailistic layer is built
+        act: activation, not applied to Input, Hidden and Output layers
+        init: initializator of the layers' weights
+        verbose: print some useful information on the layers' complexity
+    return:
+        (autoencoder, encoder, decoder), Model of autoencoder, Model of encoder, Model of decoder
     """
     # getting encoder and decoder layers output dim
     encoder_dims = dims[1:]
