@@ -3,6 +3,9 @@
 
 *.pyc
 
+# too many of those
+*.png
+
 *output*
 !output.py
 *cycle_reg_*
