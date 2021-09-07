@@ -23,7 +23,7 @@ mkdir "$PWD/results/EUROMDSrrrr_clustergan10k"
 mv "$PWD/output_fed_clustergan"/* "$PWD/results/EUROMDSrrrr_clustergan10k"/
 #python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSrrrr_clustergan10k --in_folder="$PWD/output_fed_clustergan"
 sleep 10
-rm "$PWD/output_fed_clustergan"
+rmdir "$PWD/output_fed_clustergan"
 
 # # clustergan with ae clustering using EUROMDS reduced twice
 # python3 clustering/py/server.py --address=[::]:51552 --strategy=clustergan --total_epochs=10000 --n_clients=8 --out_fol="$PWD/output2" & 

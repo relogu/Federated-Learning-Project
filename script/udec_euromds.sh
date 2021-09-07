@@ -11,7 +11,7 @@ mkdir "$PWD/results/EUROMDSrrrr_single_binary_ude20k1u40k"
 mv "$PWD/output_udec"/* "$PWD/results/EUROMDSrrrr_single_binary_ude20k1u40k"/
 #python3 py/scripts/plot_metrics.py -f="$PWD" --out_folder="$PWD" --in_folder="$PWD/output" --prefix=EUROMDSrrrr_single_prob_ude20k1u10k
 sleep 10
-rm "$PWD/output_udec"
+rmdir "$PWD/output_udec"
 
 # # entire dataset
 # python3 py/udec/main.py --groups=2 --n_clusters=6 --ae_epochs=20000 --cl_epochs=10000 --folder="$PWD/output"

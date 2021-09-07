@@ -23,7 +23,7 @@ mkdir "$PWD/results/EUROMDSrrr_ude20k1u40k"
 mv "$PWD/output_fed_udec/"/* "$PWD/results/EUROMDSrrr_binary_ude20k1u40k"/
 #python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSrrr_binary_ude20k1u40k --in_folder="$PWD/output1"
 sleep 10
-rm "$PWD/output_fed_udec"
+rmdir "$PWD/output_fed_udec"
 
 # # unsupervosed deep embedding using EUROMDS
 # python3 clustering/py/server.py --address=[::]:51551 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=20000 --cluster_epochs=40000 --n_clients=8 --out_fol="$PWD/output1" & 
