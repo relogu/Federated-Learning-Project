@@ -5,16 +5,16 @@ export PYTHONPATH="$PWD:$PYTHONPATH"
 
 mkdir "$PWD/output_fed_clustergan"
 # clustergan with ae clustering using EUROMDS reduced twice
-python3 clustering/py/server.py --address=[::]:51552 --strategy=clustergan --total_epochs=10000 --n_clients=8 --out_fol="$PWD/output_fed_clustergan" & 
+python3 clustering/py/server.py --address=[::]:51550 --strategy=clustergan --total_epochs=10000 --n_clients=8 --out_fol="$PWD/output_fed_clustergan" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
-python3 clustering/py/client_euromds.py --server=[::]:51552 --client_id=0 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
-python3 clustering/py/client_euromds.py --server=[::]:51552 --client_id=1 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
-python3 clustering/py/client_euromds.py --server=[::]:51552 --client_id=2 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
-python3 clustering/py/client_euromds.py --server=[::]:51552 --client_id=3 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
-python3 clustering/py/client_euromds.py --server=[::]:51552 --client_id=4 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
-python3 clustering/py/client_euromds.py --server=[::]:51552 --client_id=5 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
-python3 clustering/py/client_euromds.py --server=[::]:51552 --client_id=6 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
-python3 clustering/py/client_euromds.py --server=[::]:51552 --client_id=7 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
+python3 clustering/py/client_euromds.py --server=[::]:51550 --client_id=0 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
+python3 clustering/py/client_euromds.py --server=[::]:51550 --client_id=1 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
+python3 clustering/py/client_euromds.py --server=[::]:51550 --client_id=2 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
+python3 clustering/py/client_euromds.py --server=[::]:51550 --client_id=3 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
+python3 clustering/py/client_euromds.py --server=[::]:51550 --client_id=4 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
+python3 clustering/py/client_euromds.py --server=[::]:51550 --client_id=5 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
+python3 clustering/py/client_euromds.py --server=[::]:51550 --client_id=6 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
+python3 clustering/py/client_euromds.py --server=[::]:51550 --client_id=7 --alg=clustergan --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_clustergan" &
 
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
