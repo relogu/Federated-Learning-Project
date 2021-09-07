@@ -778,11 +778,11 @@ class ClusterGANClient(NumPyClient):
 
     def get_parameters(self):
         g_par = np.array([val.cpu().numpy()
-                 for _, val in self.generator.state_dict().items()], dtpye=object)
+                 for _, val in self.generator.state_dict().items()], dtype=object)
         d_par = np.array([val.cpu().numpy()
-                 for _, val in self.discriminator.state_dict().items()], dtpye=object)
+                 for _, val in self.discriminator.state_dict().items()], dtype=object)
         e_par = np.array([val.cpu().numpy()
-                 for _, val in self.encoder.state_dict().items()], dtpye=object)
+                 for _, val in self.encoder.state_dict().items()], dtype=object)
         parameters = np.concatenate([g_par, d_par, e_par], axis=0)
         return parameters
 
