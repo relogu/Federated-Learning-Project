@@ -14,6 +14,7 @@ import pickle
 
 import tensorflow as tf
 from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.initializers import VarianceScaling
 from sklearn.cluster import KMeans
 
 import py.dataset_util as data_util
@@ -166,9 +167,14 @@ if __name__ == "__main__":
     #dims = [x.shape[-1], x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters]
     dims = [x.shape[-1], int((n_features+args.n_clusters)/2),
             int((n_features+args.n_clusters)/2), args.n_clusters]
+    dims = [x.shape[-1], int((2/3)*(n_features)),
+            int((2/3)*(n_features)), int((2.5)*(n_features)), args.n_clusters]
+    init = VarianceScaling(scale=1. / 3., mode='fan_in',
+                            distribution='uniform')
 
     config['ae_lr'] = 0.1
     config['ae_dims'] = dims
+    config['ae_init'] = init
     # define the splitting
     train_idx, test_idx = data_util.split_dataset(
         x=x,
@@ -194,10 +200,10 @@ if __name__ == "__main__":
     # pre-train the autoencoder
     if args.binary:
         autoencoder, encoder, decoder = create_prob_autoencoder(
-            config['ae_dims'])
+            config['ae_dims'], init=config['ae_init'])
     else:
         autoencoder, encoder, decoder = create_autoencoder(
-            config['ae_dims'], act='relu')  # , init='glorot_normal')#, act='linear')
+            config['ae_dims'], init=config['ae_init'], act='relu')
     ae_optimizer = SGD(learning_rate=config['ae_lr'], decay=(
         config['ae_lr']-0.001)/config['ae_epochs'], momentum=config['ae_momentum'])
     autoencoder.compile(
