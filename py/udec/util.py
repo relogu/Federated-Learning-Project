@@ -34,9 +34,9 @@ def create_autoencoder(dims, act='relu', init='glorot_uniform', verbose=False):
         print('List of encoder dimensions: {}'.format(encoder_dims))
         print('List of decoder dimensions: {}'.format(decoder_dims))
     # input data
-    input_img = InputLayer(shape=(dims[0],), name='input_img')
+    input_img = InputLayer(input_shape=(dims[0],), name='input_img')
     # input labels
-    input_lbl = InputLayer(shape=(dims[-1],), name='input_lbl')
+    input_lbl = InputLayer(input_shape=(dims[-1],), name='input_lbl')
     # encoder
     encoder_layers = []
     encoder_layers.append(input_img)
@@ -121,9 +121,9 @@ def create_prob_autoencoder(dims,
         print('List of encoder dimensions: {}'.format(encoder_dims))
         print('List of decoder dimensions: {}'.format(decoder_dims))
     # input data
-    input_img = InputLayer(shape=(dims[0],), name='input_img')
+    input_img = InputLayer(input_shape=(dims[0],), name='input_img')
     # input labels
-    input_lbl = InputLayer(shape=(dims[-1],), name='input_lbl')
+    input_lbl = InputLayer(input_shape=(dims[-1],), name='input_lbl')
     # encoder
     encoder_layers = []
     encoder_layers.append(input_img)
