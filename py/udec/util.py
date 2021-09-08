@@ -6,7 +6,7 @@ Created on Wen Aug 4 10:37:10 2021
 @author: relogu
 """
 import tensorflow as tf
-from tensorflow.keras.layers import InputLayer, Dense
+from tensorflow.keras.layers import InputLayer, Dense, Dropout
 from tensorflow.keras.models import Sequential, Model
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
@@ -140,6 +140,7 @@ def create_prob_autoencoder(dims,
             print('Encoder Layer {}: {} with dims {}'.format(
                 'encoder_%d' % i, x, encoder_dims[i]))
         encoder_layers.append(x)
+        encoder_layers.append(Dropout(rate=0.2))
 
     # decoder
     decoder_layers = []
