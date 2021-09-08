@@ -128,7 +128,7 @@ if __name__ == "__main__":
         'cl_momentum': 0.9,
         'cl_epochs': args.cl_epochs,
         'update_interval': 55,
-        'ae_loss': 'mse',  # 'binary_crossentropy',#'mse',
+        'ae_loss': 'binary_crossentropy',#(specific for binary),#'mse'#,#(general)
         'cl_loss': 'kld',
         'seed': args.seed}
 
@@ -168,9 +168,9 @@ if __name__ == "__main__":
     dims = [x.shape[-1], int((n_features+args.n_clusters)/2),
             int((n_features+args.n_clusters)/2), args.n_clusters]
     dims = [x.shape[-1], int((2/3)*(n_features)),
-            int((2/3)*(n_features)), int((2.5)*(n_features)), args.n_clusters]
+            int((2/3)*(n_features)), int((2.5)*(n_features)), args.n_clusters] # (originally these are the proportions)
     init = VarianceScaling(scale=1. / 3., mode='fan_in',
-                            distribution='uniform')
+                            distribution='uniform') #(original initialization)
 
     config['ae_lr'] = 0.1
     config['ae_dims'] = dims
@@ -205,14 +205,15 @@ if __name__ == "__main__":
         autoencoder, encoder, decoder = create_autoencoder(
             config['ae_dims'], init=config['ae_init'], act='relu')
     ae_optimizer = SGD(learning_rate=config['ae_lr'], decay=(
-        config['ae_lr']-0.001)/config['ae_epochs'], momentum=config['ae_momentum'])
+        config['ae_lr']-0.001)/config['ae_epochs'], momentum=config['ae_momentum']) # (seems to work better for now)
+    # ae_optimizer = SGD(learning_rate=config['ae_lr'],
+    #                    momentum=config['ae_momentum']) # (original optimizer)
     autoencoder.compile(
         metrics=['accuracy'],
         optimizer=ae_optimizer,
         loss=config['ae_loss']
     )
     # fitting the autoencoder
-    #for i in range(int(config['ae_epochs'])):
     history = autoencoder.fit(x=x_train,
                               y=x_train,
                               batch_size=config['batch_size'],
