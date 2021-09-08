@@ -165,7 +165,8 @@ def create_prob_autoencoder(dims,
     
     # adding dropout
     for i in range(len(encoder_dims)):
-        encoder_layers.insert(int(2*i + 1), Dropout(rate=0.2))
+        #encoder_layers.insert(int(2*i + 1), Dropout(rate=0.2)) # not a good accuracy
+        encoder_layers.insert(int(2*i + 1), Dropout(rate=0.1))
 
     # autoencoder
     autoencoder_layers = []
