@@ -140,7 +140,6 @@ def create_prob_autoencoder(dims,
             print('Encoder Layer {}: {} with dims {}'.format(
                 'encoder_%d' % i, x, encoder_dims[i]))
         encoder_layers.append(x)
-        encoder_layers.append(Dropout(rate=0.2))
 
     # decoder
     decoder_layers = []
@@ -163,6 +162,10 @@ def create_prob_autoencoder(dims,
         decoder_layers.append(x)
     decoder_layers.append(
         prob_layer(dims[0], distr))
+    
+    # adding dropout
+    for i in range(len(encoder_dims)):
+        encoder_layers.insert(int(2*i + 1), Dropout(rate=0.2))
 
     # autoencoder
     autoencoder_layers = []
