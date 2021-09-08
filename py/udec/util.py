@@ -6,7 +6,7 @@ Created on Wen Aug 4 10:37:10 2021
 @author: relogu
 """
 import tensorflow as tf
-from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.layers import InputLayer, Dense
 from tensorflow.keras.models import Sequential, Model
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
@@ -34,9 +34,9 @@ def create_autoencoder(dims, act='relu', init='glorot_uniform', verbose=False):
         print('List of encoder dimensions: {}'.format(encoder_dims))
         print('List of decoder dimensions: {}'.format(decoder_dims))
     # input data
-    input_img = Input(shape=(dims[0],), name='input_img')
+    input_img = InputLayer(shape=(dims[0],), name='input_img')
     # input labels
-    input_lbl = Input(shape=(dims[-1],), name='input_lbl')
+    input_lbl = InputLayer(shape=(dims[-1],), name='input_lbl')
     # encoder
     encoder_layers = []
     encoder_layers.append(input_img)
@@ -121,9 +121,9 @@ def create_prob_autoencoder(dims,
         print('List of encoder dimensions: {}'.format(encoder_dims))
         print('List of decoder dimensions: {}'.format(decoder_dims))
     # input data
-    input_img = Input(shape=(dims[0],), name='input_img')
+    input_img = InputLayer(shape=(dims[0],), name='input_img')
     # input labels
-    input_lbl = Input(shape=(dims[-1],), name='input_lbl')
+    input_lbl = InputLayer(shape=(dims[-1],), name='input_lbl')
     # encoder
     encoder_layers = []
     encoder_layers.append(input_img)
