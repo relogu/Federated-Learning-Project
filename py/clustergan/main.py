@@ -76,7 +76,7 @@ def get_parser():
 if __name__ == "__main__":
 
     # for managing the cpu cores to use
-    torch.set_num_threads(8)
+    #torch.set_num_threads(8)
 
     # get parameters
     args = get_parser().parse_args()
@@ -129,6 +129,7 @@ if __name__ == "__main__":
     print('Using metric {}'.format('Wassestrain' if wass_metric else 'Vanilla'))
 
     CUDA = True if (torch.cuda.is_available() and args.cuda_flag) else False
+    print('CUDA availability {}'.format(torch.cuda.is_available()))
     device = torch.device('cuda:0' if CUDA else 'cpu')
     print('Using device {}'.format(device))
 
