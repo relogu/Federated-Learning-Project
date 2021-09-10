@@ -35,7 +35,7 @@ from torchvision.utils import save_image
 import py.metrics as my_metrics
 from py.dataset_util import split_dataset, PrepareData, PrepareDataSimple
 from py.util import check_weights_dict
-from py.udec.util import create_autoencoder, create_prob_autoencoder, create_clustering_model, target_distribution
+from py.udec.util import create_denoising_autoencoder, create_prob_autoencoder, create_clustering_model, target_distribution
 from py.dumping.output import dump_pred_dict, dump_result_dict
 from py.dumping.plots import print_confusion_matrix, plot_lifelines_pred
 
@@ -841,6 +841,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         # set
         self.n_clusters = config['n_clusters']
         self.ae_dims = config['ae_dims']
+        self.ae_init = config['ae_init']
         self.ae_local_epochs = config['ae_local_epochs']
         self.ae_optimizer = SGD(
             lr=config['ae_lr'], momentum=config['ae_momentum'])
@@ -932,12 +933,13 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 # building and compiling autoencoder
                 if self.binary:
                     self.autoencoder, self.encoder, self.decoder = create_prob_autoencoder(
-                        self.ae_dims)
+                        dims=self.ae_dims, init=self.ae_init)
                 else:
-                    self.autoencoder, self.encoder, self.decoder = create_autoencoder(
-                        self.ae_dims)
+                    up_frequencies = np.array([np.array(np.count_nonzero(self.x_train[:,i])/self.x_train.shape[0]) for i in range(self.x_train.shape[1])])
+                    self.autoencoder, self.encoder, self.decoder = create_denoising_autoencoder(
+                        dims=self.ae_dims, up_freq=up_frequencies, init=self.ae_init, act='selu')
                 self.autoencoder.compile(
-                    metrics=["accuracy"],
+                    metrics=[my_metrics.rounded_accuracy, "accuracy"],
                     optimizer=self.ae_optimizer,
                     loss=self.ae_loss
                 )
