@@ -5,14 +5,15 @@ Created on Tue Jun 22 19:11:01 2021
 
 @author: relogu
 """
-
 import numpy as np
 import scipy
 import sklearn
+import tensorflow as tf
 from scipy.optimize import linear_sum_assignment as linear_assignment
 from sklearn.metrics import (adjusted_mutual_info_score, adjusted_rand_score,
                              homogeneity_score, normalized_mutual_info_score,
                              rand_score)
+from tensorflow.keras.metrics import binary_accuracy
 
 # definition of the metrics used
 nmi = normalized_mutual_info_score
@@ -39,3 +40,6 @@ def acc(y_true, y_pred):
         w[y_pred[i], y_true[i]] += 1
     row_ind, col_ind = linear_assignment(w.max() - w)
     return sum([w[i, j] for i, j in zip(row_ind, col_ind)]) * 1.0 / y_pred.size
+
+def rounded_accuracy(y_true, y_pred):
+    return binary_accuracy(tf.round(y_true), tf.round(y_pred))
