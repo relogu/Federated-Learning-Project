@@ -181,7 +181,7 @@ if __name__ == "__main__":
         'cl_momentum': 0.9,
         'cl_local_epochs': 5,
         'update_interval': 55,
-        'ae_loss': 'mse',
+        'ae_loss': 'binary_crossentropy',#'mse',
         'cl_loss': 'kld',
         'seed': args.seed,
         'binary': args.binary,
@@ -238,8 +238,18 @@ if __name__ == "__main__":
     outcomes = np.array(outcomes[['outcome_3', 'outcome_2']])
     ids = np.array(ids[start:end])
     # setting the autoencoder layers
-    dims = [x.shape[-1], int((n_features+N_CLUSTERS)/2),
-            int((n_features+N_CLUSTERS)/2), N_CLUSTERS]
+    # dims = [x.shape[-1],
+    #         int((n_features+N_CLUSTERS)/2),
+    #         int((n_features+N_CLUSTERS)/2),
+    #         N_CLUSTERS]
+    
+    dims = [x.shape[-1],
+            int((2/3)*(n_features)),
+            int((2/3)*(n_features)),
+            int((2.5)*(n_features)),
+            N_CLUSTERS]
+    init = VarianceScaling(scale=1. / 3., mode='fan_in',
+                            distribution='uniform')
 
     '''
     TODO: compatibility with create_partitions methods
@@ -255,6 +265,7 @@ if __name__ == "__main__":
     '''
 
     config['ae_dims'] = dims
+    config['ae_init'] = init
 
     # algorithm choice
     if args.alg == 'k-means':
