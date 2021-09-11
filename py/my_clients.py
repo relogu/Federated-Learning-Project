@@ -899,6 +899,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         self.step = None
         self.cluster_centers = None
         self.plotting = config['plotting']
+        self.last_histo = None
 
     def get_parameters(self):  # type: ignore
         """Get the model weights by model object."""
@@ -947,11 +948,11 @@ class KMeansEmbedClusteringClient(NumPyClient):
             else:  # getting new weights
                 self.encoder.set_weights(parameters)
             # fitting the autoencoder
-            self.autoencoder.fit(x=self.x_train,
-                                 y=self.x_train,
-                                 batch_size=self.batch_size,
-                                 epochs=self.ae_local_epochs,
-                                 verbose=0)
+            self.last_histo = self.autoencoder.fit(x=self.x_train,
+                                                   y=self.x_train,
+                                                   batch_size=self.batch_size,
+                                                   epochs=self.ae_local_epochs,
+                                                   verbose=0)
             # returning the parameters necessary for FedAvg
             return self.encoder.get_weights(), len(self.x_train), {}
         elif self.step == 'k-means':  # k-Means step
@@ -995,8 +996,12 @@ class KMeansEmbedClusteringClient(NumPyClient):
             # evaluation
             loss, r_accuracy, accuracy = self.autoencoder.evaluate(
                 self.x_test, self.x_test, verbose=0)
-            metrics = {"loss": loss,
-                       "accuracy": accuracy}
+            metrics = {"eval_loss": loss,
+                       "eval_accuracy": accuracy,
+                       "eval_r_accuracy": r_accuracy,
+                       "train_loss": self.last_histo['loss'][-1],
+                       "train_accuracy": self.last_histo['accuracy'][-1],
+                       "train_r_accuracy": self.last_histo['rounded_accuracy'][-1]}
             result = metrics.copy()
             result['client'] = self.client_id
             result['round'] = self.f_round
@@ -1061,7 +1066,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                            "rand_score": ran,
                            "homogeneity_score": homo}
                 result = metrics.copy()
-                result['loss'] = loss
+                result['eval_loss'] = loss
                 result['client'] = self.client_id
                 result['round'] = self.local_iter
                 dump_result_dict('client_'+str(self.client_id), result,
