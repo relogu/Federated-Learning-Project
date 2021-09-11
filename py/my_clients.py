@@ -918,7 +918,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 q = self.clustering_model.predict(self.x_train, verbose=0)
                 # update the auxiliary target distribution p
                 self.p = target_distribution(q)
-            self.clustering_model.fit(x=self.x_train, y=self.p, verbose=0)
+            self.last_histo = self.clustering_model.fit(x=self.x_train, y=self.p, verbose=0)
         self.local_iter += 1
 
     def fit(self, parameters, config):  # type: ignore
@@ -1067,6 +1067,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                            "homogeneity_score": homo}
                 result = metrics.copy()
                 result['eval_loss'] = loss
+                result['train_loss'] = self.last_histo
                 result['client'] = self.client_id
                 result['round'] = self.local_iter
                 dump_result_dict('client_'+str(self.client_id), result,

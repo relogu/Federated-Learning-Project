@@ -19,9 +19,9 @@ python3 clustering/py/client_euromds.py --server=[::]:51551 --client_id=7 --alg=
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-mkdir "$PWD/results/EUROMDSrrrr_ude20k1u40k"
-mv "$PWD/output_fed_udec/"/* "$PWD/results/EUROMDSrrrr_deno_ude20k1u40k"/
-#python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSfinal_binary_ude20k1u40k --in_folder="$PWD/results/EUROMDSfinal_binary_ude20k1u40k"
+mkdir "$PWD/results/EUROMDSfinal_deno_ude20k1u40k"
+mv "$PWD/output_fed_udec/"/* "$PWD/results/EUROMDSfinal_deno_ude20k1u40k"/
+python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSfinal_deno_ude20k1u40k --in_folder="$PWD/results/EUROMDSfinal_deno_ude20k1u40k"
 sleep 10
 rmdir "$PWD/output_fed_udec"
 
