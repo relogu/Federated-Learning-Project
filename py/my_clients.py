@@ -999,9 +999,9 @@ class KMeansEmbedClusteringClient(NumPyClient):
             metrics = {"eval_loss": loss,
                        "eval_accuracy": accuracy,
                        "eval_r_accuracy": r_accuracy,
-                       "train_loss": self.last_histo['loss'][-1],
-                       "train_accuracy": self.last_histo['accuracy'][-1],
-                       "train_r_accuracy": self.last_histo['rounded_accuracy'][-1]}
+                       "train_loss": self.last_histo.history['loss'][-1],
+                       "train_accuracy": self.last_histo.history['accuracy'][-1],
+                       "train_r_accuracy": self.last_histo.history['rounded_accuracy'][-1]}
             result = metrics.copy()
             result['client'] = self.client_id
             result['round'] = self.f_round
