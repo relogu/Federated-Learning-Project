@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo $PWD
-# export PYTHONPATH="$PWD:$PYTHONPATH"
+export PYTHONPATH="$PWD:$PYTHONPATH"
 
 # mkdir "$PWD/output_udec"
 # cp "$PWD/results/tied_uiEUROMDSfinal_deno_single_ude10k1u1u_do001_rf005/encoder.npz" "$PWD/output_udec/encoder.npz"
