@@ -22,7 +22,7 @@ This project aims to present the application of the Federated Learning (FL) appr
     - [Dependencies](#dependencies)
     - [General set up](#general-set-up)
     - [An example](#an-example)
-  - [Analysis and results](#analysis-and-results)
+  - [Analysis and results (WIP)](#analysis-and-results-wip)
     - [Metrics](#metrics)
   - [References](#references)
 
@@ -266,33 +266,12 @@ The IP address of the server is 0.0.0.0, for example.
 Ensure to have properly set the iptables and port forwarding, for a Linux system,
 you can look at this [guide](https://www.systutorials.com/port-forwarding-using-iptables/)
 
+TODO:
 Some simulations could be executed by launching
 [run.sh](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/run.sh)
 script (working on a Ubuntu 20.04 satisfying the dependencies listed above)
 
-## Analysis and results
-
-In [results](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results) folder are provided some output figures representing the results of the simulations in [run.sh](https://github.com/relogu/Federated-Learning-Project/blob/master/clustering/run.sh).
-Every folder in [results](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results) represents one of the simulations whose results are presented in the correspondent README file.
-
-| Dataset | LDA partitioning | Model | Results |
-|:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:|
-|Blobs|yes|k-means|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/lda_k-means)|
-|Blobs|no|k-means|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/k-means)|
-|Blobs|yes|k-FED + UDE|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/lda_k-fed_ae)|
-|Blobs|no|k-FED + UDE|[README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/k-fed_ae)|
-|MNIST|yes|ClusterGAN|TODO|
-|MNIST|no|ClusterGAN|TODO|
-|EUROMDS|no|ClusterGAN|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDS_clustergan5k)<br/>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDS_clustergan10k)|
-|EUROMDSr|no|ClusterGAN|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSr_clustergan5k)<br/>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSr_clustergan10k)|
-|EUROMDSrr|no|ClusterGAN|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrr_clustergan5k)<br>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrr_clustergan10k)|
-|EUROMDSrrr|no|ClusterGAN|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrr_clustergan5k)<br>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrr_clustergan10k)|
-|EUROMDSrrrr|no|ClusterGAN|5k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrrr_clustergan5k)<br>10k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrrr_clustergan10k)|
-|EUROMDS|no|k-means + UDE|1k50d2k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDS_ude1k5d2k)<br/>2k1u4k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDS_ude2k1u4k)<br>4k1u8k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDS_ude4k1u8k)|
-|EUROMDSr|no|k-means + UDE|1k50d2k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSr_ude1k5d2k)<br/>2k1u4k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSr_ude2k1u4k)<br>4k1u8k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSr_ude4k1u8k)|
-|EUROMDSrr|no|k-means + UDE|1k50d2k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrr_ude1k5d2k)<br>2k1u4k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrr_ude2k1u4k)<br>4k1u8k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrr_ude4k1u8k)|
-|EUROMDSrrr|no|k-means + UDE|1k50d2k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrr_ude1k5d2k)<br>2k1u4k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrr_ude2k1u4k)<br>4k1u8k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrr_ude4k1u8k)|
-|EUROMDSrrrr|no|k-means + UDE|1k50d2k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrrr_ude1k5d2k)<br>2k1u4k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrrr_ude2k1u4k)<br>4k1u8k epochs: [README.md](https://github.com/relogu/Federated-Learning-Project/tree/master/clustering/results/EUROMDSrrrr_ude4k1u8k)|
+## Analysis and results (WIP)
 
 ### Metrics
 
