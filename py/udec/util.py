@@ -34,7 +34,8 @@ def create_denoising_autoencoder(dims,
                                  up_freq=None,
                                  act='relu',
                                  init='glorot_uniform',
-                                 dropout=False,
+                                 noise_rate=0.1,
+                                 dropout_rate=0.0,
                                  bias=False,
                                  verbose=False):
     """
@@ -91,10 +92,14 @@ def create_denoising_autoencoder(dims,
                 decoder_layer_name % i, x, decoder_dims[i], encoder_layers[len(encoder_layers)-1-i]))
         decoder_layers.append(x)
 
+    # adding flipping noise
+    encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=noise_rate))
+    
     # adding dropout
-    if dropout:
-        encoder_layers.insert(2, Dropout(0.2))
-    encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=0.1))
+    if dropout_rate > 0.0:
+        idx = np.arange(start=3, stop=int((2*len(dims))-2), step=2)
+        for i in idx:
+            encoder_layers.insert(i, Dropout(rate=dropout_rate))
     
     # autoencoder
     autoencoder_layers = []
@@ -121,7 +126,8 @@ def create_tied_denoising_autoencoder(dims,
                                       up_freq=None,
                                       act='relu',
                                       init='glorot_uniform',
-                                      dropout=False,
+                                      noise_rate=0.1,
+                                      dropout_rate=0.0,
                                       ortho=False,
                                       u_norm=False,
                                       verbose=False):
@@ -182,13 +188,15 @@ def create_tied_denoising_autoencoder(dims,
             print(dec_tied_verb.format(
                 decoder_layer_name % i, x, decoder_dims[i], encoder_layers[len(encoder_layers)-1-i]))
         decoder_layers.append(x)
+
+    # adding flipping noise
+    encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=noise_rate))
     
     # adding dropout
-    if dropout:
+    if dropout_rate > 0.0:
         idx = np.arange(start=3, stop=int((2*len(dims))-2), step=2)
         for i in idx:
-            encoder_layers.insert(i, Dropout(rate=0.2))
-    encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=0.1))
+            encoder_layers.insert(i, Dropout(rate=dropout_rate))
 
     # autoencoder
     autoencoder_layers = []
