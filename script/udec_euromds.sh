@@ -5,21 +5,41 @@ export PYTHONPATH="$PWD:$PYTHONPATH"
 
 mkdir "$PWD/output_udec"
 # entire dataset
-python3 py/udec/main.py --dropout 0.01 --ran_flip 0.05 --cl_lr 0.01 --update_interval 1000 --tied --groups Genetics --groups CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --ae_epochs=10000 --cl_epochs=1 --folder="$PWD/output_udec" --hardware_acc
+python3 py/udec/main.py --dropout 0.2 --ran_flip 0.1 --cl_lr 0.01 --update_interval 1000--groups Genetics --groups CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --ae_epochs=10000 --cl_epochs=1 --folder="$PWD/output_udec" --hardware_acc
 wait
 sleep 5
-mkdir "$PWD/results/tied_uiEUROMDSfinal_deno_single_ude10k1u1u_do001_rf005"
-mv "$PWD/output_udec"/* "$PWD/results/tied_uiEUROMDSfinal_deno_single_ude10k1u1u_do001_rf005"/
+mkdir "$PWD/results/EUROMDSfinal_deno_single_ude10k1u1u_do02_rf01"
+mv "$PWD/output_udec"/* "$PWD/results/EUROMDSfinal_deno_single_ude10k1u1u_do02_rf01"/
 sleep 10
 rmdir "$PWD/output_udec"
 
 mkdir "$PWD/output_udec"
 # entire dataset
-python3 py/udec/main.py --dropout 0.01 --ran_flip 0.01 --cl_lr 0.01 --update_interval 1000 --tied --groups Genetics --groups CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --ae_epochs=10000 --cl_epochs=1 --folder="$PWD/output_udec" --hardware_acc
+python3 py/udec/main.py --dropout 0.1 --ran_flip 0.1 --cl_lr 0.01 --update_interval 1000--groups Genetics --groups CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --ae_epochs=10000 --cl_epochs=1 --folder="$PWD/output_udec" --hardware_acc
 wait
 sleep 5
-mkdir "$PWD/results/tied_uiEUROMDSfinal_deno_single_ude10k1u1u_do001_rf001"
-mv "$PWD/output_udec"/* "$PWD/results/tied_uiEUROMDSfinal_deno_single_ude10k1u1u_do001_rf001"/
+mkdir "$PWD/results/EUROMDSfinal_deno_single_ude10k1u1u_do01_rf01"
+mv "$PWD/output_udec"/* "$PWD/results/EUROMDSfinal_deno_single_ude10k1u1u_do01_rf01"/
+sleep 10
+rmdir "$PWD/output_udec"
+
+mkdir "$PWD/output_udec"
+# entire dataset
+python3 py/udec/main.py --dropout 0.05 --ran_flip 0.1 --cl_lr 0.01 --update_interval 1000--groups Genetics --groups CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --ae_epochs=10000 --cl_epochs=1 --folder="$PWD/output_udec" --hardware_acc
+wait
+sleep 5
+mkdir "$PWD/results/EUROMDSfinal_deno_single_ude10k1u1u_do005_rf01"
+mv "$PWD/output_udec"/* "$PWD/results/EUROMDSfinal_deno_single_ude10k1u1u_do005_rf01"/
+sleep 10
+rmdir "$PWD/output_udec"
+
+mkdir "$PWD/output_udec"
+# entire dataset
+python3 py/udec/main.py --dropout 0.01 --ran_flip 0.1 --cl_lr 0.01 --update_interval 1000--groups Genetics --groups CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --ae_epochs=10000 --cl_epochs=1 --folder="$PWD/output_udec" --hardware_acc
+wait
+sleep 5
+mkdir "$PWD/results/EUROMDSfinal_deno_single_ude10k1u1u_do001_rf01"
+mv "$PWD/output_udec"/* "$PWD/results/EUROMDSfinal_deno_single_ude10k1u1u_do001_rf01"/
 sleep 10
 rmdir "$PWD/output_udec"
 
