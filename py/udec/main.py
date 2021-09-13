@@ -98,6 +98,13 @@ def get_parser():
                         required=False,
                         action='store',
                         help='Flag for dropout layer in autoencoder')
+    parser.add_argument('--ran_flip',
+                        dest='ran_flip',
+                        type=float,
+                        default=0.1,
+                        required=False,
+                        action='store',
+                        help='Flag for RandomFlipping layer in autoencoder')
     parser.add_argument('--ortho',
                         dest='ortho',
                         required=False,
@@ -254,7 +261,7 @@ if __name__ == "__main__":
         if args.tied:
             autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
                 config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu',
-                ortho=args.ortho, u_norm=args.u_norm)
+                ortho=args.ortho, u_norm=args.u_norm, noise_rate=args.ran_flip)
         else:
             autoencoder, encoder, decoder = create_denoising_autoencoder(
                 config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu')
