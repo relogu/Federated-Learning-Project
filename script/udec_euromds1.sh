@@ -35,7 +35,7 @@ python3 py/udec/main.py --tied --dropout 0.01 --ran_flip 0.05 --cl_lr 0.01 --upd
 wait
 sleep 5
 mkdir "$PWD/results/tied_ui1kEUROMDSfinal_deno_single_ude10k1u20k_do001_rf005"
-mv "$PWD/output_udec1"/* "$PWD/results/tiedEUROMDSfinal_deno_single_ude10k1u20k_do001_rf005"/
+mv "$PWD/output_udec1"/* "$PWD/results/tied_ui1kEUROMDSfinal_deno_single_ude10k1u20k_do001_rf005"/
 sleep 10
 rmdir "$PWD/output_udec1"
 
@@ -47,6 +47,6 @@ python3 py/udec/main.py --tied --dropout 0.01 --ran_flip 0.05 --cl_lr 0.01 --upd
 wait
 sleep 5
 mkdir "$PWD/results/tied_ui2kEUROMDSfinal_deno_single_ude10k1u20k_do001_rf005"
-mv "$PWD/output_udec1"/* "$PWD/results/tiedEUROMDSfinal_deno_single_ude10k1u20k_do001_rf005"/
+mv "$PWD/output_udec1"/* "$PWD/results/tied_ui2kEUROMDSfinal_deno_single_ude10k1u20k_do001_rf005"/
 sleep 10
 rmdir "$PWD/output_udec1"
