@@ -39,7 +39,7 @@ def kfed_clustering_on_fit_config(rnd: int,
                   'actual_round': rnd-1,
                   'total_rounds': ae_epochs}
     elif rnd < ae_epochs+2:
-        config = {'model': 'k-FED',
+        config = {'model': 'k-means',
                   'n_clusters': n_clusters,
                   'first': (rnd == ae_epochs+1),
                   'actual_round': rnd,
