@@ -99,6 +99,13 @@ def parse_args():
                         default=None,
                         action='store',
                         help='select the output folder')
+    parser.add_argument('--n_clusters',
+                        dest='n_clusters',
+                        required=False,
+                        type=int,
+                        default=6,
+                        action='store',
+                        help='number of clusters to identify (KFEDStrategy only)')
 
     _args = parser.parse_args()
 
@@ -157,7 +164,7 @@ if __name__ == "__main__":
     elif args.strategy == 'k-fed':
         on_fit_conf = partial(kfed_clustering_on_fit_config,
                               ae_epochs=args.ae_epochs,
-                              n_clusters=25,
+                              n_clusters=args.n_clusters,
                               cl_epochs=args.cluster_epochs)
         n_rounds = 1+args.ae_epochs+args.cluster_epochs
         strategy = strategies.KFEDStrategy(
