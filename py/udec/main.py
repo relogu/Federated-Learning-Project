@@ -179,23 +179,25 @@ if __name__ == "__main__":
         'cl_momentum': 0.9,
         'cl_epochs': args.cl_epochs,
         'update_interval': args.update_interval,
-        'ae_loss': 'binary_crossentropy',#(specific for binary, overfit w/o dropout),#'mse' (no overfit w/o dropout)#,#(general)
+        # (specific for binary, overfit w/o dropout),#'mse' (no overfit w/o dropout)#,#(general)
+        'ae_loss': 'binary_crossentropy',
         'cl_loss': 'kld',
         'seed': args.seed}
 
     # preparing dataset
     for g in args.groups:
         if g not in data_util.EUROMDS_GROUPS:
-            print('One of the given groups is not allowed.\nAllowed groups: {}'.\
-                format(data_util.EUROMDS_GROUPS))
+            print('One of the given groups is not allowed.\nAllowed groups: {}'.
+                  format(data_util.EUROMDS_GROUPS))
             sys.exit()
     for c in args.ex_col:
         if c not in data_util.get_euromds_cols():
-            print('One of the given columns is not allowed.\nAllowed columns: {}'.\
-                format(data_util.get_euromds_cols()))
+            print('One of the given columns is not allowed.\nAllowed columns: {}'.
+                  format(data_util.get_euromds_cols()))
             sys.exit()
     # getting the entire dataset
-    x = data_util.get_euromds_dataset(groups=args.groups, exclude_cols=args.ex_col)
+    x = data_util.get_euromds_dataset(
+        groups=args.groups, exclude_cols=args.ex_col)
     # getting the number of features
     n_features = len(x.columns)
     x = np.array(x)
@@ -217,16 +219,16 @@ if __name__ == "__main__":
     dims = [x.shape[-1],
             int((2/3)*(n_features)),
             int((2/3)*(n_features)),
-            int((2.5)*(n_features)), 
-            args.n_clusters] # (originally these are the proportions)
+            int((2.5)*(n_features)),
+            args.n_clusters]  # (originally these are the proportions)
     init = VarianceScaling(scale=1. / 3.,
                            mode='fan_in',
                            distribution="uniform")
 
-    config['ae_lr'] = 0.1 # original value
+    config['ae_lr'] = 0.1  # original value
     config['ae_dims'] = dims
     config['ae_init'] = init
-    
+
     # define the splitting
     train_idx, test_idx = data_util.split_dataset(
         x=x,
@@ -258,7 +260,8 @@ if __name__ == "__main__":
             autoencoder, encoder, decoder = create_prob_autoencoder(
                 config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act='selu')
     else:
-        up_frequencies = np.array([np.array(np.count_nonzero(x_train[:,i])/x_train.shape[0]) for i in range(n_features)])
+        up_frequencies = np.array([np.array(np.count_nonzero(
+            x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
         if args.tied:
             autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
                 config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu',
@@ -277,18 +280,18 @@ if __name__ == "__main__":
     pretrained_weights = path_to_out/'encoder.npz'
     if pretrained_weights.exists():
         print('Using existing weights in the output folder for the autoencoder')
-        param : Parameters = np.load(pretrained_weights, allow_pickle=True)
+        param: Parameters = np.load(pretrained_weights, allow_pickle=True)
         weights = param['arr_0']
         encoder.set_weights(weights)
     else:
         print('There are no existing weights in the output folder for the autoencoder')
         # fitting the autoencoder
         history = autoencoder.fit(x=x_train,
-                                y=x_train,
-                                batch_size=config['batch_size'],
-                                validation_data=(x_test, x_test),
-                                epochs=int(config['ae_epochs']),
-                                verbose=1)
+                                  y=x_train,
+                                  batch_size=config['batch_size'],
+                                  validation_data=(x_test, x_test),
+                                  epochs=int(config['ae_epochs']),
+                                  verbose=1)
         with open(path_to_out/'ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
 
@@ -311,7 +314,8 @@ if __name__ == "__main__":
         momentum=config['cl_momentum'])
     clustering_model.compile(
         optimizer=cl_optimizer,
-        loss=config['cl_loss'])
+        loss=config['cl_loss'],
+        metrics=[my_metrics.acc])
     clustering_model.get_layer(
         name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
     for i in range(int(config['cl_epochs'])):
@@ -321,7 +325,7 @@ if __name__ == "__main__":
             # update the auxiliary target distribution p
             p = target_distribution(q)
         history = clustering_model.fit(x=x_train, y=p, verbose=2,
-                                      batch_size=config['batch_size'])
+                                       batch_size=config['batch_size'])
         # evaluation
         q_eval = clustering_model.predict(x_test, verbose=0)
         # update the auxiliary target distribution p
@@ -331,7 +335,8 @@ if __name__ == "__main__":
         # evaluate the clustering performance using some metrics
         y_pred = q_eval.argmax(1)
         # evaluating metrics
-        if y_test is not None:
+        result = {}
+        if y_test is not None and args.verbose:
             acc = my_metrics.acc(y_test, y_pred)
             nmi = my_metrics.nmi(y_test, y_pred)
             ami = my_metrics.ami(y_test, y_pred)
@@ -342,7 +347,7 @@ if __name__ == "__main__":
                 print_confusion_matrix(
                     y_test, y_pred,
                     path_to_out=path_to_out)
-            if args.verbose: print(out_1 % (i+1, int(config['cl_epochs']), acc, nmi, ami, ari, ran, homo))
+            print(out_1 % (i+1, int(config['cl_epochs']), acc, nmi, ami, ari, ran, homo))
             # dumping and retrieving the results
             metrics = {"accuracy": acc,
                        "normalized_mutual_info_score": nmi,
@@ -351,11 +356,11 @@ if __name__ == "__main__":
                        "rand_score": ran,
                        "homogeneity_score": homo}
             result = metrics.copy()
-            result['loss'] = loss
-            result['t_loss'] = history.history['loss'][0]
-            result['round'] = i+1
-            dump_result_dict('clustering_model', result,
-                             path_to_out=path_to_out)
+        result['loss'] = loss
+        result['t_loss'] = history.history['loss'][0]
+        result['round'] = i+1
+        dump_result_dict('clustering_model', result,
+                        path_to_out=path_to_out)
         if id_test is not None:
             pred = {'ID': id_test,
                     'label': y_pred}
