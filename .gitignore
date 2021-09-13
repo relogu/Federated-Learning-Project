@@ -6,6 +6,9 @@
 # too many of those
 *.png
 
+# obscuring results for now
+*results*
+
 *output*
 !output.py
 *cycle_reg_*
