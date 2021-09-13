@@ -174,7 +174,7 @@ class KFEDStrategy(FedAvg):
         # get step
         config = self.on_fit_config_fn(rnd)
         # discriminate the aggregation to be performed
-        if config['model'] == 'k-FED':
+        if config['model'] == 'k-means':
             # initial checks
             if not results:
                 return None, {}
@@ -188,7 +188,7 @@ class KFEDStrategy(FedAvg):
             # pick, randomly, one client's centroids
             idx = self.rng.integers(0, all_centroids.shape[0], 1)
             # basis to be completed
-            base_centroids = all_centroids[idx][0]
+            base_centroids = all_centroids[idx][0][:int(np.sqrt(config['n_clusters']))]
             # all other centroids
             other_centroids = all_centroids[np.arange(
                 len(all_centroids)) != idx]
@@ -210,7 +210,10 @@ class KFEDStrategy(FedAvg):
             return weights_to_parameters(base_centroids), {}
         else:
             aggregated_weights = super().aggregate_fit(rnd, results, failures)
-            # Save aggregated_weights
-            print("Saving aggregated weights...")
-            np.savez(agg_weights_filename, *aggregated_weights)
+            if aggregated_weights is not None:
+                # Save aggregated_weights
+                print("Saving aggregated_weights...")
+                parameters = np.array(parameters_to_weights(
+                    aggregated_weights[0]), dtype=object)
+                np.savez(self.out_dir, parameters)
             return aggregated_weights
