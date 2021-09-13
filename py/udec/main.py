@@ -136,6 +136,11 @@ def get_parser():
                         default=51550,
                         action='store',
                         help='set the seed for the random generator of the whole dataset')
+    parser.add_argument('-v', '--verbose',
+                        dest='verbose',
+                        required=False,
+                        action='store_true',
+                        help='Flag for verbosity')
     return parser
 
 
@@ -337,7 +342,7 @@ if __name__ == "__main__":
                 print_confusion_matrix(
                     y_test, y_pred,
                     path_to_out=path_to_out)
-            print(out_1 % (i+1, int(config['cl_epochs']), acc, nmi, ami, ari, ran, homo))
+            if args.verbose: print(out_1 % (i+1, int(config['cl_epochs']), acc, nmi, ami, ari, ran, homo))
             # dumping and retrieving the results
             metrics = {"accuracy": acc,
                        "normalized_mutual_info_score": nmi,
