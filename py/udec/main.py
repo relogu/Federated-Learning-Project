@@ -14,16 +14,19 @@ import pickle
 
 import tensorflow as tf
 from tensorflow.keras.optimizers import SGD
-from tensorflow.keras.initializers import VarianceScaling
+from tensorflow.keras.initializers import VarianceScaling, RandomNormal
 from sklearn.cluster import KMeans
+from sklearn.metrics import log_loss
+
+from flwr.common.typing import Parameters
 
 import py.dataset_util as data_util
 import py.metrics as my_metrics
-from py.udec.util import create_autoencoder, create_prob_autoencoder, create_clustering_model, target_distribution
+from py.udec.util import create_denoising_autoencoder, create_tied_denoising_autoencoder, create_prob_autoencoder, create_tied_prob_autoencoder, create_clustering_model, target_distribution
 from py.dumping.plots import print_confusion_matrix
 from py.dumping.output import dump_pred_dict, dump_result_dict
 
-out_1 = 'UDEC\nEpoch %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f'
+out_1 = 'UDEC\nEpoch %d/%d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f'
 
 
 def get_parser():
@@ -78,11 +81,45 @@ def get_parser():
                         required=False,
                         action='store_true',
                         help='Flag for using probabilistic binary neurons')
+    parser.add_argument('--tied',
+                        dest='tied',
+                        required=False,
+                        action='store_true',
+                        help='Flag for using tied layers in autoencoder')
     parser.add_argument('--plotting',
                         dest='plotting',
                         required=False,
                         action='store_true',
                         help='Flag for plotting confusion matrix')
+    parser.add_argument('--dropout',
+                        dest='dropout',
+                        required=False,
+                        action='store_true',
+                        help='Flag for dropout layer in autoencoder')
+    parser.add_argument('--ortho',
+                        dest='ortho',
+                        required=False,
+                        action='store_true',
+                        help='Flag for orthogonality regularizer in autoencoder (tied only)')
+    parser.add_argument('--u_norm',
+                        dest='u_norm',
+                        required=False,
+                        action='store_true',
+                        help='Flag for unit norm constraint in autoencoder (tied only)')
+    parser.add_argument('--cl_lr',
+                        dest='cl_lr',
+                        required=False,
+                        type=float,
+                        default=0.1,
+                        action='store',
+                        help='clustering model learning rate')
+    parser.add_argument('--update_interval',
+                        dest='update_interval',
+                        required=False,
+                        type=int,
+                        default=100,
+                        action='store',
+                        help='set the update interval for the clusters distribution')
     parser.add_argument('--seed',
                         dest='seed',
                         required=False,
@@ -124,11 +161,11 @@ if __name__ == "__main__":
         'ae_epochs': args.ae_epochs,
         'ae_lr': 0.01,
         'ae_momentum': 0.9,
-        'cl_lr': 0.01,
+        'cl_lr': args.cl_lr,
         'cl_momentum': 0.9,
         'cl_epochs': args.cl_epochs,
-        'update_interval': 55,
-        'ae_loss': 'binary_crossentropy',#(specific for binary),#'mse'#,#(general)
+        'update_interval': args.update_interval,
+        'ae_loss': 'binary_crossentropy',#(specific for binary, overfit w/o dropout),#'mse' (no overfit w/o dropout)#,#(general)
         'cl_loss': 'kld',
         'seed': args.seed}
 
@@ -163,18 +200,23 @@ if __name__ == "__main__":
     # getting IDs
     ids = data_util.get_euromds_ids()
     # setting the autoencoder layers
-    #dims = [x.shape[-1], x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters]
-    #dims = [x.shape[-1], x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters]
-    dims = [x.shape[-1], int((n_features+args.n_clusters)/2),
-            int((n_features+args.n_clusters)/2), args.n_clusters]
-    dims = [x.shape[-1], int((2/3)*(n_features)),
-            int((2/3)*(n_features)), int((2.5)*(n_features)), args.n_clusters] # (originally these are the proportions)
-    init = VarianceScaling(scale=1. / 3., mode='fan_in',
-                            distribution='uniform') #(original initialization)
+    # dims = [x.shape[-1], x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters]
+    # dims = [x.shape[-1], x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters]
+    # dims = [x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters] # many tests done on these values
+    dims = [x.shape[-1],
+            int((2/3)*(n_features)),
+            int((2/3)*(n_features)),
+            int((2.5)*(n_features)), 
+            args.n_clusters] # (originally these are the proportions)
+    init = VarianceScaling(scale=1. / 3.,
+                           mode='fan_in',
+                           distribution="uniform") #(original initialization)
+    # init = RandomNormal(mean=0.0, stddev=0.01) #(paper initialization)
 
-    config['ae_lr'] = 0.1
+    config['ae_lr'] = 0.1 # original value
     config['ae_dims'] = dims
     config['ae_init'] = init
+    
     # define the splitting
     train_idx, test_idx = data_util.split_dataset(
         x=x,
@@ -199,29 +241,50 @@ if __name__ == "__main__":
 
     # pre-train the autoencoder
     if args.binary:
-        autoencoder, encoder, decoder = create_prob_autoencoder(
-            config['ae_dims'], init=config['ae_init'])
+        if args.tied:
+            autoencoder, encoder, decoder = create_tied_prob_autoencoder(
+                config['ae_dims'], init=config['ae_init'], dropout=args.dropout, act='selu')
+        else:
+            autoencoder, encoder, decoder = create_prob_autoencoder(
+                config['ae_dims'], init=config['ae_init'], dropout=args.dropout, act='selu')
     else:
-        autoencoder, encoder, decoder = create_autoencoder(
-            config['ae_dims'], init=config['ae_init'], act='relu')
-    ae_optimizer = SGD(learning_rate=config['ae_lr'], decay=(
-        config['ae_lr']-0.001)/config['ae_epochs'], momentum=config['ae_momentum']) # (seems to work better for now)
+        up_frequencies = np.array([np.array(np.count_nonzero(x_train[:,i])/x_train.shape[0]) for i in range(n_features)])
+        if args.tied:
+            autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
+                config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout=args.dropout, act='selu',
+                ortho=args.ortho, u_norm=args.u_norm)
+        else:
+            autoencoder, encoder, decoder = create_denoising_autoencoder(
+                config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout=args.dropout, act='selu')
+    ae_optimizer = SGD(learning_rate=config['ae_lr'],
+                       decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
+                       momentum=config['ae_momentum']) # (seems to work better for now)
     # ae_optimizer = SGD(learning_rate=config['ae_lr'],
     #                    momentum=config['ae_momentum']) # (original optimizer)
+    # ae_optimizer = SGD(learning_rate=config['ae_lr'], decay=(
+    #    50/config['ae_epochs']), momentum=config['ae_momentum']) # (the paper alternative)
     autoencoder.compile(
-        metrics=['accuracy'],
+        metrics=[my_metrics.rounded_accuracy, 'accuracy'],
         optimizer=ae_optimizer,
         loss=config['ae_loss']
     )
-    # fitting the autoencoder
-    history = autoencoder.fit(x=x_train,
-                              y=x_train,
-                              batch_size=config['batch_size'],
-                              validation_data=(x_test, x_test),
-                              epochs=int(config['ae_epochs']),
-                              verbose=1)
-    with open(path_to_out/'ae_history', 'wb') as file_pi:
-        pickle.dump(history.history, file_pi)
+    pretrained_weights = path_to_out/'encoder.npz'
+    if pretrained_weights.exists():
+        print('Using existing weights in the output folder for the autoencoder')
+        param : Parameters = np.load(pretrained_weights, allow_pickle=True)
+        weights = param['arr_0']
+        encoder.set_weights(weights)
+    else:
+        print('There are no existing weights in the output folder for the autoencoder')
+        # fitting the autoencoder
+        history = autoencoder.fit(x=x_train,
+                                y=x_train,
+                                batch_size=config['batch_size'],
+                                validation_data=(x_test, x_test),
+                                epochs=int(config['ae_epochs']),
+                                verbose=1)
+        with open(path_to_out/'ae_history', 'wb') as file_pi:
+            pickle.dump(history.history, file_pi)
 
     # get an estimate for clusters centers using k-means
     kmeans = KMeans(init='k-means++',
@@ -238,7 +301,8 @@ if __name__ == "__main__":
         encoder)
     # compiling the clustering model
     cl_optimizer = SGD(
-        learning_rate=config['cl_lr'], momentum=config['cl_momentum'])
+        learning_rate=config['cl_lr'],
+        momentum=config['cl_momentum'])
     clustering_model.compile(
         optimizer=cl_optimizer,
         loss=config['cl_loss'])
@@ -246,11 +310,12 @@ if __name__ == "__main__":
         name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
     for i in range(int(config['cl_epochs'])):
         if i % config['update_interval'] == 0:
+            print('Updating the target distribution')
             q = clustering_model.predict(x_train, verbose=0)
             # update the auxiliary target distribution p
             p = target_distribution(q)
-        clustering_model.fit(x=x_train, y=p, verbose=2,
-                             batch_size=config['batch_size'])
+        history = clustering_model.fit(x=x_train, y=p, verbose=2,
+                                      batch_size=config['batch_size'])
         # evaluation
         q_eval = clustering_model.predict(x_test, verbose=0)
         # update the auxiliary target distribution p
@@ -271,7 +336,7 @@ if __name__ == "__main__":
                 print_confusion_matrix(
                     y_test, y_pred,
                     path_to_out=path_to_out)
-            print(out_1 % (i+1, acc, nmi, ami, ari, ran, homo))
+            print(out_1 % (i+1, int(config['cl_epochs']), acc, nmi, ami, ari, ran, homo))
             # dumping and retrieving the results
             metrics = {"accuracy": acc,
                        "normalized_mutual_info_score": nmi,
@@ -281,6 +346,7 @@ if __name__ == "__main__":
                        "homogeneity_score": homo}
             result = metrics.copy()
             result['loss'] = loss
+            result['t_loss'] = history.history['loss'][0]
             result['round'] = i+1
             dump_result_dict('clustering_model', result,
                              path_to_out=path_to_out)

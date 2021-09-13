@@ -208,15 +208,17 @@ class ClusteringLayer(Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 class FlippingNoise(Layer):
-    def __init__(self, up_frequencies, rate=0.01, *args, **kwargs):
+    def __init__(self, up_frequencies=None, rate=0.01, *args, **kwargs):
         super(FlippingNoise, self).__init__(*args, **kwargs)
         self.up_frequencies = up_frequencies
-        self.down_frequencies = 1-up_frequencies
         self.rate = rate
 
     def build(self, input_shape):
         assert len(input_shape) == 2
         assert input_shape[1] == len(self.up_frequencies)
+        if self.up_frequencies is None:
+            self.up_frequencies = [0.5]*input_shape[1]
+        self.down_frequencies = 1-self.up_frequencies
         self.probs = tf.transpose(tf.stack((self.down_frequencies, self.up_frequencies)))
         
     def call(self,

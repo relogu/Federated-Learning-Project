@@ -5,14 +5,17 @@ Created on Wen Aug 4 10:37:10 2021
 
 @author: relogu
 """
+import numpy as np
+
 import tensorflow as tf
 from tensorflow.keras.layers import InputLayer, Dense, Dropout, GaussianNoise
 from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.constraints import UnitNorm
 import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 from tensorflow_probability import layers as tfpl
 
-from py.udec.net import DenseTied, ClusteringLayer, FlippingNoise
+from py.udec.net import DenseTied, ClusteringLayer, FlippingNoise, WeightsOrthogonalityConstraint
 
 # some string for verbose outputs
 encoder_layer_name = 'encoder_%d'
@@ -28,10 +31,11 @@ ae_layers = 'Autoencoder Layers: {}'
 
 
 def create_denoising_autoencoder(dims,
-                                 up_freq,
+                                 up_freq=None,
                                  act='relu',
                                  init='glorot_uniform',
                                  dropout=False,
+                                 bias=False,
                                  verbose=False):
     """
     Fully connected auto-encoder model, symmetric, using DenseTied layers.
@@ -63,7 +67,7 @@ def create_denoising_autoencoder(dims,
         x = Dense(units=encoder_dims[i],
                   activation=act,
                   kernel_initializer=init,
-                  use_bias=True,
+                  use_bias=bias,
                   name=encoder_layer_name % i)
         if verbose:
             print(enc_verb.format(
@@ -80,7 +84,7 @@ def create_denoising_autoencoder(dims,
         x = Dense(units=decoder_dims[i],
                   activation=act,
                   kernel_initializer=init,
-                  use_bias=True,
+                  use_bias=bias,
                   name=decoder_layer_name % i)
         if verbose:
             print(dec_verb.format(
@@ -90,7 +94,6 @@ def create_denoising_autoencoder(dims,
     # adding dropout
     if dropout:
         encoder_layers.insert(2, Dropout(0.2))
-    #encoder_layers.insert(1, GaussianNoise(0.2))
     encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=0.1))
     
     # autoencoder
@@ -114,11 +117,14 @@ def create_denoising_autoencoder(dims,
     return (autoencoder, encoder, decoder)
 
 
-def create_tied_autoencoder(dims,
-                            act='relu',
-                            init='glorot_uniform',
-                            dropout=False,
-                            verbose=False):
+def create_tied_denoising_autoencoder(dims,
+                                      up_freq=None,
+                                      act='relu',
+                                      init='glorot_uniform',
+                                      dropout=False,
+                                      ortho=False,
+                                      u_norm=False,
+                                      verbose=False):
     """
     Fully connected auto-encoder model, symmetric, using DenseTied layers.
     Arguments:
@@ -143,14 +149,15 @@ def create_tied_autoencoder(dims,
     # encoder
     encoder_layers = []
     encoder_layers.append(input_img)
+    k_con = UnitNorm(axis=0) if u_norm else None
     # internal layers in encoder
     for i in range(len(encoder_dims)):
+        k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
         x = Dense(units=encoder_dims[i],
                   activation=act,
-                  #kernel_regularizer=WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0),
+                  kernel_regularizer=k_reg,
                   kernel_initializer=init,
-                  # kernel_constraint=UnitNorm(axis=0),
-                  use_bias=False,  # True,
+                  kernel_constraint=k_con,
                   name=encoder_layer_name % i)
         if verbose:
             print(enc_verb.format(
@@ -162,15 +169,14 @@ def create_tied_autoencoder(dims,
     decoder_layers.append(input_lbl)
     # internal layers in decoder
     for i in range(len(decoder_dims)):
+        k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
         if i == len(decoder_dims)-1:
             act = 'sigmoid'
         x = DenseTied(tied_to=encoder_layers[len(encoder_layers)-1-i],
                       units=decoder_dims[i],
                       activation=act,
-                      #kernel_regularizer=WeightsOrthogonalityConstraint(encoder_dims[len(encoder_dims)-1-i], weightage=1., axis=1),
-                      # kernel_initializer=init,
-                      use_bias=False,  # True,
-                      # kernel_constraint=UnitNorm(axis=1),
+                      kernel_regularizer=k_reg,
+                      kernel_constraint=k_con,
                       name=decoder_layer_name % i)
         if verbose:
             print(dec_tied_verb.format(
@@ -179,7 +185,10 @@ def create_tied_autoencoder(dims,
     
     # adding dropout
     if dropout:
-        encoder_layers.insert(1, Dropout(rate=0.2))
+        idx = np.arange(start=3, stop=int((2*len(dims))-2), step=2)
+        for i in idx:
+            encoder_layers.insert(i, Dropout(rate=0.2))
+    encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=0.1))
 
     # autoencoder
     autoencoder_layers = []
@@ -226,8 +235,8 @@ def create_tied_prob_autoencoder(dims,
     encoder_dims = dims[1:]
     decoder_dims = list(reversed(dims))[1:]
     if verbose:
-        print(liste_enc_dim.format(encoder_dims))
-        print(liste_dec_dim.format(decoder_dims))
+        print(list_enc_dim.format(encoder_dims))
+        print(list_dec_dim.format(decoder_dims))
     # input data
     input_img = InputLayer(input_shape=(dims[0],), name='input_img')
     # input labels
@@ -239,10 +248,10 @@ def create_tied_prob_autoencoder(dims,
     for i in range(len(encoder_dims)):
         x = Dense(units=encoder_dims[i],
                   activation=act,
-                  #kernel_regularizer=WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0),
+                  # kernel_regularizer=WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0),
                   kernel_initializer=init,
                   # kernel_constraint=UnitNorm(axis=0),
-                  use_bias=False,  # True,
+                  # use_bias=True,  # default False
                   name=encoder_layer_name % i)
         if verbose:
             print(enc_verb.format(
@@ -259,9 +268,9 @@ def create_tied_prob_autoencoder(dims,
         x = DenseTied(tied_to=encoder_layers[len(encoder_layers)-1-i],
                       units=decoder_dims[i],
                       activation=act,
-                      #kernel_regularizer=WeightsOrthogonalityConstraint(encoder_dims[len(encoder_dims)-1-i], weightage=1., axis=1),
+                      # kernel_regularizer=WeightsOrthogonalityConstraint(encoder_dims[len(encoder_dims)-1-i], weightage=1., axis=1),
                       # kernel_initializer=init,
-                      use_bias=False,  # True,
+                      # use_bias=True,  # default False
                       # kernel_constraint=UnitNorm(axis=1),
                       name=decoder_layer_name % i)
         if verbose:
