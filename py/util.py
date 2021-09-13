@@ -100,7 +100,7 @@ def generate_prob_labels(n_labels: int = 2, n_samples: int = 100, label: int = 0
     if label < 0 or label > n_labels-1:
         raise ValueError(
             'The label value, label, cannot be lower than zero or higher than the number of labels minus one, n_labels-1')
-    p = [float(0.2/(n_labels-1))]*n_labels
+    p = [0.04]*n_labels
     p[label] = 0.8
     data = []
     for _ in range(n_samples):

@@ -93,8 +93,10 @@ def get_parser():
                         help='Flag for plotting confusion matrix')
     parser.add_argument('--dropout',
                         dest='dropout',
+                        type=float,
+                        default=0.0,
                         required=False,
-                        action='store_true',
+                        action='store',
                         help='Flag for dropout layer in autoencoder')
     parser.add_argument('--ortho',
                         dest='ortho',
@@ -243,19 +245,19 @@ if __name__ == "__main__":
     if args.binary:
         if args.tied:
             autoencoder, encoder, decoder = create_tied_prob_autoencoder(
-                config['ae_dims'], init=config['ae_init'], dropout=args.dropout, act='selu')
+                config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act='selu')
         else:
             autoencoder, encoder, decoder = create_prob_autoencoder(
-                config['ae_dims'], init=config['ae_init'], dropout=args.dropout, act='selu')
+                config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act='selu')
     else:
         up_frequencies = np.array([np.array(np.count_nonzero(x_train[:,i])/x_train.shape[0]) for i in range(n_features)])
         if args.tied:
             autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout=args.dropout, act='selu',
+                config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu',
                 ortho=args.ortho, u_norm=args.u_norm)
         else:
             autoencoder, encoder, decoder = create_denoising_autoencoder(
-                config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout=args.dropout, act='selu')
+                config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu')
     ae_optimizer = SGD(learning_rate=config['ae_lr'],
                        decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
                        momentum=config['ae_momentum']) # (seems to work better for now)
