@@ -314,8 +314,7 @@ if __name__ == "__main__":
         momentum=config['cl_momentum'])
     clustering_model.compile(
         optimizer=cl_optimizer,
-        loss=config['cl_loss'],
-        metrics=[my_metrics.acc])
+        loss=config['cl_loss'])
     clustering_model.get_layer(
         name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
     for i in range(int(config['cl_epochs'])):
