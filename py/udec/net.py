@@ -7,6 +7,8 @@ Created on Wen Aug 4 10:37:10 2021
 """
 from typing import Union
 
+import numpy as np
+
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from tensorflow.keras import activations, initializers, regularizers, constraints
@@ -215,9 +217,10 @@ class FlippingNoise(Layer):
 
     def build(self, input_shape):
         assert len(input_shape) == 2
-        assert input_shape[1] == len(self.up_frequencies)
         if self.up_frequencies is None:
-            self.up_frequencies = [0.5]*input_shape[1]
+            self.up_frequencies = np.array([0.5]*input_shape[1])
+        else:
+            assert input_shape[1] == len(self.up_frequencies)
         self.down_frequencies = 1-self.up_frequencies
         self.probs = tf.transpose(tf.stack((self.down_frequencies, self.up_frequencies)))
         

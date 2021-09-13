@@ -209,9 +209,6 @@ if __name__ == "__main__":
     # getting IDs
     ids = data_util.get_euromds_ids()
     # setting the autoencoder layers
-    # dims = [x.shape[-1], x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters]
-    # dims = [x.shape[-1], x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters]
-    # dims = [x.shape[-1], int((n_features+args.n_clusters)/2), int((n_features+args.n_clusters)/2), args.n_clusters] # many tests done on these values
     dims = [x.shape[-1],
             int((2/3)*(n_features)),
             int((2/3)*(n_features)),
@@ -219,8 +216,7 @@ if __name__ == "__main__":
             args.n_clusters] # (originally these are the proportions)
     init = VarianceScaling(scale=1. / 3.,
                            mode='fan_in',
-                           distribution="uniform") #(original initialization)
-    # init = RandomNormal(mean=0.0, stddev=0.01) #(paper initialization)
+                           distribution="uniform")
 
     config['ae_lr'] = 0.1 # original value
     config['ae_dims'] = dims
@@ -267,11 +263,7 @@ if __name__ == "__main__":
                 config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu')
     ae_optimizer = SGD(learning_rate=config['ae_lr'],
                        decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
-                       momentum=config['ae_momentum']) # (seems to work better for now)
-    # ae_optimizer = SGD(learning_rate=config['ae_lr'],
-    #                    momentum=config['ae_momentum']) # (original optimizer)
-    # ae_optimizer = SGD(learning_rate=config['ae_lr'], decay=(
-    #    50/config['ae_epochs']), momentum=config['ae_momentum']) # (the paper alternative)
+                       momentum=config['ae_momentum'])
     autoencoder.compile(
         metrics=[my_metrics.rounded_accuracy, 'accuracy'],
         optimizer=ae_optimizer,

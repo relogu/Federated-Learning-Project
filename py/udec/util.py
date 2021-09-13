@@ -133,7 +133,7 @@ def create_tied_denoising_autoencoder(dims,
                                       u_norm=False,
                                       verbose=False):
     """
-    Fully connected auto-encoder model, symmetric, using DenseTied layers.
+    Fully connected denoising stacked auto-encoder model, symmetric, using DenseTied layers.
     Arguments:
         dims: list of number of units in each layer of encoder. dims[0] is input dim, dims[-1] is units in hidden layer.
             The decoder is symmetric with encoder. So number of layers of the auto-encoder is 2*len(dims)-1
