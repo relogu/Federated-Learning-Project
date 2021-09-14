@@ -239,7 +239,8 @@ if __name__ == "__main__":
         'seed': args.seed,
         'binary': args.binary,
         'plotting': False,
-        'verbose': args.verbose}
+        'verbose': args.verbose,
+        'dump_metrics': False}
 
     # preparing dataset
     for g in args.groups:
@@ -366,7 +367,8 @@ if __name__ == "__main__":
             'gen_dims': [int(4*n_features), int(3*n_features), int(2*n_features), x.shape[-1]],
             'enc_dims': [int(x.shape[-1]), int(4*n_features), int(3*n_features), int(2*n_features)],
             'disc_dims': [int(x.shape[-1]), int(2*n_features), int(3*n_features), int(4*n_features)],
-            'use_binary': args.binary
+            'use_binary': args.binary,
+            'dump_metrics': False
         }
 
         client = clients.ClusterGANClient(x=x,
