@@ -35,7 +35,7 @@ import py.dataset_util as data_util
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # for debug connection
-os.environ["GRPC_VERBOSITY"] = "debug"
+os.environ["GRPC_VERBOSITY"] = "none"
 # for limiting the cpu cores to use
 torch.set_num_threads(1)
 tf.config.threading.set_inter_op_parallelism_threads(1)

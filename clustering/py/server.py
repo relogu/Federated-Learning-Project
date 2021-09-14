@@ -25,10 +25,12 @@ from py.server_fit_config import (clustergan_on_fit_config,
                                   simple_clustering_on_fit_config,
                                   simple_kmeans_on_fit_config)
 
+# Make TensorFlow log less verbose
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # disable possible gpu devices
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # for debug connection
-os.environ["GRPC_VERBOSITY"] = "debug"
+os.environ["GRPC_VERBOSITY"] = "none"
 
 
 def parse_args():
