@@ -140,6 +140,7 @@ class MyStrategy(FedAvg):
 class KFEDStrategy(FedAvg):
 
     def __init__(self,
+                 out_dir: Union[Path, str] = None,
                  seed: int = 51550,
                  fraction_fit: float = 0.1,
                  fraction_eval: float = 0.1,
@@ -168,6 +169,11 @@ class KFEDStrategy(FedAvg):
             accept_failures,
             initial_parameters)
         self.rng = np.random.default_rng(seed)
+        if out_dir is None:
+            self.out_dir = agg_weights_filename
+        else:
+            self.out_dir = Path(out_dir)/agg_weights_filename
+        print("Strategy output filename: {}".format(self.out_dir))
 
     # ->Optional[Weights]:
     def aggregate_fit(self, rnd: int, results: List[Tuple[ClientProxy, FitRes]], failures: List[BaseException]):
@@ -185,16 +191,17 @@ class KFEDStrategy(FedAvg):
             all_centroids = np.array([parameters_to_weights(
                 fit_res.parameters) for _, fit_res in results])
             print('All centroids\' shape: {}'.format(all_centroids.shape))
-            # pick, randomly, one client's centroids
+            # pick, randomly, one client's first centroids
             idx = self.rng.integers(0, all_centroids.shape[0], 1)
             # basis to be completed
-            base_centroids = all_centroids[idx][0][:int(np.sqrt(config['n_clusters']))]
-            # all other centroids
-            other_centroids = all_centroids[np.arange(
-                len(all_centroids)) != idx]
-            other_centroids = np.concatenate(other_centroids, axis=0)
+            base_centroids = [all_centroids[idx][0][0]]
+            # all the centroids
+            all_centroids = np.concatenate(all_centroids, axis=0)
+            # all other (not chosen already) centroids
+            other_centroids = all_centroids[1:]
+            basis_length = 1
             # loop for completing the basis
-            while base_centroids.shape[0] < config['n_clusters']:
+            while basis_length < config['n_clusters']:
                 # all distances from the basis of centroids
                 distances = [distance_from_centroids(
                     base_centroids, c) for c in other_centroids]
@@ -203,6 +210,7 @@ class KFEDStrategy(FedAvg):
                 # add the new centroid --> (n_centroids, n_dimensions)
                 base_centroids = np.concatenate(
                     (base_centroids, [other_centroids[idx]]), axis=0)
+                basis_length = base_centroids.shape[0]
                 print(base_centroids.shape)
             # Save base_centroids
             print(f"Saving base centroids...")

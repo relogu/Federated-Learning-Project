@@ -141,6 +141,59 @@ def parse_args():
                         help="Flag for hardware acceleration using cuda (if available)")
     parser.add_argument("--binary", dest="binary", action='store_true',
                         help="Flag for using binary neurons in the network")
+    parser.add_argument('--tied',
+                        dest='tied',
+                        required=False,
+                        action='store_true',
+                        help='Flag for using tied layers in autoencoder')
+    parser.add_argument('--plotting',
+                        dest='plotting',
+                        required=False,
+                        action='store_true',
+                        help='Flag for plotting confusion matrix')
+    parser.add_argument('--dropout',
+                        dest='dropout',
+                        type=float,
+                        default=0.01,
+                        required=False,
+                        action='store',
+                        help='Flag for dropout layer in autoencoder')
+    parser.add_argument('--ran_flip',
+                        dest='ran_flip',
+                        type=float,
+                        default=0.05,
+                        required=False,
+                        action='store',
+                        help='Flag for RandomFlipping layer in autoencoder')
+    parser.add_argument('--ortho',
+                        dest='ortho',
+                        required=False,
+                        action='store_true',
+                        help='Flag for orthogonality regularizer in autoencoder (tied only)')
+    parser.add_argument('--u_norm',
+                        dest='u_norm',
+                        required=False,
+                        action='store_true',
+                        help='Flag for unit norm constraint in autoencoder (tied only)')
+    parser.add_argument('--cl_lr',
+                        dest='cl_lr',
+                        required=False,
+                        type=float,
+                        default=0.1,
+                        action='store',
+                        help='clustering model learning rate')
+    parser.add_argument('--update_interval',
+                        dest='update_interval',
+                        required=False,
+                        type=int,
+                        default=100,
+                        action='store',
+                        help='set the update interval for the clusters distribution')
+    parser.add_argument('-v', '--verbose',
+                        dest='verbose',
+                        required=False,
+                        action='store_true',
+                        help='Flag for verbosity')
     _args = parser.parse_args()
     return _args
 
@@ -175,17 +228,18 @@ if __name__ == "__main__":
         'kmeans_local_epochs': 300,
         'kmeans_n_init': 25,
         'ae_local_epochs': 100,
-        'ae_lr': 0.01,
+        'ae_lr': 0.1,
         'ae_momentum': 0.9,
-        'cl_lr': 0.01,
+        'cl_lr': args.cl_lr,
         'cl_momentum': 0.9,
         'cl_local_epochs': 5,
-        'update_interval': 55,
+        'update_interval': args.update_interval,
         'ae_loss': 'binary_crossentropy',#'mse',
         'cl_loss': 'kld',
         'seed': args.seed,
         'binary': args.binary,
-        'plotting': False}
+        'plotting': False,
+        'verbose': args.verbose}
 
     # preparing dataset
     for g in args.groups:
@@ -208,6 +262,7 @@ if __name__ == "__main__":
             y.append(row.argmax())
         else:
             y.append(-1)
+    del prob
     y = np.array(y)
     # getting the outcomes
     outcomes = data_util.get_outcome_euromds_dataset()
@@ -223,11 +278,11 @@ if __name__ == "__main__":
             n_components=n_features,
             random_state=42,
         ).fit_transform(x)
-    # inferring ground truth labels usign HDBSCAN alg
-    y_h = hdbscan.HDBSCAN(
-        min_samples=5,
-        min_cluster_size=25,
-    ).fit_predict(x)
+    # # inferring ground truth labels usign HDBSCAN alg
+    # y_h = hdbscan.HDBSCAN(
+    #     min_samples=5,
+    #     min_cluster_size=25,
+    # ).fit_predict(x)
     # getting the client's dataset (partition)
     interval = int(len(x)/N_CLIENTS)
     start = int(interval*CLIENT_ID)
@@ -238,18 +293,14 @@ if __name__ == "__main__":
     outcomes = np.array(outcomes[['outcome_3', 'outcome_2']])
     ids = np.array(ids[start:end])
     # setting the autoencoder layers
-    # dims = [x.shape[-1],
-    #         int((n_features+N_CLUSTERS)/2),
-    #         int((n_features+N_CLUSTERS)/2),
-    #         N_CLUSTERS]
-    
     dims = [x.shape[-1],
             int((2/3)*(n_features)),
             int((2/3)*(n_features)),
             int((2.5)*(n_features)),
             N_CLUSTERS]
-    init = VarianceScaling(scale=1. / 3., mode='fan_in',
-                            distribution='uniform')
+    init = VarianceScaling(scale=1. / 3.,
+                           mode='fan_in',
+                           distribution='uniform')
 
     '''
     TODO: compatibility with create_partitions methods
@@ -264,8 +315,13 @@ if __name__ == "__main__":
     del X, Y
     '''
 
+    config['ae_tied'] = args.tied
     config['ae_dims'] = dims
     config['ae_init'] = init
+    config['ae_dropout_rate'] = args.dropout
+    config['ae_flip_rate'] = args.ran_flip
+    config['ae_ortho'] = args.ortho
+    config['ae_u_norm'] = args.u_norm
 
     # algorithm choice
     if args.alg == 'k-means':
@@ -278,12 +334,7 @@ if __name__ == "__main__":
                                             seed=SEED,
                                             config=config,
                                             output_folder=args.out_fol)
-    elif args.alg == 'k_fed-ae_clust':
-        client = clients.KFEDClusteringClient(x=x,
-                                              y=y,
-                                              client_id=CLIENT_ID,
-                                              config=config)
-    elif args.alg == 'udec':
+    elif args.alg == 'udec' or args.alg == 'k_fed-ae_clust':
         client = clients.KMeansEmbedClusteringClient(x=x,
                                                      y=y,
                                                      outcomes=outcomes,

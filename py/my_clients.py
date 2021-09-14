@@ -35,7 +35,7 @@ from torchvision.utils import save_image
 import py.metrics as my_metrics
 from py.dataset_util import split_dataset, PrepareData, PrepareDataSimple
 from py.util import check_weights_dict
-from py.udec.util import create_denoising_autoencoder, create_prob_autoencoder, create_clustering_model, target_distribution
+from py.udec.util import create_denoising_autoencoder, create_tied_denoising_autoencoder, create_prob_autoencoder, create_tied_prob_autoencoder, create_clustering_model, target_distribution
 from py.dumping.output import dump_pred_dict, dump_result_dict
 from py.dumping.plots import print_confusion_matrix, plot_lifelines_pred
 
@@ -48,202 +48,6 @@ out_4 = 'Client %d, FedIter %d\n\tae_loss %.5f\n\taccuracy %.5f\n\tr_accuracy %.
 clustering_eval_string = 'Client %d, Acc = %.5f, nmi = %.5f, ari = %.5f ; loss = %.5f'
 
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
-
-
-class KFEDClusteringClient(NumPyClient):
-    """Client object, to set client performed operations."""
-    
-    def __init__(self,
-                 x,  # data
-                 y,  # labels
-                 client_id,  # id of the client
-                 config,  # configuration dict
-                 seed: int = 51550):  # see for random gen
-        # set
-        self.n_clusters = config['n_clusters']
-        self.ae_dims = config['ae_dims']
-        self.ae_local_epochs = config['ae_local_epochs']
-        self.ae_optimizer = SGD(
-            lr=config['ae_lr'], momentum=config['ae_momentum'])
-        self.ae_loss = config['ae_loss']
-        self.cl_local_epochs = config['cl_local_epochs']
-        self.cl_optimizer = SGD(
-            lr=config['cl_lr'], momentum=config['cl_momentum'])
-        self.cl_loss = config['cl_loss']
-        self.update_interval = config['update_interval']
-        self.kmeans_local_epochs = config['kmeans_local_epochs']
-        self.kmeans_n_init = config['kmeans_n_init']
-        if y is None:
-            self.x_train, self.x_test = split_dataset(x)
-            self.y_train = self.y_test = None
-        else:
-            self.x_train, self.y_train, self.x_test, self.y_test = split_dataset(
-                x, y)
-        self.batch_size = config['batch_size']
-        self.client_id = client_id
-        self.seed = seed
-        # default
-        self.autoencoder = None
-        self.encoder = None
-        self.clustering_model = None
-        self.f_round = 0
-        self.p = None
-        self.local_iter = 0
-        self.step = None
-        self.cluster_centers = None
-
-    def get_parameters(self):  # type: ignore
-        """Get the model weights by model object."""
-        if self.step is None:
-            return []
-        elif self.step == 'pretrain_ae':
-            return self.autoencoder.get_weights()
-        elif self.step == 'k-FED':
-            return self.kmeans.cluster_centers_
-        elif self.step == 'clustering':
-            return self.clustering_model.get_weights()
-
-    def _fit_clustering_model(self):
-        for _ in range(int(self.cl_local_epochs)):
-            if self.local_iter % self.update_interval == 0:
-                q = self.clustering_model.predict(self.x_train, verbose=0)
-                # update the auxiliary target distribution p
-                self.p = target_distribution(q)
-            self.clustering_model.fit(x=self.x_train, y=self.p, verbose=0)
-            self.local_iter += 1
-
-    def fit(self, parameters, config):  # type: ignore
-        """Perform the fit step after having assigned new weights."""
-        # increasing the number of epoch
-        self.f_round += 1
-        self.step = config['model']
-        print("Federated Round number %d, step: %s, rounds %d/%d" % (self.f_round,
-                                                                     self.step,
-                                                                     config['actual_round'],
-                                                                     config['total_rounds']))
-        if self.step == 'pretrain_ae':  # ae pretrain step
-            if config['first']:
-                # building and compiling autoencoder
-                self.autoencoder, self.encoder = create_autoencoder(
-                    self.ae_dims)
-                self.autoencoder.compile(
-                    optimizer=self.ae_optimizer,
-                    loss=self.ae_loss
-                )
-            else:  # getting new weights
-                self.autoencoder.set_weights(parameters)
-            # fitting the autoencoder
-            self.autoencoder.fit(x=self.x_train,
-                                 y=self.x_train,
-                                 batch_size=32,
-                                 epochs=self.ae_local_epochs,
-                                 verbose=0)
-            # returning the parameters necessary for FedAvg
-            return self.autoencoder.get_weights(), len(self.x_train), {}
-        elif self.step == 'k-FED':  # k-Means step
-            parameters = k_means_initializer  # k++ is used
-            # number of cluster following the definition of heterogeneity
-            n_cl = int(math.sqrt(self.n_clusters))
-            self.kmeans = KMeans(init=parameters,
-                                 n_clusters=n_cl,
-                                 max_iter=self.kmeans_local_epochs,
-                                 n_init=self.kmeans_n_init,  # number of different random initializations
-                                 random_state=self.seed)
-            # fitting clusters' centers using k-means
-            self.kmeans.fit(self.encoder.predict(self.x_train))
-            # returning the parameters necessary for k-FED
-            return self.kmeans.cluster_centers_, len(self.x_train), {}
-        elif self.step == 'clustering':
-            if config['first']:  # initialize clustering layer with final kmeans' cluster centers
-                # getting final clusters centers
-                self.cluster_centers = parameters
-                # initializing clustering model
-                self.clustering_model = create_clustering_model(
-                    self.n_clusters,
-                    self.encoder)
-                # compiling the clustering model
-                self.clustering_model.compile(
-                    optimizer=self.cl_optimizer,
-                    loss=self.cl_loss)
-                self.clustering_model.get_layer(
-                    name='clustering').set_weights(np.array([self.cluster_centers]))
-            else:  # getting new weights
-                self.clustering_model.set_weights(parameters)
-            # fitting clustering model
-            self._fit_clustering_model()
-            # returning the parameters necessary for FedAvg
-            return self.clustering_model.get_weights(), len(self.x_train), {}
-
-    def evaluate(self, parameters, config):
-        loss = 0.0
-        acc = 0.0
-        result = ()
-        metrics = {}
-        if self.step == 'pretrain_ae':
-            # evaluation
-            loss = self.autoencoder.evaluate(
-                self.x_test, self.x_test, verbose=0)
-            metrics = {"loss": loss}
-            result = metrics.copy()
-            result['client'] = self.client_id
-            result['round'] = self.f_round
-            dump_result_dict('client_'+str(self.client_id)+'_ae', result)
-            print(out_2 % (self.client_id, self.f_round, loss))
-            result = (loss, len(self.x_test), {})
-        elif self.step == 'k-FED':
-            # predicting labels
-            y_pred_kmeans = self.kmeans.predict(
-                self.encoder.predict(self.x_test))
-            # computing metrics
-            acc = my_metrics.acc(self.y_test, y_pred_kmeans)
-            nmi = my_metrics.nmi(self.y_test, y_pred_kmeans)
-            ami = my_metrics.ami(self.y_test, y_pred_kmeans)
-            ari = my_metrics.ari(self.y_test, y_pred_kmeans)
-            ran = my_metrics.ran(self.y_test, y_pred_kmeans)
-            homo = my_metrics.homo(self.y_test, y_pred_kmeans)
-            print(out_1 % (self.client_id, self.f_round,
-                  acc, nmi, ami, ari, ran, homo))
-            if self.f_round % 10 == 0:  # print confusion matrix
-                print_confusion_matrix(
-                    self.y_test, y_pred_kmeans, client_id=self.client_id)
-            # retrieving the results
-            result = (loss, len(self.x_test), metrics)
-        elif self.step == 'clustering':
-            # evaluation
-            q = self.clustering_model.predict(self.x_test, verbose=0)
-            # update the auxiliary target distribution p
-            p = target_distribution(q)
-            # retrieving loss
-            loss = self.clustering_model.evaluate(self.x_test, p, verbose=0)
-            # evaluate the clustering performance using some metrics
-            y_pred = q.argmax(1)
-            if self.y_test is not None:
-                acc = my_metrics.acc(self.y_test, y_pred)
-                nmi = my_metrics.nmi(self.y_test, y_pred)
-                ami = my_metrics.ami(self.y_test, y_pred)
-                ari = my_metrics.ari(self.y_test, y_pred)
-                ran = my_metrics.ran(self.y_test, y_pred)
-                homo = my_metrics.homo(self.y_test, y_pred)
-                if self.f_round % 10 == 0:  # print confusion matrix
-                    print_confusion_matrix(
-                        self.y_test, y_pred, client_id=self.client_id)
-                print(out_1 % (self.client_id, self.f_round,
-                               acc, nmi, ami, ari, ran, homo))
-                # dumping and retrieving the results
-                metrics = {"accuracy": acc,
-                           "normalized_mutual_info_score": nmi,
-                           "adjusted_mutual_info_score": ami,
-                           "adjusted_rand_score": ari,
-                           "rand_score": ran,
-                           "homogeneity_score": homo}
-                result = metrics.copy()
-                result['loss'] = loss
-                result['client'] = self.client_id
-                result['round'] = self.local_iter
-                dump_result_dict('client_'+str(self.client_id), result)
-            result = (loss, len(self.x_test), metrics)
-        return result
-
 
 class SimpleKMeansClient(NumPyClient):
     """Client object, to set client performed operations."""
@@ -841,22 +645,32 @@ class KMeansEmbedClusteringClient(NumPyClient):
                  seed: int = 51550):  # see for random gen
         # set
         self.n_clusters = config['n_clusters']
+        # AE
         self.ae_dims = config['ae_dims']
         self.ae_init = config['ae_init']
+        self.binary = config['binary']
+        self.tied = config['ae_tied']
+        self.dropout = config['ae_dropout_rate']
+        self.ran_flip = config['ae_flip_rate']
+        self.ortho = config['ae_ortho']
+        self.u_norm = config['ae_u_norm']
         self.ae_local_epochs = config['ae_local_epochs']
         self.ae_optimizer = SGD(
-            lr=config['ae_lr'], momentum=config['ae_momentum'])
+            learning_rate=config['ae_lr'],
+            momentum=config['ae_momentum'],
+            decay=1/100000)
         self.ae_loss = config['ae_loss']
+        # clustering model
         self.cl_optimizer = SGD(
-            learning_rate=config['cl_lr'], momentum=config['cl_momentum'])
+            learning_rate=config['cl_lr'],
+            momentum=config['cl_momentum'])
         self.cl_local_epochs = config['cl_local_epochs']
-        self.cl_optimizer = SGD(
-            lr=config['cl_lr'], momentum=config['cl_momentum'])
         self.cl_loss = config['cl_loss']
         self.update_interval = config['update_interval']
+        # k-means
         self.kmeans_n_init = config['kmeans_n_init']
         self.kmeans_local_epochs = config['kmeans_local_epochs']
-
+        # dataset
         train_idx, test_idx = split_dataset(
             x=x,
             splits=config['splits'],
@@ -892,7 +706,6 @@ class KMeansEmbedClusteringClient(NumPyClient):
         self.autoencoder = None
         self.encoder = None
         self.clustering_model = None
-        self.binary = config['binary']
         self.f_round = 0
         self.p = None
         self.local_iter = 0
@@ -900,6 +713,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         self.cluster_centers = None
         self.plotting = config['plotting']
         self.last_histo = None
+        self.verbose = config['verbose']
 
     def get_parameters(self):  # type: ignore
         """Get the model weights by model object."""
@@ -913,13 +727,33 @@ class KMeansEmbedClusteringClient(NumPyClient):
             return self.clustering_model.get_weights()
 
     def _fit_clustering_model(self):
+        if self.local_iter % self.update_interval == 0:
+            print('Updating auxiliary distribution')
+            q = self.clustering_model.predict(self.x_train, verbose=0)
+            # update the auxiliary target distribution p
+            self.p = target_distribution(q)
         for _ in range(int(self.cl_local_epochs)):
-            if self.local_iter % self.update_interval == 0:
-                q = self.clustering_model.predict(self.x_train, verbose=0)
-                # update the auxiliary target distribution p
-                self.p = target_distribution(q)
             self.last_histo = self.clustering_model.fit(x=self.x_train, y=self.p, verbose=0)
         self.local_iter += 1
+        
+    def _build_ae(self):
+        if self.binary:
+            if self.tied:
+                self.autoencoder, self.encoder, self.decoder = create_tied_prob_autoencoder(
+                    self.ae_dims, init=self.ae_init, dropout=self.dropout, act='selu')
+            else:
+                self.autoencoder, self.encoder, self.decoder = create_prob_autoencoder(
+                    self.ae_dims, init=self.ae_init, dropout=self.dropout, act='selu')
+        else:
+            up_frequencies = np.array([np.array(np.count_nonzero(
+                self.x_train[:, i])/self.x_train.shape[0]) for i in range(self.x_train.shape[1])])
+            if self.tied:
+                self.autoencoder, self.encoder, self.decoder = create_tied_denoising_autoencoder(
+                    self.ae_dims, up_freq=up_frequencies, init=self.ae_init, dropout_rate=self.dropout, act='selu',
+                    ortho=self.ortho, u_norm=self.u_norm, noise_rate=self.ran_flip)
+            else:
+                self.autoencoder, self.encoder, self.decoder = create_denoising_autoencoder(
+                    self.ae_dims, up_freq=up_frequencies, init=self.ae_init, dropout_rate=self.dropout, act='selu', noise_rate=self.ran_flip)
 
     def fit(self, parameters, config):  # type: ignore
         """Perform the fit step after having assigned new weights."""
@@ -933,13 +767,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         if self.step == 'pretrain_ae':  # ae pretrain step
             if config['first']:
                 # building and compiling autoencoder
-                if self.binary:
-                    self.autoencoder, self.encoder, self.decoder = create_prob_autoencoder(
-                        dims=self.ae_dims, init=self.ae_init)
-                else:
-                    up_frequencies = np.array([np.array(np.count_nonzero(self.x_train[:,i])/self.x_train.shape[0]) for i in range(self.x_train.shape[1])])
-                    self.autoencoder, self.encoder, self.decoder = create_denoising_autoencoder(
-                        dims=self.ae_dims, up_freq=up_frequencies, init=self.ae_init, act='selu')
+                self._build_ae()
                 self.autoencoder.compile(
                     metrics=[my_metrics.rounded_accuracy, "accuracy"],
                     optimizer=self.ae_optimizer,
@@ -987,45 +815,68 @@ class KMeansEmbedClusteringClient(NumPyClient):
             # returning the parameters necessary for FedAvg
             return self.clustering_model.get_weights(), len(self.x_train), {}
 
+    def _clustering_eval(self, y_pred):
+        metrics = {}
+        # plotting outcomes on the labels
+        if self.step == 'clustering' and self.plotting and self.outcomes_test is not None:
+            times = self.outcomes_test[:, 0]
+            events = self.outcomes_test[:, 1]
+            plot_lifelines_pred(
+                times, events, y_pred, client_id=self.client_id,
+                path_to_out=self.out_dir)
+        # evaluating metrics
+        if self.y_test is not None:
+            acc = my_metrics.acc(self.y_test, y_pred)
+            nmi = my_metrics.nmi(self.y_test, y_pred)
+            ami = my_metrics.ami(self.y_test, y_pred)
+            ari = my_metrics.ari(self.y_test, y_pred)
+            ran = my_metrics.ran(self.y_test, y_pred)
+            homo = my_metrics.homo(self.y_test, y_pred)
+            if self.plotting and self.f_round % 10 == 0:
+                print_confusion_matrix(
+                    self.y_test, y_pred, client_id=self.client_id,
+                    path_to_out=self.out_dir)
+            if self.verbose:
+                print(out_1 % (self.client_id, self.f_round,
+                               acc, nmi, ami, ari, ran, homo))
+            # dumping and retrieving the results
+            metrics = {"accuracy": acc,
+                       "normalized_mutual_info_score": nmi,
+                       "adjusted_mutual_info_score": ami,
+                       "adjusted_rand_score": ari,
+                       "rand_score": ran,
+                       "homogeneity_score": homo}
+        return metrics
+
     def evaluate(self, parameters, config):
         loss = 0.0
-        acc = 0.0
         result = ()
         metrics = {}
         if self.step == 'pretrain_ae':
             # evaluation
             loss, r_accuracy, accuracy = self.autoencoder.evaluate(
                 self.x_test, self.x_test, verbose=0)
-            metrics = {"eval_loss": loss,
-                       "eval_accuracy": accuracy,
-                       "eval_r_accuracy": r_accuracy,
-                       "train_loss": self.last_histo.history['loss'][-1],
-                       "train_accuracy": self.last_histo.history['accuracy'][-1],
-                       "train_r_accuracy": self.last_histo.history['rounded_accuracy'][-1]}
-            result = metrics.copy()
-            result['client'] = self.client_id
-            result['round'] = self.f_round
-            dump_result_dict('client_'+str(self.client_id)+'_ae', result,
+            metrics['client'] = self.client_id
+            metrics['round'] = self.f_round
+            metrics["eval_loss"] = loss
+            metrics["eval_accuracy"] = accuracy
+            metrics["eval_r_accuracy"] = r_accuracy
+            metrics["train_loss"] = self.last_histo.history['loss'][-1]
+            metrics["train_accuracy"] = self.last_histo.history['accuracy'][-1]
+            metrics["train_r_accuracy"] = self.last_histo.history['rounded_accuracy'][-1]
+            dump_result_dict('client_'+str(self.client_id)+'_ae', metrics,
                              path_to_out=self.out_dir)
-            print(out_4 % (self.client_id, self.f_round, loss, accuracy, r_accuracy))
+            if self.verbose: print(out_4 % (self.client_id, self.f_round, loss, accuracy, r_accuracy))
             result = (loss, len(self.x_test), {"r_accuracy": r_accuracy,"accuracy": accuracy})
         elif self.step == 'k-means':
             # predicting labels
             y_pred_kmeans = self.kmeans.predict(
                 self.encoder.predict(self.x_test))
-            # computing metrics
-            acc = my_metrics.acc(self.y_test, y_pred_kmeans)
-            nmi = my_metrics.nmi(self.y_test, y_pred_kmeans)
-            ami = my_metrics.ami(self.y_test, y_pred_kmeans)
-            ari = my_metrics.ari(self.y_test, y_pred_kmeans)
-            ran = my_metrics.ran(self.y_test, y_pred_kmeans)
-            homo = my_metrics.homo(self.y_test, y_pred_kmeans)
-            print(out_1 % (self.client_id, self.f_round,
-                  acc, nmi, ami, ari, ran, homo))
-            if self.plotting and self.f_round % 10 == 0:
-                print_confusion_matrix(
-                    self.y_test, y_pred_kmeans, client_id=self.client_id,
-                    path_to_out=self.out_dir)
+            metrics = self._clustering_eval(y_pred_kmeans)
+            metrics['client'] = self.client_id
+            metrics['round'] = self.f_round
+            dump_result_dict('client_'+str(self.client_id)+'_k', metrics,
+                                path_to_out=self.out_dir)
             # retrieving the results
             result = (loss, len(self.x_test), metrics)
         elif self.step == 'clustering':
@@ -1037,41 +888,13 @@ class KMeansEmbedClusteringClient(NumPyClient):
             loss = self.clustering_model.evaluate(self.x_test, p, verbose=0)
             # evaluate the clustering performance using some metrics
             y_pred = q.argmax(1)
-            # plotting outcomes on the labels
-            if self.plotting and self.outcomes_test is not None:
-                times = self.outcomes_test[:, 0]
-                events = self.outcomes_test[:, 1]
-                plot_lifelines_pred(
-                    times, events, y_pred, client_id=self.client_id,
-                    path_to_out=self.out_dir)
-            # evaluating metrics
-            if self.y_test is not None:
-                acc = my_metrics.acc(self.y_test, y_pred)
-                nmi = my_metrics.nmi(self.y_test, y_pred)
-                ami = my_metrics.ami(self.y_test, y_pred)
-                ari = my_metrics.ari(self.y_test, y_pred)
-                ran = my_metrics.ran(self.y_test, y_pred)
-                homo = my_metrics.homo(self.y_test, y_pred)
-                if self.plotting and self.f_round % 10 == 0:
-                    print_confusion_matrix(
-                        self.y_test, y_pred, client_id=self.client_id,
-                        path_to_out=self.out_dir)
-                print(out_1 % (self.client_id, self.f_round,
-                               acc, nmi, ami, ari, ran, homo))
-                # dumping and retrieving the results
-                metrics = {"accuracy": acc,
-                           "normalized_mutual_info_score": nmi,
-                           "adjusted_mutual_info_score": ami,
-                           "adjusted_rand_score": ari,
-                           "rand_score": ran,
-                           "homogeneity_score": homo}
-                result = metrics.copy()
-                result['eval_loss'] = loss
-                result['train_loss'] = self.last_histo
-                result['client'] = self.client_id
-                result['round'] = self.local_iter
-                dump_result_dict('client_'+str(self.client_id), result,
-                                 path_to_out=self.out_dir)
+            metrics = self._clustering_eval(y_pred)
+            metrics['eval_loss'] = loss
+            metrics['train_loss'] = self.last_histo.history['loss'][0]
+            metrics['client'] = self.client_id
+            metrics['round'] = self.local_iter
+            dump_result_dict('client_'+str(self.client_id), metrics,
+                                path_to_out=self.out_dir)
             if self.id_test is not None:
                 pred = {'ID': self.id_test,
                         'label': y_pred}
