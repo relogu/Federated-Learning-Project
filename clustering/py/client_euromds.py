@@ -38,8 +38,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["GRPC_VERBOSITY"] = "none"
 # for limiting the cpu cores to use
 torch.set_num_threads(1)
-# tf.config.threading.set_inter_op_parallelism_threads(1)
-# tf.config.threading.set_intra_op_parallelism_threads(1)
+tf.config.threading.set_inter_op_parallelism_threads(0)
+tf.config.threading.set_intra_op_parallelism_threads(0)
 
 
 def parse_args():
