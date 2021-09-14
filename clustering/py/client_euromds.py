@@ -13,6 +13,9 @@ import random
 import sys
 from argparse import RawTextHelpFormatter
 
+# Make TensorFlow log less verbose
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
 import flwr as fl
 import matplotlib
 import matplotlib.pyplot as plt
@@ -31,9 +34,6 @@ from tensorflow.keras.optimizers import SGD
 import py.my_clients as clients
 import py.metrics as my_metrics
 import py.dataset_util as data_util
-
-# Make TensorFlow log less verbose
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 # for debug connection
 os.environ["GRPC_VERBOSITY"] = "none"
 # for limiting the cpu cores to use
