@@ -179,14 +179,14 @@ def parse_args():
                         dest='cl_lr',
                         required=False,
                         type=float,
-                        default=0.1,
+                        default=0.01,
                         action='store',
                         help='clustering model learning rate')
     parser.add_argument('--update_interval',
                         dest='update_interval',
                         required=False,
                         type=int,
-                        default=100,
+                        default=500,
                         action='store',
                         help='set the update interval for the clusters distribution')
     parser.add_argument('-v', '--verbose',

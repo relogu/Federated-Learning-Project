@@ -775,12 +775,19 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 )
             else:  # getting new weights
                 self.encoder.set_weights(parameters)
-            # fitting the autoencoder
-            self.last_histo = self.autoencoder.fit(x=self.x_train,
-                                                   y=self.x_train,
-                                                   batch_size=self.batch_size,
-                                                   epochs=self.ae_local_epochs,
-                                                   verbose=0)
+            pretrained_weights = self.out_dir/'encoder.npz'
+            if pretrained_weights.exists():
+                print('Using existing weights in the output folder for the autoencoder')
+                param: Parameters = np.load(pretrained_weights, allow_pickle=True)
+                weights = param['arr_0']
+                self.encoder.set_weights(weights)
+            else:
+                # fitting the autoencoder
+                self.last_histo = self.autoencoder.fit(x=self.x_train,
+                                                    y=self.x_train,
+                                                    batch_size=self.batch_size,
+                                                    epochs=self.ae_local_epochs,
+                                                    verbose=0)
             # returning the parameters necessary for FedAvg
             return self.encoder.get_weights(), len(self.x_train), {}
         elif self.step == 'k-means':  # k-Means step
@@ -798,6 +805,10 @@ class KMeansEmbedClusteringClient(NumPyClient):
             if config['first']:  # initialize clustering layer with final kmeans' cluster centers
                 # getting final clusters centers
                 self.cluster_centers = parameters
+                enc_final_weights = self.encoder.get_weights()
+                self.dropout, self.ran_flip = 0.0, 0.0
+                self._build_ae()
+                self.encoder.set_weights(enc_final_weights)
                 # initializing clustering model
                 self.clustering_model = create_clustering_model(
                     self.n_clusters,

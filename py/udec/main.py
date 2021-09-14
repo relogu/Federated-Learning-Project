@@ -252,39 +252,53 @@ if __name__ == "__main__":
         id_test = ids[test_idx]
 
     # pre-train the autoencoder
-    if args.binary:
-        if args.tied:
-            autoencoder, encoder, decoder = create_tied_prob_autoencoder(
-                config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act='selu')
-        else:
-            autoencoder, encoder, decoder = create_prob_autoencoder(
-                config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act='selu')
-    else:
-        up_frequencies = np.array([np.array(np.count_nonzero(
-            x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
-        if args.tied:
-            autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu',
-                ortho=args.ortho, u_norm=args.u_norm, noise_rate=args.ran_flip)
-        else:
-            autoencoder, encoder, decoder = create_denoising_autoencoder(
-                config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu')
-    ae_optimizer = SGD(learning_rate=config['ae_lr'],
-                       decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
-                       momentum=config['ae_momentum'])
-    autoencoder.compile(
-        metrics=[my_metrics.rounded_accuracy, 'accuracy'],
-        optimizer=ae_optimizer,
-        loss=config['ae_loss']
-    )
     pretrained_weights = path_to_out/'encoder.npz'
-    if pretrained_weights.exists():
+    if not pretrained_weights.exists():
         print('Using existing weights in the output folder for the autoencoder')
         param: Parameters = np.load(pretrained_weights, allow_pickle=True)
         weights = param['arr_0']
+        if args.binary:
+            if args.tied:
+                autoencoder, encoder, decoder = create_tied_prob_autoencoder(
+                    config['ae_dims'], act='selu')
+            else:
+                autoencoder, encoder, decoder = create_prob_autoencoder(
+                    config['ae_dims'], act='selu')
+        else:
+            if args.tied:
+                autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
+                    config['ae_dims'], act='selu', ortho=args.ortho, u_norm=args.u_norm)
+            else:
+                autoencoder, encoder, decoder = create_denoising_autoencoder(
+                    config['ae_dims'], act='selu')
         encoder.set_weights(weights)
     else:
         print('There are no existing weights in the output folder for the autoencoder')
+        if args.binary:
+            if args.tied:
+                autoencoder, encoder, decoder = create_tied_prob_autoencoder(
+                    config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act='selu')
+            else:
+                autoencoder, encoder, decoder = create_prob_autoencoder(
+                    config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act='selu')
+        else:
+            up_frequencies = np.array([np.array(np.count_nonzero(
+                x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
+            if args.tied:
+                autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
+                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu',
+                    ortho=args.ortho, u_norm=args.u_norm, noise_rate=args.ran_flip)
+            else:
+                autoencoder, encoder, decoder = create_denoising_autoencoder(
+                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu')
+        ae_optimizer = SGD(learning_rate=config['ae_lr'],
+                        decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
+                        momentum=config['ae_momentum'])
+        autoencoder.compile(
+            metrics=[my_metrics.rounded_accuracy, 'accuracy'],
+            optimizer=ae_optimizer,
+            loss=config['ae_loss']
+        )
         # fitting the autoencoder
         history = autoencoder.fit(x=x_train,
                                   y=x_train,
@@ -294,6 +308,28 @@ if __name__ == "__main__":
                                   verbose=1)
         with open(path_to_out/'ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
+        parameters = np.array(encoder.get_weights(), dtype=object)
+        np.savez(path_to_out/'encoder', parameters)
+    
+    param: Parameters = np.load(pretrained_weights, allow_pickle=True)
+    weights = param['arr_0']
+    
+    if args.binary:
+        if args.tied:
+            autoencoder, encoder, decoder = create_tied_prob_autoencoder(
+                config['ae_dims'], act='selu')
+        else:
+            autoencoder, encoder, decoder = create_prob_autoencoder(
+                config['ae_dims'], act='selu')
+    else:
+        if args.tied:
+            autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
+                config['ae_dims'], act='selu', ortho=args.ortho, u_norm=args.u_norm)
+        else:
+            autoencoder, encoder, decoder = create_denoising_autoencoder(
+                config['ae_dims'], act='selu')
+    encoder.set_weights(weights)
+
 
     # get an estimate for clusters centers using k-means
     kmeans = KMeans(init='k-means++',
