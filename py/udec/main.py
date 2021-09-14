@@ -254,25 +254,6 @@ if __name__ == "__main__":
     # pre-train the autoencoder
     pretrained_weights = path_to_out/'encoder.npz'
     if not pretrained_weights.exists():
-        print('Using existing weights in the output folder for the autoencoder')
-        param: Parameters = np.load(pretrained_weights, allow_pickle=True)
-        weights = param['arr_0']
-        if args.binary:
-            if args.tied:
-                autoencoder, encoder, decoder = create_tied_prob_autoencoder(
-                    config['ae_dims'], act='selu')
-            else:
-                autoencoder, encoder, decoder = create_prob_autoencoder(
-                    config['ae_dims'], act='selu')
-        else:
-            if args.tied:
-                autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                    config['ae_dims'], act='selu', ortho=args.ortho, u_norm=args.u_norm)
-            else:
-                autoencoder, encoder, decoder = create_denoising_autoencoder(
-                    config['ae_dims'], act='selu')
-        encoder.set_weights(weights)
-    else:
         print('There are no existing weights in the output folder for the autoencoder')
         if args.binary:
             if args.tied:
