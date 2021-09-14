@@ -5,7 +5,7 @@ export PYTHONPATH="$PWD:$PYTHONPATH"
 
 mkdir "$PWD/output_fed_udec1"
 # UDEC using EUROMDS
-python3 clustering/py/server.py --address=[::]:51554 --strategy=fedavg --kmeans_epochs=1 --ae_epochs=10000 --cluster_epochs=10000 --n_clients=2 --out_fol="$PWD/output_fed_udec1" & 
+python3 clustering/py/server.py --address=[::]:51554 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=10000 --cluster_epochs=10000 --n_clients=2 --out_fol="$PWD/output_fed_udec1" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
 python3 clustering/py/client_euromds.py --server=[::]:51554 --update_interval 200000 --tied --client_id=0 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec1" &
 python3 clustering/py/client_euromds.py --server=[::]:51554 --update_interval 200000 --tied --client_id=1 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec1" &
@@ -23,7 +23,7 @@ rmdir "$PWD/output_fed_udec1"
 
 mkdir "$PWD/output_fed_udec1"
 # UDEC using EUROMDS
-python3 clustering/py/server.py --address=[::]:51554 --strategy=fedavg --kmeans_epochs=1 --ae_epochs=10000 --cluster_epochs=10000 --n_clients=2 --out_fol="$PWD/output_fed_udec1" & 
+python3 clustering/py/server.py --address=[::]:51554 --strategy=fed_avg --kmeans_epochs=1 --ae_epochs=10000 --cluster_epochs=10000 --n_clients=2 --out_fol="$PWD/output_fed_udec1" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
 python3 clustering/py/client_euromds.py --server=[::]:51554 --update_interval 200000 --tied --client_id=0 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec1" &
 python3 clustering/py/client_euromds.py --server=[::]:51554 --update_interval 200000 --tied --client_id=1 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec1" &
