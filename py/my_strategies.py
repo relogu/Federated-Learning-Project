@@ -52,9 +52,9 @@ class SaveModelStrategy(FedAvg):
             accept_failures,
             initial_parameters)
         if out_dir is None:
-            self.out_dir = agg_weights_filename
+            self.out_dir = Path('')
         else:
-            self.out_dir = Path(out_dir)/agg_weights_filename
+            self.out_dir = Path(out_dir)
         print("Strategy output filename: {}".format(self.out_dir))
 
     def aggregate_fit(
@@ -63,13 +63,16 @@ class SaveModelStrategy(FedAvg):
         results: List[Tuple[ClientProxy, FitRes]],
         failures: List[BaseException],
     ):  # -> Optional[Weights]:
+        # get step
+        config = self.on_fit_config_fn(rnd)
         aggregated_weights = super().aggregate_fit(rnd, results, failures)
-        if aggregated_weights is not None:
+        if aggregated_weights is not None and config['last']:
             # Save aggregated_weights
             print("Saving aggregated_weights...")
+            filename = agg_weights_filename.format(config['model'])
             parameters = np.array(parameters_to_weights(
                 aggregated_weights[0]), dtype=object)
-            np.savez(self.out_dir, parameters)
+            np.savez(self.out_dir/filename, parameters)
         return aggregated_weights
 
 
