@@ -714,6 +714,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         self.plotting = config['plotting']
         self.last_histo = None
         self.verbose = config['verbose']
+        self.dump_metrics = config['dump_metrics']
 
     def get_parameters(self):  # type: ignore
         """Get the model weights by model object."""
@@ -867,16 +868,17 @@ class KMeansEmbedClusteringClient(NumPyClient):
             # evaluation
             loss, r_accuracy, accuracy = self.autoencoder.evaluate(
                 self.x_test, self.x_test, verbose=0)
-            metrics['client'] = self.client_id
-            metrics['round'] = self.f_round
-            metrics["eval_loss"] = loss
-            metrics["eval_accuracy"] = accuracy
-            metrics["eval_r_accuracy"] = r_accuracy
-            metrics["train_loss"] = self.last_histo.history['loss'][-1]
-            metrics["train_accuracy"] = self.last_histo.history['accuracy'][-1]
-            metrics["train_r_accuracy"] = self.last_histo.history['rounded_accuracy'][-1]
-            dump_result_dict('client_'+str(self.client_id)+'_ae', metrics,
-                             path_to_out=self.out_dir)
+            if self.dump_metrics :
+                metrics['client'] = self.client_id
+                metrics['round'] = self.f_round
+                metrics["eval_loss"] = loss
+                metrics["eval_accuracy"] = accuracy
+                metrics["eval_r_accuracy"] = r_accuracy
+                metrics["train_loss"] = self.last_histo.history['loss'][-1]
+                metrics["train_accuracy"] = self.last_histo.history['accuracy'][-1]
+                metrics["train_r_accuracy"] = self.last_histo.history['rounded_accuracy'][-1]
+                dump_result_dict('client_'+str(self.client_id)+'_ae', metrics,
+                                path_to_out=self.out_dir)
             if self.verbose: print(out_4 % (self.client_id, self.f_round, loss, accuracy, r_accuracy))
             result = (loss, len(self.x_test), {"r_accuracy": r_accuracy,"accuracy": accuracy})
         elif self.step == 'k-means':
@@ -884,10 +886,11 @@ class KMeansEmbedClusteringClient(NumPyClient):
             y_pred_kmeans = self.kmeans.predict(
                 self.encoder.predict(self.x_test))
             metrics = self._clustering_eval(y_pred_kmeans)
-            metrics['client'] = self.client_id
-            metrics['round'] = self.f_round
-            dump_result_dict('client_'+str(self.client_id)+'_k', metrics,
-                                path_to_out=self.out_dir)
+            if self.dump_metrics :
+                metrics['client'] = self.client_id
+                metrics['round'] = self.f_round
+                dump_result_dict('client_'+str(self.client_id)+'_k', metrics,
+                                    path_to_out=self.out_dir)
             # retrieving the results
             result = (loss, len(self.x_test), metrics)
         elif self.step == 'clustering':
@@ -897,19 +900,20 @@ class KMeansEmbedClusteringClient(NumPyClient):
             p = target_distribution(q)
             # retrieving loss
             loss = self.clustering_model.evaluate(self.x_test, p, verbose=0)
-            # evaluate the clustering performance using some metrics
-            y_pred = q.argmax(1)
-            metrics = self._clustering_eval(y_pred)
-            metrics['eval_loss'] = loss
-            metrics['train_loss'] = self.last_histo.history['loss'][0]
-            metrics['client'] = self.client_id
-            metrics['round'] = self.local_iter
-            dump_result_dict('client_'+str(self.client_id), metrics,
+            if self.dump_metrics :
+                # evaluate the clustering performance using some metrics
+                y_pred = q.argmax(1)
+                metrics = self._clustering_eval(y_pred)
+                metrics['eval_loss'] = loss
+                metrics['train_loss'] = self.last_histo.history['loss'][0]
+                metrics['client'] = self.client_id
+                metrics['round'] = self.local_iter
+                dump_result_dict('client_'+str(self.client_id), metrics,
+                                    path_to_out=self.out_dir)
+                if self.id_test is not None:
+                    pred = {'ID': self.id_test,
+                            'label': y_pred}
+                    dump_pred_dict('pred_client_'+str(self.client_id), pred,
                                 path_to_out=self.out_dir)
-            if self.id_test is not None:
-                pred = {'ID': self.id_test,
-                        'label': y_pred}
-                dump_pred_dict('pred_client_'+str(self.client_id), pred,
-                               path_to_out=self.out_dir)
             result = (loss, len(self.x_test), metrics)
         return result
