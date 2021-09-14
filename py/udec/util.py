@@ -93,7 +93,8 @@ def create_denoising_autoencoder(dims,
         decoder_layers.append(x)
 
     # adding flipping noise
-    encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=noise_rate))
+    if noise_rate > 0.0:
+        encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=noise_rate))
     
     # adding dropout
     if dropout_rate > 0.0:
@@ -191,7 +192,8 @@ def create_tied_denoising_autoencoder(dims,
         decoder_layers.append(x)
 
     # adding flipping noise
-    encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=noise_rate))
+    if noise_rate > 0.0:
+        encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=noise_rate))
     
     # adding dropout
     if dropout_rate > 0.0:
