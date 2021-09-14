@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo $PWD
-# export PYTHONPATH="$PWD:$PYTHONPATH"
+export PYTHONPATH="$PWD:$PYTHONPATH"
 
 # mkdir "$PWD/output_fed_udec"
 # # UDEC using EUROMDS
