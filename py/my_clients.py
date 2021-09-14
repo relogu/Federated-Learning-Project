@@ -721,8 +721,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
         if self.step is None:
             return []
         elif self.step == 'pretrain_ae':
-            return self.autoencoder.get_weights()
-        elif self.step == 'k-FED':
+            return self.encoder.get_weights()
+        elif self.step == 'k-means':
             return self.kmeans.cluster_centers_
         elif self.step == 'clustering':
             return self.clustering_model.get_weights()
