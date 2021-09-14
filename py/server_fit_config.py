@@ -14,16 +14,19 @@ def simple_clustering_on_fit_config(rnd: int,
     if rnd < ae_epochs+1:
         return {'model': 'pretrain_ae',
                 'first': (rnd == 1),
+                'last': (rnd == ae_epochs),
                 'actual_round': rnd,
                 'total_rounds': ae_epochs}
     elif rnd < ae_epochs+kmeans_epochs+1:
         return {'model': 'k-means',
                 'first': (rnd == ae_epochs+1),
+                'last': (rnd == ae_epochs+1),
                 'actual_round': rnd-ae_epochs,
                 'total_rounds': kmeans_epochs}
     else:
         return {'model': 'clustering',
                 'first': (rnd == ae_epochs+kmeans_epochs+1),
+                'last': (rnd == cl_epochs+ae_epochs+1),
                 'actual_round': rnd-ae_epochs-kmeans_epochs,
                 'total_rounds': cl_epochs}
 
@@ -36,18 +39,21 @@ def kfed_clustering_on_fit_config(rnd: int,
         config = {'model': 'pretrain_ae',
                   'n_clusters': n_clusters,
                   'first': (rnd == 1),
+                  'last': (rnd == ae_epochs),
                   'actual_round': rnd-1,
                   'total_rounds': ae_epochs}
     elif rnd < ae_epochs+2:
         config = {'model': 'k-means',
                   'n_clusters': n_clusters,
                   'first': (rnd == ae_epochs+1),
+                  'last': (rnd == ae_epochs+1),
                   'actual_round': rnd,
                   'total_rounds': 1}
     else:
         config = {'model': 'clustering',
                   'n_clusters': n_clusters,
                   'first': (rnd == ae_epochs+2),
+                  'last': (rnd == cl_epochs+ae_epochs+1),
                   'actual_round': rnd-ae_epochs-1,
                   'total_rounds': cl_epochs}
     return config

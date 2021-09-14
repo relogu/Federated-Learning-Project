@@ -17,7 +17,7 @@ from flwr.server.client_proxy import ClientProxy, EvaluateRes
 from flwr.server.strategy import FedAvg
 from py.util import distance_from_centroids
 
-agg_weights_filename = "aggregated_weights.npz"
+agg_weights_filename = "aggregated_weights_{}.npz"
 
 
 class SaveModelStrategy(FedAvg):
@@ -170,9 +170,9 @@ class KFEDStrategy(FedAvg):
             initial_parameters)
         self.rng = np.random.default_rng(seed)
         if out_dir is None:
-            self.out_dir = agg_weights_filename
+            self.out_dir = Path('')
         else:
-            self.out_dir = Path(out_dir)/agg_weights_filename
+            self.out_dir = Path(out_dir)
         print("Strategy output filename: {}".format(self.out_dir))
 
     # ->Optional[Weights]:
@@ -218,10 +218,11 @@ class KFEDStrategy(FedAvg):
             return weights_to_parameters(base_centroids), {}
         else:
             aggregated_weights = super().aggregate_fit(rnd, results, failures)
-            if aggregated_weights is not None:
+            if aggregated_weights is not None and config['last']:
                 # Save aggregated_weights
                 print("Saving aggregated_weights...")
+                filename = agg_weights_filename.format(config['model'])
                 parameters = np.array(parameters_to_weights(
                     aggregated_weights[0]), dtype=object)
-                np.savez(self.out_dir, parameters)
+                np.savez(self.out_dir/filename, parameters)
             return aggregated_weights
