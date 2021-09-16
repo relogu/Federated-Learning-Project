@@ -240,7 +240,7 @@ if __name__ == "__main__":
         'binary': args.binary,
         'plotting': False,
         'verbose': args.verbose,
-        'dump_metrics': False}
+        'dump_metrics': True}
 
     # preparing dataset
     for g in args.groups:
