@@ -35,7 +35,7 @@ mkdir "$PWD/results/kFED_ui4CEUROMDSfinal_deno_ude10k1u10k"
 mv "$PWD/output_fed_udec1/"/* "$PWD/results/kFED_ui4CEUROMDSfinal_deno_ude10k1u10k"/
 #python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSfinal_deno_ude20k1u40k --in_folder="$PWD/results/EUROMDSfinal_deno_ude20k1u40k"
 sleep 10
-# rmdir "$PWD/output_fed_udec1"
+rmdir "$PWD/output_fed_udec1"
 
 # mkdir "$PWD/output_fed_udec1"
 # # UDEC using EUROMDS
