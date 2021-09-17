@@ -62,13 +62,6 @@ def parse_args():
                                  'k-ae_clust', 'clustergan'],
                         action='store',
                         help='algorithm identifier')
-    parser.add_argument('--dim_red',
-                        dest='dim_red',
-                        required=False,
-                        type=bool,
-                        default=False,
-                        action='store',
-                        help='set True if You want to do the dimensionality reduction')
     parser.add_argument('--n_clients',
                         dest='n_clients',
                         required=True,
@@ -113,13 +106,6 @@ def parse_args():
                         default=51550,
                         action='store',
                         help='set the seed for the random generator of the whole dataset')
-    parser.add_argument('--lda',
-                        dest='lda',
-                        required=False,
-                        type=bool,
-                        default=False,
-                        action='store',
-                        help='wheater to apply LDA partitioning to the entire dataset')
     parser.add_argument('--groups',
                         dest='groups',
                         required=True,
@@ -227,7 +213,7 @@ if __name__ == "__main__":
         'shuffle': SHUFFLE,
         'kmeans_local_epochs': 300,
         'kmeans_n_init': 25,
-        'ae_local_epochs': 100,
+        'ae_local_epochs': 10,
         'ae_lr': 0.1,
         'ae_momentum': 0.9,
         'cl_lr': args.cl_lr,
@@ -270,20 +256,6 @@ if __name__ == "__main__":
     # getting IDs
     ids = data_util.get_euromds_ids()
     n_features = len(x.columns)
-    # dimensionality reduction through UMAP alg
-    if args.dim_red:
-        n_features = 2
-        x = umap.UMAP(
-            n_neighbors=30,
-            min_dist=0.0,
-            n_components=n_features,
-            random_state=42,
-        ).fit_transform(x)
-    # # inferring ground truth labels usign HDBSCAN alg
-    # y_h = hdbscan.HDBSCAN(
-    #     min_samples=5,
-    #     min_cluster_size=25,
-    # ).fit_predict(x)
     # getting the client's dataset (partition)
     interval = int(len(x)/N_CLIENTS)
     start = int(interval*CLIENT_ID)
@@ -302,19 +274,6 @@ if __name__ == "__main__":
     init = VarianceScaling(scale=1. / 3.,
                            mode='fan_in',
                            distribution='uniform')
-
-    '''
-    TODO: compatibility with create_partitions methods
-    X = (x, y)
-    if USE_LDA:
-        Y, _ = create_lda_partitions(dataset=X, num_partitions=N_CLIENTS)
-    else:
-        Y = create_partitions(unpartitioned_dataset=X,
-                                iid_fraction=0.4,
-                                num_partitions=N_CLIENTS)
-    x, y = Y[CLIENT_ID]
-    del X, Y
-    '''
 
     config['ae_tied'] = args.tied
     config['ae_dims'] = dims
@@ -378,6 +337,5 @@ if __name__ == "__main__":
                                           config=config,
                                           client_id=CLIENT_ID,
                                           output_folder=args.out_fol)
-    # TODO: elif args.alg == 'k-clustergan':
     # Start Flower client
     fl.client.start_numpy_client(SERVER, client=client)
