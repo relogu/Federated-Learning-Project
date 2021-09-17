@@ -212,7 +212,7 @@ if __name__ == "__main__":
         'shuffle': SHUFFLE,
         'kmeans_local_epochs': 300,
         'kmeans_n_init': 25,
-        'ae_local_epochs': 10,
+        'ae_local_epochs': 1,
         'ae_lr': 0.1,
         'ae_momentum': 0.9,
         'cl_lr': args.cl_lr,
