@@ -198,7 +198,6 @@ if __name__ == "__main__":
     N_CLIENTS = args.n_clients
     N_CLUSTERS = args.n_clusters
     SEED = args.seed
-    USE_LDA = args.lda
     SERVER = args.server
     FOLD_N = args.fold_n
     SHUFFLE = args.shuffle
