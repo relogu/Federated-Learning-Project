@@ -868,7 +868,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             # evaluation
             loss, r_accuracy, accuracy = self.autoencoder.evaluate(
                 self.x_test, self.x_test, verbose=0)
-            if self.dump_metrics :
+            if self.dump_metrics:
                 metrics['client'] = self.client_id
                 metrics['round'] = self.f_round
                 metrics["eval_loss"] = loss
@@ -905,7 +905,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 y_pred = q.argmax(1)
                 metrics = self._clustering_eval(y_pred)
                 metrics['eval_loss'] = loss
-                metrics['train_loss'] = self.last_histo.history['loss'][0]
+                metrics['train_loss'] = self.last_histo.history['loss'][-1]
                 metrics['client'] = self.client_id
                 metrics['round'] = self.local_iter
                 dump_result_dict('client_'+str(self.client_id), metrics,
