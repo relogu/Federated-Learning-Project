@@ -755,7 +755,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                     ortho=self.ortho, u_norm=self.u_norm, noise_rate=self.ran_flip)
             else:
                 self.autoencoder, self.encoder, self.decoder = create_denoising_autoencoder(
-                    self.ae_dims, up_freq=up_frequencies, init=self.ae_init, dropout_rate=self.dropout, act='selu', noise_rate=self.ran_flip)
+                    self.ae_dims, up_freq=self.up_frequencies, init=self.ae_init, dropout_rate=self.dropout, act='selu', noise_rate=self.ran_flip)
 
     def fit(self, parameters, config):  # type: ignore
         """Perform the fit step after having assigned new weights."""
@@ -896,7 +896,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             metrics = self._clustering_eval(y_pred_kmeans)
             if self.dump_metrics :
                 metrics['client'] = self.client_id
-                metrics['round'] = self.f_round
+                metrics['round'] = 1
                 dump_result_dict('client_'+str(self.client_id)+'_k', metrics,
                                     path_to_out=self.out_dir)
             # retrieving the results
