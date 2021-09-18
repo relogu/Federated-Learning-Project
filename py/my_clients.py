@@ -773,7 +773,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
         elif self.step == 'pretrain_ae':  # ae pretrain step
             if config['first']:
                 # getting aggregated frequencies
-                self.up_frequencies = parameters
+                self.up_frequencies = np.array(parameters)
+                print('Aggregated frequencies retrieved')
                 # building and compiling autoencoder
                 self._build_ae()
                 self.autoencoder.compile(
