@@ -923,4 +923,6 @@ class KMeansEmbedClusteringClient(NumPyClient):
                     dump_pred_dict('pred_client_'+str(self.client_id), pred,
                                 path_to_out=self.out_dir)
             result = (loss, len(self.x_test), metrics)
+        else:
+            result = (loss, len(self.x_test), metrics)
         return result
