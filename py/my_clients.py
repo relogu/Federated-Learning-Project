@@ -652,6 +652,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         self.tied = config['ae_tied']
         self.dropout = config['ae_dropout_rate']
         self.ran_flip = config['ae_flip_rate']
+        self.up_frequencies = []
         self.ortho = config['ae_ortho']
         self.u_norm = config['ae_u_norm']
         self.ae_local_epochs = config['ae_local_epochs']
@@ -720,6 +721,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
         """Get the model weights by model object."""
         if self.step is None:
             return []
+        elif self.step == 'freq_avg':
+            return self.up_frequencies
         elif self.step == 'pretrain_ae':
             return self.encoder.get_weights()
         elif self.step == 'k-means':
