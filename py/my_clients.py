@@ -878,7 +878,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 self.x_test, self.x_test, verbose=0)
             if self.dump_metrics:
                 metrics['client'] = self.client_id
-                metrics['round'] = self.f_round
+                metrics['round'] = self.f_round-1
                 metrics["eval_loss"] = loss
                 metrics["eval_accuracy"] = accuracy
                 metrics["eval_r_accuracy"] = r_accuracy
