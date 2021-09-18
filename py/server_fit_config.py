@@ -35,26 +35,33 @@ def kfed_clustering_on_fit_config(rnd: int,
                                   ae_epochs: int = 300,
                                   cl_epochs: int = 1000,
                                   n_clusters: int = 2):
-    if rnd < ae_epochs+1:
-        config = {'model': 'pretrain_ae',
+    if rnd == 1:
+        config = {'model': 'freq_avg',
                   'n_clusters': n_clusters,
                   'first': (rnd == 1),
+                  'last': (rnd == 1),
+                  'actual_round': rnd,
+                  'total_rounds': 1}
+    elif rnd < ae_epochs+2:
+        config = {'model': 'pretrain_ae',
+                  'n_clusters': n_clusters,
+                  'first': (rnd == 2),
                   'last': (rnd == ae_epochs),
                   'actual_round': rnd-1,
                   'total_rounds': ae_epochs}
-    elif rnd < ae_epochs+2:
+    elif rnd < ae_epochs+3:
         config = {'model': 'k-means',
                   'n_clusters': n_clusters,
-                  'first': (rnd == ae_epochs+1),
-                  'last': (rnd == ae_epochs+1),
-                  'actual_round': rnd,
+                  'first': (rnd == ae_epochs+2),
+                  'last': (rnd == ae_epochs+2),
+                  'actual_round': rnd-1-ae_epochs,
                   'total_rounds': 1}
     else:
         config = {'model': 'clustering',
                   'n_clusters': n_clusters,
-                  'first': (rnd == ae_epochs+2),
-                  'last': (rnd == cl_epochs+ae_epochs+1),
-                  'actual_round': rnd-ae_epochs-1,
+                  'first': (rnd == ae_epochs+3),
+                  'last': (rnd == cl_epochs+ae_epochs+2),
+                  'actual_round': rnd-ae_epochs-2,
                   'total_rounds': cl_epochs}
     return config
 

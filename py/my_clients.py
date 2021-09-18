@@ -746,11 +746,9 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 self.autoencoder, self.encoder, self.decoder = create_prob_autoencoder(
                     self.ae_dims, init=self.ae_init, dropout=self.dropout, act='selu')
         else:
-            up_frequencies = np.array([np.array(np.count_nonzero(
-                self.x_train[:, i])/self.x_train.shape[0]) for i in range(self.x_train.shape[1])])
             if self.tied:
                 self.autoencoder, self.encoder, self.decoder = create_tied_denoising_autoencoder(
-                    self.ae_dims, up_freq=up_frequencies, init=self.ae_init, dropout_rate=self.dropout, act='selu',
+                    self.ae_dims, up_freq=self.up_frequencies, init=self.ae_init, dropout_rate=self.dropout, act='selu',
                     ortho=self.ortho, u_norm=self.u_norm, noise_rate=self.ran_flip)
             else:
                 self.autoencoder, self.encoder, self.decoder = create_denoising_autoencoder(
@@ -765,8 +763,14 @@ class KMeansEmbedClusteringClient(NumPyClient):
                                                                      self.step,
                                                                      config['actual_round'],
                                                                      config['total_rounds']))
-        if self.step == 'pretrain_ae':  # ae pretrain step
+        if self.step == 'freq_avg':
+            self.up_frequencies = np.array([np.array(np.count_nonzero(
+                self.x_train[:, i])/self.x_train.shape[0]) for i in range(self.x_train.shape[1])])
+            return self.up_frequencies, len(self.x_train), {}
+        elif self.step == 'pretrain_ae':  # ae pretrain step
             if config['first']:
+                # getting aggregated frequencies
+                self.up_frequencies = parameters
                 # building and compiling autoencoder
                 self._build_ae()
                 self.autoencoder.compile(
