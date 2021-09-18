@@ -140,7 +140,7 @@ def parse_args():
     parser.add_argument('--dropout',
                         dest='dropout',
                         type=float,
-                        default=0.01,
+                        default=0.05,
                         required=False,
                         action='store',
                         help='Flag for dropout layer in autoencoder')
