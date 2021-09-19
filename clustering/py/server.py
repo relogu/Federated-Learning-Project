@@ -170,7 +170,7 @@ if __name__ == "__main__":
                               ae_epochs=args.ae_epochs,
                               n_clusters=args.n_clusters,
                               cl_epochs=args.cluster_epochs)
-        n_rounds = 1+args.ae_epochs+args.cluster_epochs
+        n_rounds = 2+args.ae_epochs+args.cluster_epochs
         strategy = strategies.KFEDStrategy(
             out_dir=args.out_fol,
             min_available_clients=args.clients,

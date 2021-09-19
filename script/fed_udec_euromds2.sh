@@ -5,7 +5,7 @@ export PYTHONPATH="$PWD:$PYTHONPATH"
 
 mkdir "$PWD/output_fed_udec2"
 # UDEC using EUROMDS
-python3 clustering/py/server.py --address=[::]:51552 --strategy=k-fed --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=10000 --n_clients=6 --out_fol="$PWD/output_fed_udec2" & 
+python3 clustering/py/server.py --n_clusters 8 --address=[::]:51552 --strategy=k-fed --kmeans_epochs=1 --ae_epochs=2000 --cluster_epochs=10000 --n_clients=6 --out_fol="$PWD/output_fed_udec2" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
 python3 clustering/py/client_euromds.py --n_clusters 8 --ran_flip 0.25 --server=[::]:51552 --update_interval 200000 --tied --client_id=0 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/output_fed_udec2" &
 python3 clustering/py/client_euromds.py --n_clusters 8 --ran_flip 0.25 --server=[::]:51552 --update_interval 200000 --tied --client_id=1 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/output_fed_udec2" &
