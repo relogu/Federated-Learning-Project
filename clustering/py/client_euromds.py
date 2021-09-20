@@ -216,7 +216,7 @@ if __name__ == "__main__":
         'ae_lr': 0.1,
         'ae_momentum': 0.9,
         'cl_lr': args.cl_lr,
-        'cl_momentum': None,
+        'cl_momentum': 0.0,
         'cl_local_epochs': 1,
         'update_interval': args.update_interval,
         'ae_loss': 'binary_crossentropy',#'mse',
