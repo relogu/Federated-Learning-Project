@@ -938,6 +938,24 @@ class KMeansEmbedClusteringClient(NumPyClient):
                                 path_to_out=self.out_dir)
             if self.verbose: print(out_4 % (self.client_id, self.f_round, loss, accuracy, r_accuracy))
             result = (loss, len(self.x_test), {"r_accuracy": r_accuracy,"accuracy": accuracy})
+        elif self.step == 'finetune_ae':
+            # evaluation
+            loss, r_accuracy, accuracy = self.autoencoder.evaluate(
+                self.x_test, self.x_test, verbose=0)
+            if self.dump_metrics:
+                metrics['client'] = self.client_id
+                metrics['round'] = self.f_round-1
+                metrics["eval_loss"] = loss
+                metrics["eval_accuracy"] = accuracy
+                metrics["eval_r_accuracy"] = r_accuracy
+                metrics["train_loss"] = self.last_histo.history['loss'][-1]
+                metrics["train_accuracy"] = self.last_histo.history['accuracy'][-1]
+                metrics["train_r_accuracy"] = self.last_histo.history['rounded_accuracy'][-1]
+                dump_result_dict('client_'+str(self.client_id)+'_ae1', metrics,
+                                path_to_out=self.out_dir)
+            if self.verbose: print(out_4 % (self.client_id, self.f_round, loss, accuracy, r_accuracy))
+            result = (loss, len(self.x_test), {"r_accuracy": r_accuracy,"accuracy": accuracy})
+        
         elif self.step == 'k-means':
             # predicting labels
             y_pred_kmeans = self.kmeans.predict(
