@@ -146,7 +146,7 @@ def get_parser():
                         action='store_true',
                         help='Flag for verbosity')
     return parser
-
+    
 
 if __name__ == "__main__":
     # configuration
@@ -225,9 +225,11 @@ if __name__ == "__main__":
             int((2/3)*(n_features)),
             int((2.5)*(n_features)),
             args.n_clusters]  # (originally these are the proportions)
-    init = VarianceScaling(scale=1. / 3.,
-                           mode='fan_in',
-                           distribution="uniform")
+    # init = VarianceScaling(scale=1. / 3.,
+    #                        mode='fan_in',
+    #                        distribution="uniform") # old
+    init = RandomNormal(mean=0.0,
+                        stddev=0.01) # DEC paper
 
     config['ae_lr'] = 0.1  # original value
     config['ae_dims'] = dims
@@ -303,9 +305,55 @@ if __name__ == "__main__":
         parameters = np.array(encoder.get_weights(), dtype=object)
         np.savez(path_to_out/'encoder', parameters)
     
-    param: Parameters = np.load(pretrained_weights, allow_pickle=True)
-    weights = param['arr_0']
-    
+    trained_weights = path_to_out/'encoder_ft.npz'
+    if not trained_weights.exists():
+        param: Parameters = np.load(pretrained_weights, allow_pickle=True)
+        weights = param['arr_0']
+        
+        if args.binary:
+            if args.tied:
+                autoencoder, encoder, decoder = create_tied_prob_autoencoder(
+                    config['ae_dims'], act='selu')
+            else:
+                autoencoder, encoder, decoder = create_prob_autoencoder(
+                    config['ae_dims'], act='selu')
+        else:
+            if args.tied:
+                autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
+                    config['ae_dims'], act='selu', ortho=args.ortho, u_norm=args.u_norm)
+            else:
+                autoencoder, encoder, decoder = create_denoising_autoencoder(
+                    config['ae_dims'], act='selu')
+        
+        encoder.set_weights(weights)
+        # ae_optimizer = SGD(learning_rate=config['ae_lr'],
+        #                 decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
+        #                 momentum=config['ae_momentum']) # old
+        learning_rate_fn = InverseTimeDecay(initial_learning_rate=config['ae_lr'],
+                                            decay_steps=1,
+                                            decay_rate=float((2/5)*int(config['ae_epochs'])/9)) # from DEC paper
+        ae_optimizer = SGD(
+            learning_rate=learning_rate_fn,
+            momentum=config['ae_momentum'])
+        autoencoder.compile(
+            metrics=[my_metrics.rounded_accuracy, 'accuracy'],
+            optimizer=ae_optimizer,
+            loss=config['ae_loss']
+        )
+        autoencoder.summary()
+        # fitting again the autoencoder
+        history = autoencoder.fit(x=x_train,
+                                    y=x_train,
+                                    batch_size=config['batch_size'],
+                                    validation_data=(x_test, x_test),
+                                    epochs=int(2*config['ae_epochs']),
+                                    verbose=1)
+        with open(path_to_out/'ae_history1', 'wb') as file_pi:
+            pickle.dump(history.history, file_pi)
+        parameters = np.array(encoder.get_weights(), dtype=object)
+        np.savez(path_to_out/'encoder_ft', parameters)
+
+        
     if args.binary:
         if args.tied:
             autoencoder, encoder, decoder = create_tied_prob_autoencoder(
@@ -320,35 +368,10 @@ if __name__ == "__main__":
         else:
             autoencoder, encoder, decoder = create_denoising_autoencoder(
                 config['ae_dims'], act='selu')
-    
+                
+    param: Parameters = np.load(trained_weights, allow_pickle=True)
+    weights = param['arr_0']
     encoder.set_weights(weights)
-    # ae_optimizer = SGD(learning_rate=config['ae_lr'],
-    #                 decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
-    #                 momentum=config['ae_momentum']) # old
-    learning_rate_fn = InverseTimeDecay(initial_learning_rate=config['ae_lr'],
-                                        decay_steps=1,
-                                        decay_rate=float((2/5)*int(config['ae_epochs'])/9)) # from DEC paper
-    ae_optimizer = SGD(
-        learning_rate=learning_rate_fn,
-        momentum=config['ae_momentum'])
-    autoencoder.compile(
-        metrics=[my_metrics.rounded_accuracy, 'accuracy'],
-        optimizer=ae_optimizer,
-        loss=config['ae_loss']
-    )
-    autoencoder.summary()
-    # fitting again the autoencoder
-    history = autoencoder.fit(x=x_train,
-                                y=x_train,
-                                batch_size=config['batch_size'],
-                                validation_data=(x_test, x_test),
-                                epochs=int(2*config['ae_epochs']),
-                                verbose=1)
-    with open(path_to_out/'ae_history1', 'wb') as file_pi:
-        pickle.dump(history.history, file_pi)
-    parameters = np.array(encoder.get_weights(), dtype=object)
-    np.savez(path_to_out/'encoder_ft', parameters)
-
 
     # get an estimate for clusters centers using k-means
     kmeans = KMeans(init='k-means++',
@@ -372,6 +395,7 @@ if __name__ == "__main__":
         loss=config['cl_loss'])
     clustering_model.get_layer(
         name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
+    y_old = None
     for i in range(int(config['cl_epochs'])):
         if i % config['update_interval'] == 0:
             print('Updating the target distribution')
@@ -420,7 +444,20 @@ if __name__ == "__main__":
                     'label': y_pred}
             dump_pred_dict('pred', pred,
                            path_to_out=path_to_out)
+        # check for required convergence
+        if i > 1:
+            tol = 1 - my_metrics.acc(y_pred, y_old)
+            if i%100:
+                print("Current label change ratio is {}".format(tol))
+            if tol < 0.001:
+                break
+            else:
+                y_old = y_pred.copy()
+        else:
+            y_old = y_pred.copy()
+            
 
     # saving the model weights
     parameters = np.array(clustering_model.get_weights(), dtype=object)
-    np.savez(path_to_out/'clustering_model', parameters)
+    np.savez(path_to_out/'clustering', parameters)
+    
