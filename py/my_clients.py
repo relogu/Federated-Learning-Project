@@ -28,6 +28,7 @@ from flwr.server.strategy import FedAvg
 from sklearn.cluster import KMeans
 from sklearn.ensemble._hist_gradient_boosting import loss
 from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers.schedules import InverseTimeDecay
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
@@ -656,10 +657,12 @@ class KMeansEmbedClusteringClient(NumPyClient):
         self.ortho = config['ae_ortho']
         self.u_norm = config['ae_u_norm']
         self.ae_local_epochs = config['ae_local_epochs']
+        learning_rate_fn = InverseTimeDecay(initial_learning_rate=config['ae_lr'],
+                                            decay_steps=1,
+                                            decay_rate=float(800/9))
         self.ae_optimizer = SGD(
-            learning_rate=config['ae_lr'],
-            momentum=config['ae_momentum'],
-            decay=1/100000)
+            learning_rate=learning_rate_fn,
+            momentum=config['ae_momentum'])
         self.ae_loss = config['ae_loss']
         # clustering model
         self.cl_optimizer = SGD(
