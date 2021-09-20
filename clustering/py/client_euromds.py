@@ -123,7 +123,7 @@ def parse_args():
                         default=None,
                         action='store',
                         help='select the output folder')
-    parser.add_argument("--hardware_acc", dest="cuda_flag", action='store_true',
+    parser.add_argument("--cuda", dest="cuda_flag", action='store_true',
                         help="Flag for hardware acceleration using cuda (if available)")
     parser.add_argument("--binary", dest="binary", action='store_true',
                         help="Flag for using binary neurons in the network")
