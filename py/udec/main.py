@@ -449,7 +449,9 @@ if __name__ == "__main__":
             tol = 1 - my_metrics.acc(y_pred, y_old)
             if i%100:
                 print("Current label change ratio is {}".format(tol))
-            if tol < 0.001:
+            if tol < 0.001: # from DEC paper
+                print("Final label change ratio is {} reached at {} iteration". \
+                    format(tol, i))
                 break
             else:
                 y_old = y_pred.copy()
