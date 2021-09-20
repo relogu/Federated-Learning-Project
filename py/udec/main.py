@@ -177,7 +177,7 @@ if __name__ == "__main__":
         'kmeans_epochs': 300,
         'kmeans_n_init': 25,
         'ae_epochs': args.ae_epochs,
-        'ae_lr': 0.01,
+        'ae_lr': 0.01, # DEC paper
         'ae_momentum': 0.9,
         'cl_lr': args.cl_lr,
         'cl_momentum': 0.9,
@@ -224,17 +224,16 @@ if __name__ == "__main__":
             int((2/3)*(n_features)),
             int((2/3)*(n_features)),
             int((2.5)*(n_features)),
-            args.n_clusters]  # (originally these are the proportions)
+            args.n_clusters]  # DEC paper proportions
     # init = VarianceScaling(scale=1. / 3.,
     #                        mode='fan_in',
     #                        distribution="uniform") # old
     init = RandomNormal(mean=0.0,
-                                    stddev=0.01) # DEC paper
+                        stddev=0.01) # DEC paper
 
-    config['ae_lr'] = 0.1  # original value
     config['ae_dims'] = dims
     config['ae_init'] = init
-    config['ae_act'] = 'relu'
+    config['ae_act'] = 'relu' # 'relu' --> DEC paper # 'selu' --> should be better for binary
 
     # define the splitting
     train_idx, test_idx = data_util.split_dataset(
@@ -281,14 +280,12 @@ if __name__ == "__main__":
                 autoencoder, encoder, decoder = create_denoising_autoencoder(
                     config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act=config['ae_act'])
         # ae_optimizer = SGD(learning_rate=config['ae_lr'],
-        #                 decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
-        #                 momentum=config['ae_momentum']) # old
-        learning_rate_fn = InverseTimeDecay(initial_learning_rate=config['ae_lr'],
-                                            decay_steps=1,
-                                            decay_rate=float((2/5)*int(config['ae_epochs'])/9)) # from DEC paper
+        #                    momentum=config['ae_momentum'],
+        #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs'])  # old
         ae_optimizer = SGD(
-            learning_rate=learning_rate_fn,
-            momentum=config['ae_momentum'])
+            learning_rate=config['ae_lr'],
+            momentum=config['ae_momentum'],
+            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
         autoencoder.compile(
             metrics=[my_metrics.rounded_accuracy, 'accuracy'],
             optimizer=ae_optimizer,
@@ -310,7 +307,7 @@ if __name__ == "__main__":
     if not trained_weights.exists():
         param: Parameters = np.load(pretrained_weights, allow_pickle=True)
         weights = param['arr_0']
-        
+        # no dropout, keep denoising
         if args.binary:
             if args.tied:
                 autoencoder, encoder, decoder = create_tied_prob_autoencoder(
@@ -327,15 +324,15 @@ if __name__ == "__main__":
                     config['ae_dims'], up_freq=up_frequencies, act=config['ae_act'])
         
         encoder.set_weights(weights)
+        
         # ae_optimizer = SGD(learning_rate=config['ae_lr'],
-        #                 decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
-        #                 momentum=config['ae_momentum']) # old
-        learning_rate_fn = InverseTimeDecay(initial_learning_rate=config['ae_lr'],
-                                            decay_steps=1,
-                                            decay_rate=float((2/5)*int(config['ae_epochs'])/9)) # from DEC paper
+        #                    momentum=config['ae_momentum'],
+        #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs'])  # old
         ae_optimizer = SGD(
-            learning_rate=learning_rate_fn,
-            momentum=config['ae_momentum'])
+            learning_rate=config['ae_lr'],
+            momentum=config['ae_momentum'],
+            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+        
         autoencoder.compile(
             metrics=[my_metrics.rounded_accuracy, 'accuracy'],
             optimizer=ae_optimizer,
@@ -354,7 +351,7 @@ if __name__ == "__main__":
         parameters = np.array(encoder.get_weights(), dtype=object)
         np.savez(path_to_out/'encoder_ft', parameters)
 
-        
+    # clean from the auxialiary layer for the clustering model
     if args.binary:
         if args.tied:
             autoencoder, encoder, decoder = create_tied_prob_autoencoder(
