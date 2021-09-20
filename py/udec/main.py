@@ -229,11 +229,12 @@ if __name__ == "__main__":
     #                        mode='fan_in',
     #                        distribution="uniform") # old
     init = RandomNormal(mean=0.0,
-                        stddev=0.01) # DEC paper
+                                    stddev=0.01) # DEC paper
 
     config['ae_lr'] = 0.1  # original value
     config['ae_dims'] = dims
     config['ae_init'] = init
+    config['ae_act'] = 'relu'
 
     # define the splitting
     train_idx, test_idx = data_util.split_dataset(
@@ -264,21 +265,21 @@ if __name__ == "__main__":
         if args.binary:
             if args.tied:
                 autoencoder, encoder, decoder = create_tied_prob_autoencoder(
-                    config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act='selu')
+                    config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act=config['ae_act'])
             else:
                 autoencoder, encoder, decoder = create_prob_autoencoder(
-                    config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act='selu')
+                    config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act=config['ae_act'])
         else:
             up_frequencies = np.array([np.array(np.count_nonzero(
                 x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
             print('Freq :{}'.format(up_frequencies))
             if args.tied:
                 autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu',
+                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act=config['ae_act'],
                     ortho=args.ortho, u_norm=args.u_norm, noise_rate=args.ran_flip)
             else:
                 autoencoder, encoder, decoder = create_denoising_autoencoder(
-                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu')
+                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act=config['ae_act'])
         # ae_optimizer = SGD(learning_rate=config['ae_lr'],
         #                 decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
         #                 momentum=config['ae_momentum']) # old
@@ -313,17 +314,17 @@ if __name__ == "__main__":
         if args.binary:
             if args.tied:
                 autoencoder, encoder, decoder = create_tied_prob_autoencoder(
-                    config['ae_dims'], act='selu')
+                    config['ae_dims'], act=config['ae_act'])
             else:
                 autoencoder, encoder, decoder = create_prob_autoencoder(
-                    config['ae_dims'], act='selu')
+                    config['ae_dims'], act=config['ae_act'])
         else:
             if args.tied:
                 autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                    config['ae_dims'], act='selu', ortho=args.ortho, u_norm=args.u_norm)
+                    config['ae_dims'], up_freq=up_frequencies, act=config['ae_act'], ortho=args.ortho, u_norm=args.u_norm)
             else:
                 autoencoder, encoder, decoder = create_denoising_autoencoder(
-                    config['ae_dims'], act='selu')
+                    config['ae_dims'], up_freq=up_frequencies, act=config['ae_act'])
         
         encoder.set_weights(weights)
         # ae_optimizer = SGD(learning_rate=config['ae_lr'],
@@ -357,17 +358,17 @@ if __name__ == "__main__":
     if args.binary:
         if args.tied:
             autoencoder, encoder, decoder = create_tied_prob_autoencoder(
-                config['ae_dims'], act='selu')
+                config['ae_dims'], act=config['ae_act'])
         else:
             autoencoder, encoder, decoder = create_prob_autoencoder(
-                config['ae_dims'], act='selu')
+                config['ae_dims'], act=config['ae_act'])
     else:
         if args.tied:
             autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                config['ae_dims'], act='selu', ortho=args.ortho, u_norm=args.u_norm)
+                config['ae_dims'], act=config['ae_act'], ortho=args.ortho, u_norm=args.u_norm)
         else:
             autoencoder, encoder, decoder = create_denoising_autoencoder(
-                config['ae_dims'], act='selu')
+                config['ae_dims'], act=config['ae_act'])
                 
     param: Parameters = np.load(trained_weights, allow_pickle=True)
     weights = param['arr_0']
