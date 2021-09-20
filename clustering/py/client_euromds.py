@@ -72,7 +72,7 @@ def parse_args():
                         help='number of total clients in the FL setting')
     parser.add_argument('--fold_n',
                         dest='fold_n',
-                        required=True,
+                        required=False,
                         type=int,
                         default=0,
                         choices=[0, 1, 2, 3, 4],
