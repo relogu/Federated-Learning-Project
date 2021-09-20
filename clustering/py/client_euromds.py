@@ -57,7 +57,7 @@ def parse_args():
                         dest='alg',
                         required=True,
                         type=type(''),
-                        default='k-means',
+                        default='udec',
                         choices=['k-means', 'udec',
                                  'k-ae_clust', 'clustergan'],
                         action='store',
@@ -82,7 +82,7 @@ def parse_args():
                         dest='shuffle',
                         required=False,
                         type=bool,
-                        default=False,
+                        default=True,
                         action='store',
                         help='wheater to shuffle in train-test partitioning')
     parser.add_argument('--n_clusters',
