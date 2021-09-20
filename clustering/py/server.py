@@ -25,6 +25,7 @@ from sklearn.cluster import KMeans
 
 import py.my_strategies as strategies
 from py.server_fit_config import (clustergan_on_fit_config,
+                                  udec_clustering_on_fit_config,
                                   kfed_clustering_on_fit_config,
                                   simple_clustering_on_fit_config,
                                   simple_kmeans_on_fit_config)
@@ -166,11 +167,11 @@ if __name__ == "__main__":
             on_fit_config_fn=on_fit_conf
         )
     elif args.strategy == 'k-fed':
-        on_fit_conf = partial(kfed_clustering_on_fit_config,
+        on_fit_conf = partial(udec_clustering_on_fit_config,
                               ae_epochs=args.ae_epochs,
                               n_clusters=args.n_clusters,
                               cl_epochs=args.cluster_epochs)
-        n_rounds = 2+args.ae_epochs+args.cluster_epochs
+        n_rounds = 2+int(3*args.ae_epochs)+args.cluster_epochs
         strategy = strategies.KFEDStrategy(
             out_dir=args.out_fol,
             min_available_clients=args.clients,

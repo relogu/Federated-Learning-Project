@@ -28,7 +28,7 @@ from flwr.dataset.utils.common import create_lda_partitions, create_partitions
 from sklearn import datasets
 from sklearn.cluster import KMeans
 from sklearn.model_selection import KFold
-from tensorflow.keras.initializers import VarianceScaling
+from tensorflow.keras.initializers import VarianceScaling, RandomNormal
 from tensorflow.keras.optimizers import SGD
 
 import py.my_clients as clients
@@ -215,6 +215,7 @@ if __name__ == "__main__":
         'ae_local_epochs': 1,
         'ae_lr': 0.1,
         'ae_momentum': 0.9,
+        'ae_act': 'relu', # 'relu' --> DEC paper, 'selu' --> should be better for binary
         'cl_lr': args.cl_lr,
         'cl_momentum': 0.0,
         'cl_local_epochs': 1,
@@ -269,10 +270,13 @@ if __name__ == "__main__":
             int((2/3)*(n_features)),
             int((2/3)*(n_features)),
             int((2.5)*(n_features)),
-            N_CLUSTERS]
-    init = VarianceScaling(scale=1. / 3.,
-                           mode='fan_in',
-                           distribution='uniform')
+            N_CLUSTERS]  # DEC paper proportions
+    # init = VarianceScaling(scale=1. / 3.,
+    #                        mode='fan_in',
+    #                        distribution="uniform") # old
+    init = RandomNormal(mean=0.0,
+                        stddev=0.01) # DEC paper
+
 
     config['ae_tied'] = args.tied
     config['ae_dims'] = dims

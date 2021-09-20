@@ -647,6 +647,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
         # set
         self.n_clusters = config['n_clusters']
         # AE
+        self.ae_momentum = config['ae_momentum']
+        self.ae_lr = config['ae_lr']
         self.ae_dims = config['ae_dims']
         self.ae_init = config['ae_init']
         self.binary = config['binary']
@@ -657,13 +659,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
         self.ortho = config['ae_ortho']
         self.u_norm = config['ae_u_norm']
         self.ae_local_epochs = config['ae_local_epochs']
-        learning_rate_fn = InverseTimeDecay(initial_learning_rate=config['ae_lr'],
-                                            decay_steps=1,
-                                            decay_rate=float(800/9))
-        self.ae_optimizer = SGD(
-            learning_rate=learning_rate_fn,
-            momentum=config['ae_momentum'])
         self.ae_loss = config['ae_loss']
+        self.ae_act = config['ae_act']
         # clustering model
         self.cl_optimizer = SGD(
             learning_rate=config['cl_lr'],
@@ -717,6 +714,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         self.cluster_centers = None
         self.plotting = config['plotting']
         self.last_histo = None
+        self.y_old = None
         self.verbose = config['verbose']
         self.dump_metrics = config['dump_metrics']
 
@@ -747,18 +745,20 @@ class KMeansEmbedClusteringClient(NumPyClient):
         if self.binary:
             if self.tied:
                 self.autoencoder, self.encoder, self.decoder = create_tied_prob_autoencoder(
-                    self.ae_dims, init=self.ae_init, dropout=self.dropout, act='selu')
+                    self.ae_dims, init=self.ae_init, dropout=self.dropout, act=self.ae_act)
             else:
                 self.autoencoder, self.encoder, self.decoder = create_prob_autoencoder(
-                    self.ae_dims, init=self.ae_init, dropout=self.dropout, act='selu')
+                    self.ae_dims, init=self.ae_init, dropout=self.dropout, act=self.ae_act)
         else:
             if self.tied:
                 self.autoencoder, self.encoder, self.decoder = create_tied_denoising_autoencoder(
-                    self.ae_dims, up_freq=self.up_frequencies, init=self.ae_init, dropout_rate=self.dropout, act='selu',
+                    self.ae_dims, up_freq=self.up_frequencies, init=self.ae_init,
+                    dropout_rate=self.dropout, act=self.ae_act,
                     ortho=self.ortho, u_norm=self.u_norm, noise_rate=self.ran_flip)
             else:
                 self.autoencoder, self.encoder, self.decoder = create_denoising_autoencoder(
-                    self.ae_dims, up_freq=self.up_frequencies, init=self.ae_init, dropout_rate=self.dropout, act='selu', noise_rate=self.ran_flip)
+                    self.ae_dims, up_freq=self.up_frequencies, init=self.ae_init,
+                    dropout_rate=self.dropout, act=self.ae_act, noise_rate=self.ran_flip)
 
     def fit(self, parameters, config):  # type: ignore
         """Perform the fit step after having assigned new weights."""
@@ -775,6 +775,13 @@ class KMeansEmbedClusteringClient(NumPyClient):
             return self.up_frequencies, len(self.x_train), {}
         elif self.step == 'pretrain_ae':  # ae pretrain step
             if config['first']:
+                # self.ae_optimizer = SGD(learning_rate=self.ae_lr,
+                #                    momentum=self.ae_momentum,
+                #                    decay=(self.ae_lr-0.0001)/config['ae_epochs'])  # old
+                self.ae_optimizer = SGD(
+                    learning_rate=self.ae_lr,
+                    momentum=self.ae_momentum,
+                    decay=float(9/((2/5)*int(config['total_rounds']))))  # from DEC paper
                 # getting aggregated frequencies
                 self.up_frequencies = np.array(parameters)
                 print('Aggregated frequencies retrieved')
@@ -787,7 +794,46 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 )
             else:  # getting new weights
                 self.encoder.set_weights(parameters)
-            pretrained_weights = self.out_dir/'encoder.npz'
+            pretrained_weights = self.out_dir/'aggregated_weights_pretrain_ae.npz'
+            if pretrained_weights.exists():
+                print('Using existing weights in the output folder for the autoencoder')
+                param: Parameters = np.load(pretrained_weights, allow_pickle=True)
+                weights = param['arr_0']
+                self.encoder.set_weights(weights)
+            else:
+                # fitting the autoencoder
+                self.last_histo = self.autoencoder.fit(x=self.x_train,
+                                                    y=self.x_train,
+                                                    batch_size=self.batch_size,
+                                                    epochs=self.ae_local_epochs,
+                                                    verbose=0)
+            # returning the parameters necessary for FedAvg
+            return self.encoder.get_weights(), len(self.x_train), {}
+        elif self.step == 'finetune_ae':  # ae pretrain step
+            if config['first']:
+                # self.ae_optimizer = SGD(learning_rate=self.ae_lr,
+                #                    momentum=self.ae_momentum,
+                #                    decay=(self.ae_lr-0.0001)/config['ae_epochs'])  # old
+                self.ae_optimizer = SGD(
+                    learning_rate=self.ae_lr,
+                    momentum=self.ae_momentum,
+                    decay=float(9/((1/5)*int(config['total_rounds']))))  # from DEC paper
+                # building and compiling autoencoder
+                self.dropout = 0.0
+                self._build_ae()
+                self.autoencoder.compile(
+                    metrics=[my_metrics.rounded_accuracy, "accuracy"],
+                    optimizer=self.ae_optimizer,
+                    loss=self.ae_loss
+                )
+            else:  # getting new weights
+                self.encoder.set_weights(parameters)
+            # getting pre-trained weights
+            pretrained_weights = self.out_dir/'aggregated_weights_pretrain_ae.npz'
+            param: Parameters = np.load(pretrained_weights, allow_pickle=True)
+            weights = param['arr_0']
+            self.encoder.set_weights(weights)
+            pretrained_weights = self.out_dir/'aggregated_weights_finetune_ae.npz'
             if pretrained_weights.exists():
                 print('Using existing weights in the output folder for the autoencoder')
                 param: Parameters = np.load(pretrained_weights, allow_pickle=True)
@@ -914,11 +960,17 @@ class KMeansEmbedClusteringClient(NumPyClient):
             if self.dump_metrics :
                 # evaluate the clustering performance using some metrics
                 y_pred = q.argmax(1)
+                if self.y_old is None:
+                    tol = 1.0
+                if self.local_iter > 1:
+                    tol = 1 - my_metrics.acc(y_pred, self.y_old)
                 metrics = self._clustering_eval(y_pred)
                 metrics['eval_loss'] = loss
                 metrics['train_loss'] = self.last_histo.history['loss'][-1]
                 metrics['client'] = self.client_id
                 metrics['round'] = self.local_iter
+                metrics['tol'] = tol
+                self.y_old = y_pred.copy()
                 dump_result_dict('client_'+str(self.client_id), metrics,
                                     path_to_out=self.out_dir)
                 if self.id_test is not None:
