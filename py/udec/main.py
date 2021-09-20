@@ -12,8 +12,12 @@ import numpy as np
 import sys
 import pickle
 
+# Make TensorFlow log less verbose
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
 import tensorflow as tf
 from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers.schedules import InverseTimeDecay
 from tensorflow.keras.initializers import VarianceScaling, RandomNormal
 from sklearn.cluster import KMeans
 from sklearn.metrics import log_loss
@@ -64,16 +68,16 @@ def get_parser():
                         help='wheater to shuffle in train-test partitioning')
     parser.add_argument('--ae_epochs',
                         dest='ae_epochs',
-                        required=True,
+                        required=False,
                         type=int,
-                        default=200,
+                        default=50000,
                         action='store',
                         help='number of epochs for the autoencoder pre-training')
     parser.add_argument('--cl_epochs',
                         dest='cl_epochs',
-                        required=True,
+                        required=False,
                         type=int,
-                        default=1000,
+                        default=10000,
                         action='store',
                         help='number of epochs for the clustering step')
     parser.add_argument('--binary',
@@ -94,14 +98,14 @@ def get_parser():
     parser.add_argument('--dropout',
                         dest='dropout',
                         type=float,
-                        default=0.0,
+                        default=0.05,
                         required=False,
                         action='store',
                         help='Flag for dropout layer in autoencoder')
     parser.add_argument('--ran_flip',
                         dest='ran_flip',
                         type=float,
-                        default=0.1,
+                        default=0.25,
                         required=False,
                         action='store',
                         help='Flag for RandomFlipping layer in autoencoder')
@@ -265,6 +269,7 @@ if __name__ == "__main__":
         else:
             up_frequencies = np.array([np.array(np.count_nonzero(
                 x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
+            print('Freq :{}'.format(up_frequencies))
             if args.tied:
                 autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
                     config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu',
@@ -272,9 +277,15 @@ if __name__ == "__main__":
             else:
                 autoencoder, encoder, decoder = create_denoising_autoencoder(
                     config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act='selu')
-        ae_optimizer = SGD(learning_rate=config['ae_lr'],
-                        decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
-                        momentum=config['ae_momentum'])
+        # ae_optimizer = SGD(learning_rate=config['ae_lr'],
+        #                 decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
+        #                 momentum=config['ae_momentum']) # old
+        learning_rate_fn = InverseTimeDecay(initial_learning_rate=config['ae_lr'],
+                                            decay_steps=1,
+                                            decay_rate=float((2/5)*int(config['ae_epochs'])/9)) # from DEC paper
+        ae_optimizer = SGD(
+            learning_rate=learning_rate_fn,
+            momentum=config['ae_momentum'])
         autoencoder.compile(
             metrics=[my_metrics.rounded_accuracy, 'accuracy'],
             optimizer=ae_optimizer,
@@ -287,7 +298,7 @@ if __name__ == "__main__":
                                   validation_data=(x_test, x_test),
                                   epochs=int(config['ae_epochs']),
                                   verbose=1)
-        with open(path_to_out/'ae_history', 'wb') as file_pi:
+        with open(path_to_out/'ae_history1', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
         parameters = np.array(encoder.get_weights(), dtype=object)
         np.savez(path_to_out/'encoder', parameters)
@@ -309,7 +320,34 @@ if __name__ == "__main__":
         else:
             autoencoder, encoder, decoder = create_denoising_autoencoder(
                 config['ae_dims'], act='selu')
+    
     encoder.set_weights(weights)
+    # ae_optimizer = SGD(learning_rate=config['ae_lr'],
+    #                 decay=(config['ae_lr']-0.0001)/config['ae_epochs'],
+    #                 momentum=config['ae_momentum']) # old
+    learning_rate_fn = InverseTimeDecay(initial_learning_rate=config['ae_lr'],
+                                        decay_steps=1,
+                                        decay_rate=float((2/5)*int(config['ae_epochs'])/9)) # from DEC paper
+    ae_optimizer = SGD(
+        learning_rate=learning_rate_fn,
+        momentum=config['ae_momentum'])
+    autoencoder.compile(
+        metrics=[my_metrics.rounded_accuracy, 'accuracy'],
+        optimizer=ae_optimizer,
+        loss=config['ae_loss']
+    )
+    autoencoder.summary()
+    # fitting again the autoencoder
+    history = autoencoder.fit(x=x_train,
+                                y=x_train,
+                                batch_size=config['batch_size'],
+                                validation_data=(x_test, x_test),
+                                epochs=int(2*config['ae_epochs']),
+                                verbose=1)
+    with open(path_to_out/'ae_history1', 'wb') as file_pi:
+        pickle.dump(history.history, file_pi)
+    parameters = np.array(encoder.get_weights(), dtype=object)
+    np.savez(path_to_out/'encoder_ft', parameters)
 
 
     # get an estimate for clusters centers using k-means
@@ -386,9 +424,3 @@ if __name__ == "__main__":
     # saving the model weights
     parameters = np.array(clustering_model.get_weights(), dtype=object)
     np.savez(path_to_out/'clustering_model', parameters)
-    parameters = np.array(decoder.get_weights(), dtype=object)
-    np.savez(path_to_out/'decoder', parameters)
-    parameters = np.array(autoencoder.get_weights(), dtype=object)
-    np.savez(path_to_out/'autoencoder', parameters)
-    parameters = np.array(encoder.get_weights(), dtype=object)
-    np.savez(path_to_out/'encoder', parameters)
