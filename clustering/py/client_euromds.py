@@ -55,7 +55,7 @@ def parse_args():
                         help='client identifier')
     parser.add_argument('--alg',
                         dest='alg',
-                        required=True,
+                        required=False,
                         type=type(''),
                         default='udec',
                         choices=['k-means', 'udec',
