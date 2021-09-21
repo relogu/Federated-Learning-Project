@@ -366,7 +366,8 @@ if __name__ == "__main__":
     else:
         if args.tied:
             autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                config['ae_dims'], act=config['ae_act'], ortho=args.ortho, u_norm=args.u_norm)
+                config['ae_dims'], act=config['ae_act'], noise_rate=0.0,
+                ortho=args.ortho, u_norm=args.u_norm)
         else:
             autoencoder, encoder, decoder = create_denoising_autoencoder(
                 config['ae_dims'], act=config['ae_act'])
