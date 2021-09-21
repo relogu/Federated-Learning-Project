@@ -50,6 +50,7 @@ clustering_eval_string = 'Client %d, Acc = %.5f, nmi = %.5f, ari = %.5f ; loss =
 
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
+
 class SimpleKMeansClient(NumPyClient):
     """Client object, to set client performed operations."""
 
@@ -584,11 +585,11 @@ class ClusterGANClient(NumPyClient):
 
     def get_parameters(self):
         g_par = np.array([val.cpu().numpy()
-                 for _, val in self.generator.state_dict().items()], dtype=object)
+                          for _, val in self.generator.state_dict().items()], dtype=object)
         d_par = np.array([val.cpu().numpy()
-                 for _, val in self.discriminator.state_dict().items()], dtype=object)
+                          for _, val in self.discriminator.state_dict().items()], dtype=object)
         e_par = np.array([val.cpu().numpy()
-                 for _, val in self.encoder.state_dict().items()], dtype=object)
+                          for _, val in self.encoder.state_dict().items()], dtype=object)
         parameters = np.concatenate([g_par, d_par, e_par], axis=0)
         return parameters
 
@@ -678,20 +679,16 @@ class KMeansEmbedClusteringClient(NumPyClient):
             shuffle=config['shuffle'],
             fold_n=config['fold_n'])
 
-        self.x_train = x[train_idx]
-        self.x_test = x[test_idx]
-        self.y_train = self.y_test = None
-        self.outcomes_train = self.outcomes_test = None
-        self.id_train = self.id_test = None
+        self.x_train, self.x_test = x[train_idx], x[test_idx]
+        self.y_train, self.y_test = None, None
+        self.outcomes_train, self.outcomes_test = None, None
+        self.id_train, self.id_test = None, None
         if y is not None:
-            self.y_test = y[test_idx]
-            self.y_train = y[train_idx]
+            self.y_test, self.y_train = y[test_idx], y[train_idx]
         if outcomes is not None:
-            self.outcomes_train = outcomes[train_idx]
-            self.outcomes_test = outcomes[test_idx]
+            self.outcomes_train, self.outcomes_test = outcomes[train_idx], outcomes[test_idx]
         if ids is not None:
-            self.id_train = ids[train_idx]
-            self.id_test = ids[test_idx]
+            self.id_train, self.id_test = ids[train_idx], ids[test_idx]
 
         self.batch_size = config['batch_size']
         self.client_id = client_id
@@ -731,16 +728,6 @@ class KMeansEmbedClusteringClient(NumPyClient):
         elif self.step == 'clustering':
             return self.clustering_model.get_weights()
 
-    def _fit_clustering_model(self):
-        if self.local_iter % self.update_interval == 0:
-            print('Updating auxiliary distribution')
-            q = self.clustering_model.predict(self.x_train, verbose=0)
-            # update the auxiliary target distribution p
-            self.p = target_distribution(q)
-        for _ in range(int(self.cl_local_epochs)):
-            self.last_histo = self.clustering_model.fit(x=self.x_train, y=self.p, verbose=0)
-        self.local_iter += 1
-        
     def _build_ae(self):
         if self.binary:
             if self.tied:
@@ -759,6 +746,35 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 self.autoencoder, self.encoder, self.decoder = create_denoising_autoencoder(
                     self.ae_dims, up_freq=self.up_frequencies, init=self.ae_init,
                     dropout_rate=self.dropout, act=self.ae_act, noise_rate=self.ran_flip)
+
+    def _fit_clustering_model(self):
+        if self.local_iter % self.update_interval == 0:
+            print('Updating auxiliary distribution')
+            q = self.clustering_model.predict(self.x_train, verbose=0)
+            # update the auxiliary target distribution p
+            self.p = target_distribution(q)
+        for _ in range(int(self.cl_local_epochs)):
+            self.last_histo = self.clustering_model.fit(
+                x=self.x_train, y=self.p, verbose=0)
+        self.local_iter += 1
+
+    def _fit_autoencoder(self, finetune=False, is_first=False):
+        # check if the final weights already exist
+        filename = 'finetune' if finetune else 'pretrain'
+        pretrained_weights = self.out_dir / \
+            'aggregated_weights_{}_ae.npz'.format(filename)
+        if pretrained_weights.exists() and is_first:
+            print('Using existing weights in the output folder for the autoencoder')
+            param: Parameters = np.load(pretrained_weights, allow_pickle=True)
+            weights = param['arr_0']
+            self.encoder.set_weights(weights)
+        else:
+            # fitting the autoencoder
+            self.last_histo = self.autoencoder.fit(x=self.x_train,
+                                                   y=self.x_train,
+                                                   batch_size=self.batch_size,
+                                                   epochs=self.ae_local_epochs,
+                                                   verbose=0)
 
     def fit(self, parameters, config):  # type: ignore
         """Perform the fit step after having assigned new weights."""
@@ -794,19 +810,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 )
             else:  # getting new weights
                 self.encoder.set_weights(parameters)
-            pretrained_weights = self.out_dir/'aggregated_weights_pretrain_ae.npz'
-            if pretrained_weights.exists():
-                print('Using existing weights in the output folder for the autoencoder')
-                param: Parameters = np.load(pretrained_weights, allow_pickle=True)
-                weights = param['arr_0']
-                self.encoder.set_weights(weights)
-            else:
-                # fitting the autoencoder
-                self.last_histo = self.autoencoder.fit(x=self.x_train,
-                                                    y=self.x_train,
-                                                    batch_size=self.batch_size,
-                                                    epochs=self.ae_local_epochs,
-                                                    verbose=0)
+            self._fit_autoencoder(is_first=config['first'])
             # returning the parameters necessary for FedAvg
             return self.encoder.get_weights(), len(self.x_train), {}
         elif self.step == 'finetune_ae':  # ae pretrain step
@@ -818,7 +822,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                     learning_rate=self.ae_lr,
                     momentum=self.ae_momentum,
                     decay=float(9/((1/5)*int(config['total_rounds']))))  # from DEC paper
-                # building and compiling autoencoder
+                # building and compiling autoencoder for finetuning
                 self.dropout, self.ran_flip = 0.0, 0.0
                 self._build_ae()
                 self.autoencoder.compile(
@@ -833,19 +837,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             param: Parameters = np.load(pretrained_weights, allow_pickle=True)
             weights = param['arr_0']
             self.encoder.set_weights(weights)
-            pretrained_weights = self.out_dir/'aggregated_weights_finetune_ae.npz'
-            if pretrained_weights.exists():
-                print('Using existing weights in the output folder for the autoencoder')
-                param: Parameters = np.load(pretrained_weights, allow_pickle=True)
-                weights = param['arr_0']
-                self.encoder.set_weights(weights)
-            else:
-                # fitting the autoencoder
-                self.last_histo = self.autoencoder.fit(x=self.x_train,
-                                                       y=self.x_train,
-                                                       batch_size=self.batch_size,
-                                                       epochs=self.ae_local_epochs,
-                                                       verbose=0)
+            self._fit_autoencoder(finetune=True, is_first=config['first'])
             # returning the parameters necessary for FedAvg
             return self.encoder.get_weights(), len(self.x_train), {}
         elif self.step == 'k-means':  # k-Means step
@@ -864,8 +856,10 @@ class KMeansEmbedClusteringClient(NumPyClient):
                 # getting final clusters centers
                 self.cluster_centers = parameters
                 self._build_ae()
+                # getting finetuned ae weights
                 pretrained_weights = self.out_dir/'aggregated_weights_finetune_ae.npz'
-                param: Parameters = np.load(pretrained_weights, allow_pickle=True)
+                param: Parameters = np.load(
+                    pretrained_weights, allow_pickle=True)
                 weights = param['arr_0']
                 self.encoder.set_weights(weights)
                 # initializing clustering model
@@ -885,7 +879,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             # returning the parameters necessary for FedAvg
             return self.clustering_model.get_weights(), len(self.x_train), {}
 
-    def _clustering_eval(self, y_pred):
+    def _classes_evaluate(self, y_pred):
         metrics = {}
         # plotting outcomes on the labels
         if self.step == 'clustering' and self.plotting and self.outcomes_test is not None:
@@ -918,85 +912,84 @@ class KMeansEmbedClusteringClient(NumPyClient):
                        "homogeneity_score": homo}
         return metrics
 
+    def _ae_evaluate(self, finetune=False):
+        metrics = {}
+        loss, r_accuracy, accuracy = self.autoencoder.evaluate(
+            self.x_test, self.x_test, verbose=0)
+        metrics['client'] = self.client_id
+        metrics['round'] = self.f_round-1
+        metrics["eval_loss"] = loss
+        metrics["eval_accuracy"] = accuracy
+        metrics["eval_r_accuracy"] = r_accuracy
+        metrics["train_loss"] = self.last_histo.history['loss'][-1]
+        metrics["train_accuracy"] = self.last_histo.history['accuracy'][-1]
+        metrics["train_r_accuracy"] = self.last_histo.history['rounded_accuracy'][-1]
+        if self.dump_metrics:
+            filename = '_ae_ft' if finetune else '_ae'
+            dump_result_dict('client_'+str(self.client_id)+filename, metrics,
+                             path_to_out=self.out_dir)
+        if self.verbose:
+            print(out_4 % (self.client_id, self.f_round, loss,
+                  metrics["eval_accuracy"], metrics["eval_r_accuracy"]))
+        return metrics
+
+    def _clustering_evaluate(self):
+        q = self.clustering_model.predict(self.x_test, verbose=0)
+        # update the auxiliary target distribution p
+        p = target_distribution(q)
+        # retrieving loss
+        loss = self.clustering_model.evaluate(self.x_test, p, verbose=0)
+        # evaluate the clustering performance using some metrics
+        y_pred = q.argmax(1)
+        if self.y_old is None:
+            tol = 1.0
+        if self.local_iter > 1:
+            tol = 1 - my_metrics.acc(y_pred, self.y_old)
+        metrics = self._classes_evaluate(y_pred)
+        metrics['eval_loss'] = loss
+        metrics['train_loss'] = self.last_histo.history['loss'][-1]
+        metrics['client'] = self.client_id
+        metrics['round'] = self.local_iter
+        metrics['tol'] = tol
+        self.y_old = y_pred.copy()
+        if self.dump_metrics:
+            dump_result_dict('client_'+str(self.client_id), metrics,
+                             path_to_out=self.out_dir)
+            if self.id_test is not None:
+                pred = {'ID': self.id_test,
+                        'label': y_pred}
+                dump_pred_dict('pred_client_'+str(self.client_id), pred,
+                               path_to_out=self.out_dir)
+        return metrics
+
     def evaluate(self, parameters, config):
         loss = 0.0
         result = ()
         metrics = {}
         if self.step == 'pretrain_ae':
             # evaluation
-            loss, r_accuracy, accuracy = self.autoencoder.evaluate(
-                self.x_test, self.x_test, verbose=0)
-            if self.dump_metrics:
-                metrics['client'] = self.client_id
-                metrics['round'] = self.f_round-1
-                metrics["eval_loss"] = loss
-                metrics["eval_accuracy"] = accuracy
-                metrics["eval_r_accuracy"] = r_accuracy
-                metrics["train_loss"] = self.last_histo.history['loss'][-1]
-                metrics["train_accuracy"] = self.last_histo.history['accuracy'][-1]
-                metrics["train_r_accuracy"] = self.last_histo.history['rounded_accuracy'][-1]
-                dump_result_dict('client_'+str(self.client_id)+'_ae', metrics,
-                                path_to_out=self.out_dir)
-            if self.verbose: print(out_4 % (self.client_id, self.f_round, loss, accuracy, r_accuracy))
-            result = (loss, len(self.x_test), {"r_accuracy": r_accuracy,"accuracy": accuracy})
+            metrics = self._ae_evaluate()
+            result = (loss, len(self.x_test), {"r_accuracy": metrics["eval_r_accuracy"],
+                                               "accuracy": metrics["eval_accuracy"]})
         elif self.step == 'finetune_ae':
             # evaluation
-            loss, r_accuracy, accuracy = self.autoencoder.evaluate(
-                self.x_test, self.x_test, verbose=0)
-            if self.dump_metrics:
-                metrics['client'] = self.client_id
-                metrics['round'] = self.f_round-1
-                metrics["eval_loss"] = loss
-                metrics["eval_accuracy"] = accuracy
-                metrics["eval_r_accuracy"] = r_accuracy
-                metrics["train_loss"] = self.last_histo.history['loss'][-1]
-                metrics["train_accuracy"] = self.last_histo.history['accuracy'][-1]
-                metrics["train_r_accuracy"] = self.last_histo.history['rounded_accuracy'][-1]
-                dump_result_dict('client_'+str(self.client_id)+'_ae1', metrics,
-                                path_to_out=self.out_dir)
-            if self.verbose: print(out_4 % (self.client_id, self.f_round, loss, accuracy, r_accuracy))
-            result = (loss, len(self.x_test), {"r_accuracy": r_accuracy,"accuracy": accuracy})
-        
+            metrics = self._ae_evaluate(finetune=True)
+            result = (loss, len(self.x_test), {"r_accuracy": metrics["eval_r_accuracy"],
+                                               "accuracy": metrics["eval_accuracy"]})
         elif self.step == 'k-means':
             # predicting labels
             y_pred_kmeans = self.kmeans.predict(
                 self.encoder.predict(self.x_test))
-            metrics = self._clustering_eval(y_pred_kmeans)
-            if self.dump_metrics :
+            metrics = self._classes_evaluate(y_pred_kmeans)
+            if self.dump_metrics:
                 metrics['client'] = self.client_id
                 metrics['round'] = 1
                 dump_result_dict('client_'+str(self.client_id)+'_k', metrics,
-                                    path_to_out=self.out_dir)
+                                 path_to_out=self.out_dir)
             # retrieving the results
             result = (loss, len(self.x_test), metrics)
         elif self.step == 'clustering':
-            # evaluation
-            q = self.clustering_model.predict(self.x_test, verbose=0)
-            # update the auxiliary target distribution p
-            p = target_distribution(q)
-            # retrieving loss
-            loss = self.clustering_model.evaluate(self.x_test, p, verbose=0)
-            if self.dump_metrics :
-                # evaluate the clustering performance using some metrics
-                y_pred = q.argmax(1)
-                if self.y_old is None:
-                    tol = 1.0
-                if self.local_iter > 1:
-                    tol = 1 - my_metrics.acc(y_pred, self.y_old)
-                metrics = self._clustering_eval(y_pred)
-                metrics['eval_loss'] = loss
-                metrics['train_loss'] = self.last_histo.history['loss'][-1]
-                metrics['client'] = self.client_id
-                metrics['round'] = self.local_iter
-                metrics['tol'] = tol
-                self.y_old = y_pred.copy()
-                dump_result_dict('client_'+str(self.client_id), metrics,
-                                    path_to_out=self.out_dir)
-                if self.id_test is not None:
-                    pred = {'ID': self.id_test,
-                            'label': y_pred}
-                    dump_pred_dict('pred_client_'+str(self.client_id), pred,
-                                path_to_out=self.out_dir)
+            metrics = self._clustering_evaluate()
             result = (loss, len(self.x_test), metrics)
         else:
             result = (loss, len(self.x_test), metrics)
