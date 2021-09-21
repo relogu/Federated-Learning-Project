@@ -215,7 +215,7 @@ if __name__ == "__main__":
         'ae_local_epochs': 1,
         'ae_lr': 0.1,
         'ae_momentum': 0.9,
-        'ae_act': 'relu', # 'relu' --> DEC paper, 'selu' --> should be better for binary
+        'ae_act': 'selu', # 'relu' --> DEC paper, 'selu' --> should be better for binary
         'cl_lr': args.cl_lr,
         'cl_momentum': 0.0,
         'cl_local_epochs': 1,

@@ -288,7 +288,7 @@ if __name__ == "__main__":
         ae_optimizer = SGD(
             learning_rate=config['ae_lr'],
             momentum=config['ae_momentum'],
-            decay=float(9/((3/5)*int(config['ae_epochs']))))  # from DEC paper
+            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
         autoencoder.compile(
             metrics=[my_metrics.rounded_accuracy, 'accuracy'],
             optimizer=ae_optimizer,
@@ -335,7 +335,7 @@ if __name__ == "__main__":
         ae_optimizer = SGD(
             learning_rate=config['ae_lr'],
             momentum=config['ae_momentum'],
-            decay=float(9/((3/5)*int(config['ae_epochs']))))  # from DEC paper
+            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
         
         autoencoder.compile(
             metrics=[my_metrics.rounded_accuracy, 'accuracy'],
@@ -448,10 +448,11 @@ if __name__ == "__main__":
             dump_pred_dict('pred', pred,
                            path_to_out=path_to_out)
         # check for required convergence
-        if i > 1:
+        if i > 1000:
             tol = 1 - my_metrics.acc(y_pred, y_old)
             if i%100:
-                print("Current label change ratio is {}".format(tol))
+                print("Current label change ratio is {}, i.e. {}/{} samples". \
+                    format(tol, int(tol*len(x_test)), len(x_test)))
             if tol < 0.001: # from DEC paper
                 print("Final label change ratio is {}, i.e. {}/{} samples, reached at {} iteration". \
                     format(tol, int(tol*len(x_test)), len(x_test), i))
