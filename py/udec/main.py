@@ -177,13 +177,13 @@ if __name__ == "__main__":
         'kmeans_epochs': 300,
         'kmeans_n_init': 25,
         'ae_epochs': args.ae_epochs,
-        'ae_lr': 0.01, # DEC paper
+        'ae_lr': 0.1,#0.01, # DEC paper
         'ae_momentum': 0.9,
         'cl_lr': args.cl_lr,
         'cl_momentum': 0.9,
         'cl_epochs': args.cl_epochs,
         'update_interval': args.update_interval,
-        # (specific for binary, overfit w/o dropout),#'mse' (no overfit w/o dropout)#,#(general)
+        # bce (specific for binary, overfit w/o dropout),#'mse' (no overfit w/o dropout)#,#(general)
         'ae_loss': 'binary_crossentropy',
         'cl_loss': 'kld',
         'seed': args.seed}
@@ -229,11 +229,11 @@ if __name__ == "__main__":
     #                        mode='fan_in',
     #                        distribution="uniform") # old
     init = RandomNormal(mean=0.0,
-                        stddev=0.01) # DEC paper
+                        stddev=0.2) #stddev=0.01) # DEC paper, is better
 
     config['ae_dims'] = dims
     config['ae_init'] = init
-    config['ae_act'] = 'relu' # 'relu' --> DEC paper # 'selu' --> should be better for binary
+    config['ae_act'] = 'selu' # 'relu' --> DEC paper # 'selu' --> is better for binary
 
     # define the splitting
     train_idx, test_idx = data_util.split_dataset(
@@ -256,6 +256,9 @@ if __name__ == "__main__":
     if ids is not None:
         id_train = ids[train_idx]
         id_test = ids[test_idx]
+        
+    up_frequencies = np.array([np.array(np.count_nonzero(
+        x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
 
     # pre-train the autoencoder
     pretrained_weights = path_to_out/'encoder.npz'
@@ -269,16 +272,16 @@ if __name__ == "__main__":
                 autoencoder, encoder, decoder = create_prob_autoencoder(
                     config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act=config['ae_act'])
         else:
-            up_frequencies = np.array([np.array(np.count_nonzero(
-                x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
             print('Freq :{}'.format(up_frequencies))
             if args.tied:
                 autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act=config['ae_act'],
+                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'],
+                    dropout_rate=args.dropout, act=config['ae_act'],
                     ortho=args.ortho, u_norm=args.u_norm, noise_rate=args.ran_flip)
             else:
                 autoencoder, encoder, decoder = create_denoising_autoencoder(
-                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'], dropout_rate=args.dropout, act=config['ae_act'])
+                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'],
+                    dropout_rate=args.dropout, act=config['ae_act'])
         # ae_optimizer = SGD(learning_rate=config['ae_lr'],
         #                    momentum=config['ae_momentum'],
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs'])  # old
@@ -298,7 +301,7 @@ if __name__ == "__main__":
                                   validation_data=(x_test, x_test),
                                   epochs=int(config['ae_epochs']),
                                   verbose=1)
-        with open(path_to_out/'ae_history1', 'wb') as file_pi:
+        with open(path_to_out/'ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
         parameters = np.array(encoder.get_weights(), dtype=object)
         np.savez(path_to_out/'encoder', parameters)
@@ -318,10 +321,11 @@ if __name__ == "__main__":
         else:
             if args.tied:
                 autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                    config['ae_dims'], up_freq=up_frequencies, act=config['ae_act'], ortho=args.ortho, u_norm=args.u_norm)
+                    config['ae_dims'], noise_rate=0.0, act=config['ae_act'],
+                    ortho=args.ortho, u_norm=args.u_norm)
             else:
                 autoencoder, encoder, decoder = create_denoising_autoencoder(
-                    config['ae_dims'], up_freq=up_frequencies, act=config['ae_act'])
+                    config['ae_dims'], noise_rate=0.0, act=config['ae_act'])
         
         encoder.set_weights(weights)
         
@@ -432,8 +436,8 @@ if __name__ == "__main__":
                        "rand_score": ran,
                        "homogeneity_score": homo}
             result = metrics.copy()
-        result['loss'] = loss
-        result['t_loss'] = history.history['loss'][0]
+        result['eval_loss'] = loss
+        result['train_loss'] = history.history['loss'][0]
         result['round'] = i+1
         dump_result_dict('clustering_model', result,
                         path_to_out=path_to_out)
@@ -448,8 +452,8 @@ if __name__ == "__main__":
             if i%100:
                 print("Current label change ratio is {}".format(tol))
             if tol < 0.001: # from DEC paper
-                print("Final label change ratio is {} reached at {} iteration". \
-                    format(tol, i))
+                print("Final label change ratio is {}, i.e. {}/{} samples, reached at {} iteration". \
+                    format(tol, int(tol*len(x_test)), len(x_test), i))
                 break
             else:
                 y_old = y_pred.copy()
