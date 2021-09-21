@@ -301,7 +301,7 @@ if __name__ == "__main__":
                                   validation_data=(x_test, x_test),
                                   epochs=int(config['ae_epochs']),
                                   verbose=1)
-        with open(path_to_out/'ae_history', 'wb') as file_pi:
+        with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
         parameters = np.array(encoder.get_weights(), dtype=object)
         np.savez(path_to_out/'encoder', parameters)
@@ -350,7 +350,7 @@ if __name__ == "__main__":
                                     validation_data=(x_test, x_test),
                                     epochs=int(2*config['ae_epochs']),
                                     verbose=1)
-        with open(path_to_out/'ae_history1', 'wb') as file_pi:
+        with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
         parameters = np.array(encoder.get_weights(), dtype=object)
         np.savez(path_to_out/'encoder_ft', parameters)
