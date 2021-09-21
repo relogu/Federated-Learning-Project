@@ -815,13 +815,6 @@ class KMeansEmbedClusteringClient(NumPyClient):
             return self.encoder.get_weights(), len(self.x_train), {}
         elif self.step == 'finetune_ae':  # ae pretrain step
             if config['first']:
-                # self.ae_optimizer = SGD(learning_rate=self.ae_lr,
-                #                    momentum=self.ae_momentum,
-                #                    decay=(self.ae_lr-0.0001)/config['ae_epochs'])  # old
-                self.ae_optimizer = SGD(
-                    learning_rate=self.ae_lr,
-                    momentum=self.ae_momentum,
-                    decay=float(9/((1/5)*int(config['total_rounds']))))  # from DEC paper
                 # building and compiling autoencoder for finetuning
                 self.dropout, self.ran_flip = 0.0, 0.0
                 self._build_ae()
