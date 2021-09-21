@@ -819,7 +819,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                     momentum=self.ae_momentum,
                     decay=float(9/((1/5)*int(config['total_rounds']))))  # from DEC paper
                 # building and compiling autoencoder
-                self.dropout = 0.0
+                self.dropout, self.ran_flip = 0.0, 0.0
                 self._build_ae()
                 self.autoencoder.compile(
                     metrics=[my_metrics.rounded_accuracy, "accuracy"],
@@ -842,10 +842,10 @@ class KMeansEmbedClusteringClient(NumPyClient):
             else:
                 # fitting the autoencoder
                 self.last_histo = self.autoencoder.fit(x=self.x_train,
-                                                    y=self.x_train,
-                                                    batch_size=self.batch_size,
-                                                    epochs=self.ae_local_epochs,
-                                                    verbose=0)
+                                                       y=self.x_train,
+                                                       batch_size=self.batch_size,
+                                                       epochs=self.ae_local_epochs,
+                                                       verbose=0)
             # returning the parameters necessary for FedAvg
             return self.encoder.get_weights(), len(self.x_train), {}
         elif self.step == 'k-means':  # k-Means step
@@ -863,10 +863,11 @@ class KMeansEmbedClusteringClient(NumPyClient):
             if config['first']:  # initialize clustering layer with final kmeans' cluster centers
                 # getting final clusters centers
                 self.cluster_centers = parameters
-                enc_final_weights = self.encoder.get_weights()
-                self.dropout, self.ran_flip = 0.0, 0.0
                 self._build_ae()
-                self.encoder.set_weights(enc_final_weights)
+                pretrained_weights = self.out_dir/'aggregated_weights_finetune_ae.npz'
+                param: Parameters = np.load(pretrained_weights, allow_pickle=True)
+                weights = param['arr_0']
+                self.encoder.set_weights(weights)
                 # initializing clustering model
                 self.clustering_model = create_clustering_model(
                     self.n_clusters,
