@@ -179,7 +179,8 @@ def split_dataset(x,
                   splits: int = 5,
                   fold_n: int = 0,
                   shuffle: bool = False,
-                  r_state: int = 51550):
+                  r_state: int = 51550,
+                  verbose: bool = False):
     if fold_n < 0 or fold_n > splits-1:
         raise ValueError(
             'The fold number, fold_n, cannot be lower than zero or higher than the number of splits minus one, splits-1')
@@ -192,9 +193,9 @@ def split_dataset(x,
         kfold = KFold(n_splits=splits)
     # get split selected
     for i, (train, test) in enumerate(kfold.split(x)):
-        print('Current split {}'.format(i))
+        if verbose: print('Current split {}'.format(i))
         if i == fold_n:
-            print('Selected split {}'.format(i))
+            if verbose: print('Selected split {}'.format(i))
             return train, test
 
 
