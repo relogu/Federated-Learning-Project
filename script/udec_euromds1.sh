@@ -7,11 +7,11 @@ mkdir "$PWD/output_udec1"
 #cp "$PWD/results/tied_uiEUROMDSfinal_deno_single_ude10k1u1u_do001_rf005/encoder.npz" "$PWD/output_udec1/encoder.npz"
 #cp "$PWD/results/tied_uiEUROMDSfinal_deno_single_ude10k1u1u_do001_rf005/ae_history" "$PWD/output_udec1/ae_history"
 # entire dataset
-python3 py/udec/main.py --ae_epochs 3000 --cl_epochs 20000 --n_clusters 8 --dropout 0.01 --ran_flip 0.01 --tied --groups Genetics --groups CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D  --folder "$PWD/output_udec1" --hardware_acc
+python3 py/udec/main.py --ae_epochs 3000 --cl_epochs 20000 --n_clusters 8 --dropout 0.05 --ran_flip 0.05 --tied --groups Genetics --groups CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D  --folder "$PWD/output_udec1" --hardware_acc
 wait
 sleep 5
-mkdir "$PWD/results/paperDEC_EUROMDSfinal_single_a"
-mv "$PWD/output_udec1"/* "$PWD/results/paperDEC_EUROMDSfinal_single_a"/
+mkdir "$PWD/results/paperDEC_EUROMDSfinal_single_f"
+mv "$PWD/output_udec1"/* "$PWD/results/paperDEC_EUROMDSfinal_single_f"/
 sleep 10
 rmdir "$PWD/output_udec1"
 

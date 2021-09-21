@@ -288,7 +288,7 @@ if __name__ == "__main__":
         ae_optimizer = SGD(
             learning_rate=config['ae_lr'],
             momentum=config['ae_momentum'],
-            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+            decay=float(9/((3/5)*int(config['ae_epochs']))))  # from DEC paper
         autoencoder.compile(
             metrics=[my_metrics.rounded_accuracy, 'accuracy'],
             optimizer=ae_optimizer,
@@ -335,7 +335,7 @@ if __name__ == "__main__":
         ae_optimizer = SGD(
             learning_rate=config['ae_lr'],
             momentum=config['ae_momentum'],
-            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+            decay=float(9/((3/5)*int(config['ae_epochs']))))  # from DEC paper
         
         autoencoder.compile(
             metrics=[my_metrics.rounded_accuracy, 'accuracy'],
