@@ -67,7 +67,7 @@ def udec_clustering_on_fit_config(rnd: int,
         config = {'model': 'clustering',
                   'n_clusters': n_clusters,
                   'first': (rnd == int(3*ae_epochs+3)),
-                  'last': (rnd == int(cl_epochs+3*ae_epochs+3)),
+                  'last': (rnd == int(cl_epochs+3*ae_epochs+2)),
                   'actual_round': int(rnd-2-3*ae_epochs),
                   'total_rounds': cl_epochs}
     return config
