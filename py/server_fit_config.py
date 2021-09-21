@@ -53,7 +53,7 @@ def udec_clustering_on_fit_config(rnd: int,
         config = {'model': 'finetune_ae',
                   'n_clusters': n_clusters,
                   'first': (rnd == ae_epochs+2),
-                  'last': (rnd == int(3*ae_epochs+2)),
+                  'last': (rnd == int(3*ae_epochs+1)),
                   'actual_round': rnd-ae_epochs-1,
                   'total_rounds': int(2*ae_epochs)}
     elif rnd < int(3*ae_epochs+3):
