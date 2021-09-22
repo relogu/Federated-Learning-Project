@@ -448,7 +448,7 @@ if __name__ == "__main__":
             dump_pred_dict('pred', pred,
                            path_to_out=path_to_out)
         # check for required convergence
-        if i > 1000:
+        if i > 2000:
             tol = 1 - my_metrics.acc(y_pred, y_old)
             if i%100:
                 print("Current label change ratio is {}, i.e. {}/{} samples". \
