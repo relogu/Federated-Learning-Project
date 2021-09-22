@@ -8,6 +8,7 @@
 
 # obscuring results for now
 *results*
+!results/*
 
 *output*
 !output.py
