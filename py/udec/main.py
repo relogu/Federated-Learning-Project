@@ -415,8 +415,12 @@ if __name__ == "__main__":
         loss = clustering_model.evaluate(x_test, p_eval, verbose=2)
         # evaluate the clustering performance using some metrics
         y_pred = q_eval.argmax(1)
+        # getting the cycle projections and predictions
+        x_ae_test = autoencoder(x_test)
+        y_ae_pred = clustering_model.predict(x_ae_test, verbose=0).argmax(1)
         # evaluating metrics
         result = {}
+        cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
         if y_test is not None and args.verbose:
             acc = my_metrics.acc(y_test, y_pred)
             nmi = my_metrics.nmi(y_test, y_pred)
@@ -429,41 +433,44 @@ if __name__ == "__main__":
                     y_test, y_pred,
                     path_to_out=path_to_out)
             print(out_1 % (i+1, int(config['cl_epochs']), acc, nmi, ami, ari, ran, homo))
+            print('Cycle accuracy is {}'.format(cycle_acc))
             # dumping and retrieving the results
             metrics = {"accuracy": acc,
                        "normalized_mutual_info_score": nmi,
                        "adjusted_mutual_info_score": ami,
                        "adjusted_rand_score": ari,
                        "rand_score": ran,
-                       "homogeneity_score": homo}
+                       "homogeneity_score": homo,
+                       "cycle_accuracy": cycle_acc}
             result = metrics.copy()
+        result["cycle_accuracy"] = cycle_acc
         result['eval_loss'] = loss
         result['train_loss'] = history.history['loss'][0]
         result['round'] = i+1
-        dump_result_dict('clustering_model', result,
-                        path_to_out=path_to_out)
         if id_test is not None:
             pred = {'ID': id_test,
                     'label': y_pred}
             dump_pred_dict('pred', pred,
                            path_to_out=path_to_out)
         # check for required convergence
-        if i > 2000:
+        if i > 0:
             tol = 1 - my_metrics.acc(y_pred, y_old)
-            if i%100:
+            if i%100 and args.verbose:
                 print("Current label change ratio is {}, i.e. {}/{} samples". \
                     format(tol, int(tol*len(x_test)), len(x_test)))
-            if tol < 0.001: # from DEC paper
+            if tol < 0.001 and i > 2000: # from DEC paper
                 print("Final label change ratio is {}, i.e. {}/{} samples, reached at {} iteration". \
                     format(tol, int(tol*len(x_test)), len(x_test), i))
                 break
             else:
                 y_old = y_pred.copy()
         else:
+            tol = 1
             y_old = y_pred.copy()
-            
+        result['tol'] = tol
+        dump_result_dict('clustering_model', result,
+                        path_to_out=path_to_out)
 
     # saving the model weights
     parameters = np.array(clustering_model.get_weights(), dtype=object)
-    np.savez(path_to_out/'clustering', parameters)
-    
+    np.savez(path_to_out/'clustering', parameters)    
