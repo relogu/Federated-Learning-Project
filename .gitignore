@@ -4,10 +4,10 @@
 *.pyc
 
 # too many of those
-*.png
+#*.png
 
 # obscuring results for now
-*results*
+#*results*
 !results/*/*.png
 !results/*/*.md
 
