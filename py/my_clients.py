@@ -928,8 +928,8 @@ class KMeansEmbedClusteringClient(NumPyClient):
         # evaluate the clustering performance using some metrics
         y_pred = q.argmax(1)
         # getting the cycle projections and predictions
-        x_ae_test = autoencoder(x_test)
-        y_ae_pred = clustering_model.predict(x_ae_test, verbose=0).argmax(1)
+        x_ae_test = self.autoencoder(self.x_test)
+        y_ae_pred = self.clustering_model.predict(x_ae_test, verbose=0).argmax(1)
         if self.y_old is None:
             tol = 1.0
         if self.local_iter > 1:
