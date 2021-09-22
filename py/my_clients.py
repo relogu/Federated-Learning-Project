@@ -874,13 +874,6 @@ class KMeansEmbedClusteringClient(NumPyClient):
 
     def _classes_evaluate(self, y_pred):
         metrics = {}
-        # plotting outcomes on the labels
-        if self.step == 'clustering' and self.plotting and self.outcomes_test is not None:
-            times = self.outcomes_test[:, 0]
-            events = self.outcomes_test[:, 1]
-            plot_lifelines_pred(
-                times, events, y_pred, client_id=self.client_id,
-                path_to_out=self.out_dir)
         # evaluating metrics
         if self.y_test is not None:
             acc = my_metrics.acc(self.y_test, y_pred)
@@ -934,11 +927,15 @@ class KMeansEmbedClusteringClient(NumPyClient):
         loss = self.clustering_model.evaluate(self.x_test, p, verbose=0)
         # evaluate the clustering performance using some metrics
         y_pred = q.argmax(1)
+        # getting the cycle projections and predictions
+        x_ae_test = autoencoder(x_test)
+        y_ae_pred = clustering_model.predict(x_ae_test, verbose=0).argmax(1)
         if self.y_old is None:
             tol = 1.0
         if self.local_iter > 1:
             tol = 1 - my_metrics.acc(y_pred, self.y_old)
         metrics = self._classes_evaluate(y_pred)
+        metrics['cycle_accuracy'] = my_metrics.acc(y_pred, y_ae_pred)
         metrics['eval_loss'] = loss
         metrics['train_loss'] = self.last_histo.history['loss'][-1]
         metrics['client'] = self.client_id
