@@ -2,7 +2,7 @@
 
 echo $PWD
 export PYTHONPATH="$PWD:$PYTHONPATH"
-CLUSTERS="7"
+CLUSTERS="3"
 
 mkdir "$PWD/output_udec3"
 #cp "$PWD/results/tied_uiEUROMDSfinal_deno_single_ude10k1u1u_do001_rf005/encoder.npz" "$PWD/output_udec3/encoder.npz"
