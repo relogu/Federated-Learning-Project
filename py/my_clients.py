@@ -934,9 +934,10 @@ class KMeansEmbedClusteringClient(NumPyClient):
         del x_ae_test, y_ae_pred
         # getting the train cycle accuracy
         x_ae_train = self.autoencoder(self.x_train)
+        y_pred_train = self.clustering_model.predict(np.round(self.x_train), verbose=0).argmax(1)
         y_ae_pred = self.clustering_model.predict(np.round(x_ae_train), verbose=0).argmax(1)
-        train_cycle_accuracy = my_metrics.acc(y_pred, y_ae_pred)
-        del x_ae_train, y_ae_pred
+        train_cycle_accuracy = my_metrics.acc(y_pred_train, y_ae_pred)
+        del x_ae_train, y_ae_pred, y_pred_train
         if self.y_old is None:
             tol = 1.0
         if self.local_iter > 1:
