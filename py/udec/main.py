@@ -415,12 +415,19 @@ if __name__ == "__main__":
         loss = clustering_model.evaluate(x_test, p_eval, verbose=2)
         # evaluate the clustering performance using some metrics
         y_pred = q_eval.argmax(1)
-        # getting the cycle projections and predictions
+        # getting the cycle accuracy of evaluation set
         x_ae_test = autoencoder(x_test)
         y_ae_pred = clustering_model.predict(np.round(x_ae_test), verbose=0).argmax(1)
+        eval_cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
+        del y_ae_pred, x_ae_test
+        # getting the cycle accuracy of train set
+        x_ae_train = autoencoder(x_train)
+        y_ae_pred = clustering_model.predict(np.round(x_ae_train), verbose=0).argmax(1)
+        train_cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
+        del y_ae_pred, x_ae_train
         # evaluating metrics
         result = {}
-        cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
+        eval_cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
         if y_test is not None and args.verbose:
             acc = my_metrics.acc(y_test, y_pred)
             nmi = my_metrics.nmi(y_test, y_pred)
@@ -433,17 +440,17 @@ if __name__ == "__main__":
                     y_test, y_pred,
                     path_to_out=path_to_out)
             print(out_1 % (i+1, int(config['cl_epochs']), acc, nmi, ami, ari, ran, homo))
-            print('Cycle accuracy is {}'.format(cycle_acc))
+            print('Eval cycle accuracy is {}'.format(eval_cycle_acc))
             # dumping and retrieving the results
             metrics = {"accuracy": acc,
                        "normalized_mutual_info_score": nmi,
                        "adjusted_mutual_info_score": ami,
                        "adjusted_rand_score": ari,
                        "rand_score": ran,
-                       "homogeneity_score": homo,
-                       "cycle_accuracy": cycle_acc}
+                       "homogeneity_score": homo}
             result = metrics.copy()
-        result["cycle_accuracy"] = cycle_acc
+        result["eval_cycle_accuracy"] = eval_cycle_acc
+        result["train_cycle_accuracy"] = train_cycle_acc
         result['eval_loss'] = loss
         result['train_loss'] = history.history['loss'][0]
         result['round'] = i+1

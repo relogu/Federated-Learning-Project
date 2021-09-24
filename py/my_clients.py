@@ -927,15 +927,23 @@ class KMeansEmbedClusteringClient(NumPyClient):
         loss = self.clustering_model.evaluate(self.x_test, p, verbose=0)
         # evaluate the clustering performance using some metrics
         y_pred = q.argmax(1)
-        # getting the cycle projections and predictions
+        # getting the eval cycle accuracy
         x_ae_test = self.autoencoder(self.x_test)
         y_ae_pred = self.clustering_model.predict(np.round(x_ae_test), verbose=0).argmax(1)
+        eval_cycle_accuracy = my_metrics.acc(y_pred, y_ae_pred)
+        del x_ae_test, y_ae_pred
+        # getting the train cycle accuracy
+        x_ae_train = self.autoencoder(self.x_train)
+        y_ae_pred = self.clustering_model.predict(np.round(x_ae_train), verbose=0).argmax(1)
+        train_cycle_accuracy = my_metrics.acc(y_pred, y_ae_pred)
+        del x_ae_train, y_ae_pred
         if self.y_old is None:
             tol = 1.0
         if self.local_iter > 1:
             tol = 1 - my_metrics.acc(y_pred, self.y_old)
         metrics = self._classes_evaluate(y_pred)
-        metrics['cycle_accuracy'] = my_metrics.acc(y_pred, y_ae_pred)
+        metrics['train_cycle_accuracy'] = train_cycle_accuracy
+        metrics['eval_cycle_accuracy'] = eval_cycle_accuracy
         metrics['eval_loss'] = loss
         metrics['train_loss'] = self.last_histo.history['loss'][-1]
         metrics['client'] = self.client_id
