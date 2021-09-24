@@ -650,6 +650,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         # AE
         self.ae_momentum = config['ae_momentum']
         self.ae_lr = config['ae_lr']
+        self.ae_lr_dr = config['ae_lr_dr'] # decay ratio, from DEC paper is 2/5
         self.ae_dims = config['ae_dims']
         self.ae_init = config['ae_init']
         self.binary = config['binary']
@@ -791,13 +792,12 @@ class KMeansEmbedClusteringClient(NumPyClient):
             return self.up_frequencies, len(self.x_train), {}
         elif self.step == 'pretrain_ae':  # ae pretrain step
             if config['first']:
-                # self.ae_optimizer = SGD(learning_rate=self.ae_lr,
-                #                    momentum=self.ae_momentum,
-                #                    decay=(self.ae_lr-0.0001)/config['ae_epochs'])  # old
                 self.ae_optimizer = SGD(
                     learning_rate=self.ae_lr,
                     momentum=self.ae_momentum,
-                    decay=float(9/((2/5)*int(config['total_rounds']))))  # from DEC paper
+                    # from DEC paper, divide lr by 10 every 2/5 of # pre-trainepochs
+                    # old --> make it decay from 0.1 to 0.001
+                    decay=float(9/((self.ae_lr_dr)*int(config['total_rounds']))))
                 # getting aggregated frequencies
                 self.up_frequencies = np.array(parameters)
                 print('Aggregated frequencies retrieved')
@@ -929,7 +929,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         y_pred = q.argmax(1)
         # getting the cycle projections and predictions
         x_ae_test = self.autoencoder(self.x_test)
-        y_ae_pred = self.clustering_model.predict(x_ae_test, verbose=0).argmax(1)
+        y_ae_pred = self.clustering_model.predict(np.round(x_ae_test), verbose=0).argmax(1)
         if self.y_old is None:
             tol = 1.0
         if self.local_iter > 1:

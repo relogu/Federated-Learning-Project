@@ -417,7 +417,7 @@ if __name__ == "__main__":
         y_pred = q_eval.argmax(1)
         # getting the cycle projections and predictions
         x_ae_test = autoencoder(x_test)
-        y_ae_pred = clustering_model.predict(x_ae_test, verbose=0).argmax(1)
+        y_ae_pred = clustering_model.predict(np.round(x_ae_test), verbose=0).argmax(1)
         # evaluating metrics
         result = {}
         cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
