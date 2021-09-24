@@ -2,79 +2,139 @@
 
 echo $PWD
 export PYTHONPATH="$PWD:$PYTHONPATH"
+echo "Number of clusters $1"
+CLUSTERS="$1"
+echo "Letter defining network set up $2"
+LETTER="$2"
+echo "Port for server communication $3"
+PORT="[::]:$3"
+echo "Output folder $4"
+OUT_FOL="$4"
 
-mkdir "$PWD/output_fed_udec"
+if [ $2 == "a" ]
+then
+DROPOUT="0.20"
+RAN_FLIP="0.20"
+U_NORM=""
+AE_EPOCHS="2500"
+fi
+
+if [ $2 == "b" ]
+then
+DROPOUT="0.05"
+RAN_FLIP="0.05"
+U_NORM=""
+AE_EPOCHS="2500"
+fi
+
+if [ $2 == "c" ]
+then
+DROPOUT="0.20"
+RAN_FLIP="0.20"
+U_NORM="--u_norm"
+AE_EPOCHS="2500"
+fi
+
+if [ $2 == "d" ]
+then
+DROPOUT="0.10"
+RAN_FLIP="0.10"
+U_NORM="--u_norm"
+AE_EPOCHS="2500"
+fi
+
+if [ $2 == "e" ]
+then
+DROPOUT="0.05"
+RAN_FLIP="0.05"
+U_NORM="--u_norm"
+AE_EPOCHS="2500"
+fi
+
+if [ $2 == "f" ]
+then
+DROPOUT="0.01"
+RAN_FLIP="0.01"
+U_NORM="--u_norm"
+AE_EPOCHS="2500"
+fi
+
+if [ $2 == "g" ]
+then
+DROPOUT="0.01"
+RAN_FLIP="0.01"
+U_NORM="--u_norm"
+AE_EPOCHS="5000"
+fi
+
+mkdir "$PWD/$OUT_FOL"
 # UDEC using EUROMDS
-python3 clustering/py/server.py --address=[::]:51550 --n_clusters 8 --strategy=k-fed --kmeans_epochs=1 --ae_epochs=5000 --cluster_epochs=10000 --n_clients=2 --out_fol="$PWD/output_fed_udec" & 
+python3 clustering/py/server.py --address=$PORT --n_clusters $CLUSTERS --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=2 --out_fol="$PWD/$OUT_FOL" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
-python3 clustering/py/client_euromds.py --u_norm --verbose --cuda --n_clusters 8 --ran_flip 0.25 --server=[::]:51550 --update_interval 100 --n_clients=2 --tied --client_id=0 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/output_fed_udec" &
-python3 clustering/py/client_euromds.py --u_norm --verbose --cuda --n_clusters 8 --ran_flip 0.25 --server=[::]:51550 --update_interval 100 --n_clients=2 --tied --client_id=1 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/output_fed_udec" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --cuda --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=2 --tied --client_id=0 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --cuda --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=2 --tied --client_id=1 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
 
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-mkdir "$PWD/results/8kFED_ui2CEUROMDSfinal_deno_ude5k1u10k"
-mv "$PWD/output_fed_udec/"/* "$PWD/results/8kFED_ui2CEUROMDSfinal_deno_ude5k1u10k"/
-#python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSfinal_deno_ude20k1u40k --in_folder="$PWD/results/EUROMDSfinal_deno_ude20k1u40k"
+mkdir "$PWD/results/DECFED_2CEUROMDSfinal_deno_fed_$LETTER-K$CLUSTERS"
+mv "$PWD/$OUT_FOL/"/* "$PWD/results/DECFED_2CEUROMDSfinal_deno_fed_$LETTER-K$CLUSTERS"/
 sleep 10
-rmdir "$PWD/output_fed_udec"
+rmdir "$PWD/$OUT_FOL"
 
-# mkdir "$PWD/output_fed_udec"
-# # UDEC using EUROMDS
-# python3 clustering/py/server.py --address=[::]:51550 --strategy=k-fed --kmeans_epochs=1 --ae_epochs=10000 --cluster_epochs=10000 --n_clients=4 --out_fol="$PWD/output_fed_udec" & 
-# sleep 2 # Sleep for 2s to give the server enough time to start
-# python3 clustering/py/client_euromds.py --ran_flip 0.2 --server=[::]:51550 --update_interval 200000 --tied --client_id=0 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --ran_flip 0.2 --server=[::]:51550 --update_interval 200000 --tied --client_id=1 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --ran_flip 0.2 --server=[::]:51550 --update_interval 200000 --tied --client_id=2 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --ran_flip 0.2 --server=[::]:51550 --update_interval 200000 --tied --client_id=3 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
+mkdir "$PWD/$OUT_FOL"
+# UDEC using EUROMDS
+python3 clustering/py/server.py --address=$PORT --n_clusters $CLUSTERS --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=4 --out_fol="$PWD/$OUT_FOL" & 
+sleep 2 # Sleep for 2s to give the server enough time to start
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=4 --tied --client_id=0 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=4 --tied --client_id=1 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=4 --tied --client_id=2 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=4 --tied --client_id=3 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
 
-# # This will allow you to use CTRL+C to stop all background processes
-# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-# wait
-# mkdir "$PWD/results/kFED_noui4CEUROMDSfinal_deno_ude10k1u10k"
-# mv "$PWD/output_fed_udec/"/* "$PWD/results/kFED_noui4CEUROMDSfinal_deno_ude10k1u10k"/
-# #python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSfinal_deno_ude20k1u40k --in_folder="$PWD/results/EUROMDSfinal_deno_ude20k1u40k"
-# sleep 10
-# rmdir "$PWD/output_fed_udec"
+# This will allow you to use CTRL+C to stop all background processes
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
+wait
+mkdir "$PWD/results/DECFED_4CEUROMDSfinal_deno_fed_$LETTER-K$CLUSTERS"
+mv "$PWD/$OUT_FOL/"/* "$PWD/results/DECFED_4CEUROMDSfinal_deno_fed_$LETTER-K$CLUSTERS"/
+sleep 10
+rmdir "$PWD/$OUT_FOL"
 
-# mkdir "$PWD/output_fed_udec"
-# # UDEC using EUROMDS
-# python3 clustering/py/server.py --address=[::]:51550 --strategy=k-fed --kmeans_epochs=1 --ae_epochs=10000 --cluster_epochs=10000 --n_clients=6 --out_fol="$PWD/output_fed_udec" & 
-# sleep 2 # Sleep for 2s to give the server enough time to start
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=0 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=1 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=2 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=3 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=4 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=5 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
+mkdir "$PWD/$OUT_FOL"
+# UDEC using EUROMDS
+python3 clustering/py/server.py --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=6 --out_fol="$PWD/$OUT_FOL" & 
+sleep 2 # Sleep for 2s to give the server enough time to start
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=6 --tied --client_id=0 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=6 --tied --client_id=1 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=6 --tied --client_id=2 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=6 --tied --client_id=3 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=6 --tied --client_id=4 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=6 --tied --client_id=5 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
 
-# # This will allow you to use CTRL+C to stop all background processes
-# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-# wait
-# mkdir "$PWD/results/kFED_noui6CEUROMDSfinal_deno_ude10k1u10k"
-# mv "$PWD/output_fed_udec/"/* "$PWD/results/kFED_noui6CEUROMDSfinal_deno_ude10k1u10k"/
-# #python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSfinal_deno_ude20k1u40k --in_folder="$PWD/results/EUROMDSfinal_deno_ude20k1u40k"
-# sleep 10
-# rmdir "$PWD/output_fed_udec"
+# This will allow you to use CTRL+C to stop all background processes
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
+wait
+mkdir "$PWD/results/DECFED_6CEUROMDSfinal_deno_fed_$LETTER-K$CLUSTERS"
+mv "$PWD/$OUT_FOL/"/* "$PWD/results/DECFED_6CEUROMDSfinal_deno_fed_$LETTER-K$CLUSTERS"/
+sleep 10
+rmdir "$PWD/$OUT_FOL"
 
-# mkdir "$PWD/output_fed_udec"
-# # UDEC using EUROMDS
-# python3 clustering/py/server.py --address=[::]:51550 --strategy=k-fed --kmeans_epochs=1 --ae_epochs=10000 --cluster_epochs=10000 --n_clients=6 --out_fol="$PWD/output_fed_udec" & 
-# sleep 2 # Sleep for 2s to give the server enough time to start
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=0 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=1 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=2 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=3 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=4 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=5 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=6 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
-# python3 clustering/py/client_euromds.py --server=[::]:51550 --update_interval 200000 --tied --client_id=7 --alg=udec --shuffle=True --fold_n=0 --n_clients=8 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --n_clusters=6 --out_fol="$PWD/output_fed_udec" &
+mkdir "$PWD/$OUT_FOL"
+# UDEC using EUROMDS
+python3 clustering/py/server.py --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=8 --out_fol="$PWD/$OUT_FOL" & 
+sleep 2 # Sleep for 2s to give the server enough time to start
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=8 --tied --client_id=0 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=8 --tied --client_id=1 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=8 --tied --client_id=2 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=8 --tied --client_id=3 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=8 --tied --client_id=4 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=8 --tied --client_id=5 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=8 --tied --client_id=6 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
+python3 clustering/py/client_euromds.py $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --update_interval 100 --n_clients=8 --tied --client_id=7 --groups=Genetics --groups=CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D --out_fol="$PWD/$OUT_FOL" &
 
-# # This will allow you to use CTRL+C to stop all background processes
-# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-# wait
-# mkdir "$PWD/results/kFED_noui8CEUROMDSfinal_deno_ude10k1u10k"
-# mv "$PWD/output_fed_udec/"/* "$PWD/results/kFED_noui8CEUROMDSfinal_deno_ude10k1u10k"/
-# #python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSfinal_deno_ude20k1u40k --in_folder="$PWD/results/EUROMDSfinal_deno_ude20k1u40k"
-# sleep 10
-# rmdir "$PWD/output_fed_udec"
+# This will allow you to use CTRL+C to stop all background processes
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
+wait
+mkdir "$PWD/results/DECFED_8CEUROMDSfinal_deno_fed_$LETTER-k$CLUSTERS"
+mv "$PWD/$OUT_FOL/"/* "$PWD/results/DECFED_8CEUROMDSfinal_deno_fed_$LETTER-k$CLUSTERS"/
+sleep 10
+rmdir "$PWD/$OUT_FOL"
