@@ -214,6 +214,7 @@ if __name__ == "__main__":
         'kmeans_n_init': 25,
         'ae_local_epochs': 1,
         'ae_lr': 0.1,
+        'ae_lr_dr': 2/5, # decay ratio, DEC paper 2/5 to divide by ten every 2/5 of # pretrain epochs
         'ae_momentum': 0.9,
         'ae_act': 'selu', # 'relu' --> DEC paper, 'selu' --> should be better for binary
         'cl_lr': args.cl_lr,
