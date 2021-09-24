@@ -422,9 +422,10 @@ if __name__ == "__main__":
         del y_ae_pred, x_ae_test
         # getting the cycle accuracy of train set
         x_ae_train = autoencoder(x_train)
+        y_pred_train = clustering_model.predict(np.round(x_train), verbose=0).argmax(1)
         y_ae_pred = clustering_model.predict(np.round(x_ae_train), verbose=0).argmax(1)
-        train_cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
-        del y_ae_pred, x_ae_train
+        train_cycle_acc = my_metrics.acc(y_pred_train, y_ae_pred)
+        del y_ae_pred, x_ae_train, y_pred_train
         # evaluating metrics
         result = {}
         eval_cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
