@@ -461,7 +461,7 @@ if __name__ == "__main__":
                            path_to_out=path_to_out)
         # check for required convergence
         if i > 0:
-            tol = 1 - my_metrics.acc(y_pred, y_old)
+            tol = float(1 - my_metrics.acc(y_pred, y_old))
             if i%100 and args.verbose:
                 print("Current label change ratio is {}, i.e. {}/{} samples". \
                     format(tol, int(tol*len(x_test)), len(x_test)))
