@@ -428,7 +428,6 @@ if __name__ == "__main__":
         del y_ae_pred, x_ae_train, y_pred_train
         # evaluating metrics
         result = {}
-        eval_cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
         if y_test is not None and args.verbose:
             acc = my_metrics.acc(y_test, y_pred)
             nmi = my_metrics.nmi(y_test, y_pred)
