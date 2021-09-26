@@ -781,6 +781,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         """Perform the fit step after having assigned new weights."""
         # increasing the number of epoch
         self.f_round += 1
+        self.local_iter += 1
         self.step = config['model']
         print("Federated Round number %d, step: %s, rounds %d/%d" % (self.f_round,
                                                                      self.step,
@@ -792,6 +793,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             return self.up_frequencies, len(self.x_train), {}
         elif self.step == 'pretrain_ae':  # ae pretrain step
             if config['first']:
+                self.local_iter = 1
                 self.ae_optimizer = SGD(
                     learning_rate=self.ae_lr,
                     momentum=self.ae_momentum,
@@ -815,6 +817,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             return self.encoder.get_weights(), len(self.x_train), {}
         elif self.step == 'finetune_ae':  # ae pretrain step
             if config['first']:
+                self.local_iter = 1
                 # building and compiling autoencoder for finetuning
                 self.dropout, self.ran_flip = 0.0, 0.0
                 self._build_ae()
@@ -834,6 +837,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             # returning the parameters necessary for FedAvg
             return self.encoder.get_weights(), len(self.x_train), {}
         elif self.step == 'k-means':  # k-Means step
+            self.local_iter = 1
             parameters = k_means_initializer  # k++ is used
             self.kmeans = KMeans(init=parameters,
                                  n_clusters=self.n_clusters,
@@ -846,6 +850,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
             return self.kmeans.cluster_centers_, len(self.x_train), {}
         elif self.step == 'clustering':
             if config['first']:  # initialize clustering layer with final kmeans' cluster centers
+                self.local_iter = 1
                 # getting final clusters centers
                 self.cluster_centers = parameters
                 self._build_ae()
@@ -903,7 +908,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         loss, r_accuracy, accuracy = self.autoencoder.evaluate(
             self.x_test, self.x_test, verbose=0)
         metrics['client'] = self.client_id
-        metrics['round'] = self.f_round-1
+        metrics['round'] = self.local_iter
         metrics["eval_loss"] = loss
         metrics["eval_accuracy"] = accuracy
         metrics["eval_r_accuracy"] = r_accuracy
