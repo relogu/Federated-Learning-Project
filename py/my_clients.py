@@ -749,7 +749,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
                     dropout_rate=self.dropout, act=self.ae_act, noise_rate=self.ran_flip)
 
     def _fit_clustering_model(self):
-        if self.local_iter % self.update_interval == 0:
+        if self.local_iter % self.update_interval == 1:
             print('Updating auxiliary distribution')
             q = self.clustering_model.predict(self.x_train, verbose=0)
             # update the auxiliary target distribution p
@@ -757,7 +757,6 @@ class KMeansEmbedClusteringClient(NumPyClient):
         for _ in range(int(self.cl_local_epochs)):
             self.last_histo = self.clustering_model.fit(
                 x=self.x_train, y=self.p, verbose=0)
-        self.local_iter += 1
 
     def _fit_autoencoder(self, finetune=False, is_first=False):
         # check if the final weights already exist
@@ -945,7 +944,7 @@ class KMeansEmbedClusteringClient(NumPyClient):
         del x_ae_train, y_ae_pred, y_pred_train
         if self.y_old is None:
             tol = 1.0
-        if self.local_iter > 1:
+        elif self.local_iter > 0:
             tol = 1 - my_metrics.acc(y_pred, self.y_old)
         metrics = self._classes_evaluate(y_pred)
         metrics['train_cycle_accuracy'] = train_cycle_accuracy
