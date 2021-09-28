@@ -49,6 +49,11 @@ def get_parser():
                         help='which groups of variables to use for EUROMDS dataset')
     parser.add_argument('--ex_col', dest='ex_col', required=True,
                         action='append', help='which columns to exclude for EUROMDS dataset')
+    parser.add_argument('--fill',
+                        dest='fill',
+                        required=False,
+                        action='store_true',
+                        help='Flag for fill NaNs in dataset')
     parser.add_argument("--n_clusters", dest="n_clusters", default=10,
                         type=int, help="Define the number of clusters to identify")
     parser.add_argument('--fold_n',
@@ -200,8 +205,11 @@ if __name__ == "__main__":
                   format(data_util.get_euromds_cols()))
             sys.exit()
     # getting the entire dataset
-    x = data_util.get_euromds_dataset(
-        groups=args.groups, exclude_cols=args.ex_col)
+    if args.fill:
+        fill = 2044
+    else:
+        fill = 0
+    x = data_util.get_euromds_dataset(groups=args.groups, exclude_cols=args.ex_col, accept_nan=fill)
     # getting the number of features
     n_features = len(x.columns)
     x = np.array(x)

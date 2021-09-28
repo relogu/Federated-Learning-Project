@@ -11,9 +11,11 @@ import pathlib
 import warnings
 from pathlib import Path
 from typing import Union
+from collections import Counter
 
 import matplotlib.pyplot as plt
 import numpy as np
+import scipy
 import pandas as pd
 import sklearn
 import tensorflow as tf
@@ -27,6 +29,18 @@ from tensorflow.keras.datasets import mnist
 EUROMDS_GROUPS = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto',
                   'GeneCyto', 'Demographics', 'Clinical']
 
+def fillcolumn(ser):
+    tot = len(ser)
+    cna = len(ser[ser.isna()])
+    l = ser[ser.notna()]
+    zeros = len(l[l==0])
+    prob = zeros/tot
+    m = np.random.choice([0, 1],
+                         p = [prob, float(1-prob)],
+                         size = cna)
+    ser[ser.isna()] = m
+    return ser
+    
 class PrepareDataSimple(Dataset):
 
     def __init__(self, x, y):
@@ -79,7 +93,9 @@ def get_euromds_cols(accept_nan: int = 0,
 def get_euromds_dataset(accept_nan: int = 0,
                         groups: list[str] = None,
                         exclude_cols: list[str] = None,
-                        path_to_data: Union[Path, str] = None):
+                        path_to_data: Union[Path, str] = None,
+                        verbose: bool = False,
+                        seed: int = 51550):
     # set the path
     if path_to_data is None:
         parent = pathlib.Path(__file__).parent.parent.absolute()
@@ -114,6 +130,12 @@ def get_euromds_dataset(accept_nan: int = 0,
     filtered = main_df.copy()
     for c in main_df.columns:
         a = len(main_df[main_df[c].isnull()])
+        if verbose and a > 0:
+            mean = np.average(main_df[~main_df[c].isnull()][c])
+            mode = scipy.stats.mode(main_df[~main_df[c].isnull()][c])
+            print('Column {} has {} NaNs, mean value is {}, mode is {}'. \
+                format(c, a, mean, mode))
+        main_df[c] = fillcolumn(main_df[c])
         if a > accept_nan:
             filtered = filtered.drop(columns=c)
     del main_df
