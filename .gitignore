@@ -13,7 +13,9 @@
 # obscuring results for now
 #*results*
 #!results/*/*.png
-results/*/*.md
+!*results/*FED_g-K8/*
+!*results/*FED_g-K6/*
+!*results/*single_g_*/*
 
 *output*
 !output.py
