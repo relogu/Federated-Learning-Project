@@ -3,13 +3,17 @@
 
 *.pyc
 
+# histories
+*_history
+
 # too many of those
 #*.png
+*results/*/*.png
 
 # obscuring results for now
 #*results*
-!results/*/*.png
-!results/*/*.md
+#!results/*/*.png
+results/*/*.md
 
 *output*
 !output.py
