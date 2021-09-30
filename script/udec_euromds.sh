@@ -14,7 +14,7 @@ then
 FILL="--fill"
 DS="fill"
 fi
-
+echo "Dataset type chosen $DS"
 
 mkdir "$PWD/$OUT_FOL"
 # entire dataset
