@@ -205,11 +205,12 @@ if __name__ == "__main__":
                   format(data_util.get_euromds_cols()))
             sys.exit()
     # getting the entire dataset
+    print("Filling? {}".format(args.fill))
     if args.fill:
         fill = 2044
     else:
         fill = 0
-    x = data_util.get_euromds_dataset(groups=args.groups, exclude_cols=args.ex_col, accept_nan=fill)
+    x = data_util.get_euromds_dataset(groups=args.groups, exclude_cols=args.ex_col, accept_nan=fill, verbose=args.verbose)
     # getting the number of features
     n_features = len(x.columns)
     print('Number of features extracted is {}'.format(n_features))
