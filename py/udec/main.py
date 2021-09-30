@@ -212,6 +212,7 @@ if __name__ == "__main__":
     x = data_util.get_euromds_dataset(groups=args.groups, exclude_cols=args.ex_col, accept_nan=fill)
     # getting the number of features
     n_features = len(x.columns)
+    print('Number of features extracted is {}'.format(n_features))
     x = np.array(x)
     # getting labels from HDP
     prob = data_util.get_euromds_dataset(groups=['HDP'])
