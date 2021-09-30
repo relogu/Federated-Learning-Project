@@ -29,17 +29,24 @@ from tensorflow.keras.datasets import mnist
 EUROMDS_GROUPS = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto',
                   'GeneCyto', 'Demographics', 'Clinical']
 
-def fillcolumn(ser):
+def fillcolumn(ser, verbose=False):
     tot = len(ser)
     cna = len(ser[ser.isna()])
     l = ser[ser.notna()]
     zeros = len(l[l==0])
     prob = zeros/tot
+    if verbose:
+        print('Total samples {}, NaN samples {}, prob of 0s {}'. \
+            format(tot, cna, prob))
     m = np.random.choice([0, 1],
                          p = [prob, float(1-prob)],
                          size = cna)
-    ser[ser.isna()] = m
-    return ser
+    ser.loc[ser.isna()] = m
+    if verbose:
+        cna = len(ser[ser.isna()])
+        print('Once transformed, NaN samples {}'. \
+            format(cna))
+    return ser#.astype(int)
     
 class PrepareDataSimple(Dataset):
 
@@ -135,9 +142,10 @@ def get_euromds_dataset(accept_nan: int = 0,
             mode = scipy.stats.mode(main_df[~main_df[c].isnull()][c])
             print('Column {} has {} NaNs, mean value is {}, mode is {}'. \
                 format(c, a, mean, mode))
-        main_df[c] = fillcolumn(main_df[c])
         if a > accept_nan:
             filtered = filtered.drop(columns=c)
+        elif a > 0:
+            filtered.loc[:, c] = fillcolumn(filtered[c], verbose)
     del main_df
     del groups
     del df_groups
