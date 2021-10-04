@@ -177,7 +177,7 @@ def parse_args():
                         dest='update_interval',
                         required=False,
                         type=int,
-                        default=500,
+                        default=100,
                         action='store',
                         help='set the update interval for the clusters distribution')
     parser.add_argument('-v', '--verbose',
