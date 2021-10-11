@@ -13,7 +13,7 @@ echo "Output folder $4"
 OUT_FOL="$4"
 echo "Fill NaNs $5"
 FILL=""
-DS="{$DS}"
+DS=""
 if [ $5 == "fill" ]
 then
 FILL="--fill"
