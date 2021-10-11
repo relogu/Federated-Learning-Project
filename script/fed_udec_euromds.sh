@@ -13,7 +13,7 @@ OUT_FOL="$4"
 echo "Fill NaNs $5"
 FILL=""
 DS="{$DS}"
-if [ $5 = "fill" ]
+if [ $5 == "fill" ]
 then
 FILL="--fill"
 DS="fill"
