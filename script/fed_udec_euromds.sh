@@ -2,6 +2,7 @@
 
 echo $PWD
 export PYTHONPATH="$PWD:$PYTHONPATH"
+
 echo "Number of clusters $1"
 CLUSTERS="$1"
 echo "Letter defining network set up $2"
@@ -22,7 +23,7 @@ echo "Dataset type chosen $DS"
 
 DATASET="--groups Genetics --groups CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D"
 SERVER="clustering/py/server.py"
-CLIENT="clustering/py/client.py"
+CLIENT="clustering/py/client_euromds.py"
 
 if [ $2 == "a" ]
 then
