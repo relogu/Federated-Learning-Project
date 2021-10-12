@@ -50,7 +50,7 @@ def parse_args():
                         required=True,
                         type=int,
                         default=2,
-                        choices=[2, 3, 4, 5, 6, 7, 8],
+                        #choices=[2, 3, 4, 5, 6, 7, 8],
                         action='store',
                         help='minimum number of active clients to perform an iteration step')
     parser.add_argument('--strategy',
