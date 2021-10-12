@@ -67,7 +67,7 @@ def parse_args():
                         required=True,
                         type=int,
                         default=2,
-                        choices=[2, 3, 4, 5, 6, 7, 8],
+                        #choices=[2, 3, 4, 5, 6, 7, 8],
                         action='store',
                         help='number of total clients in the FL setting')
     parser.add_argument('--fold_n',
