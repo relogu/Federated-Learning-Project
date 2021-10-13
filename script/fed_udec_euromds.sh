@@ -81,20 +81,20 @@ U_NORM="--u_norm"
 AE_EPOCHS="1"
 fi
 
-# mkdir "$PWD/$OUT_FOL"
-# # UDEC using EUROMDS
-# python3 $SERVER --address=$PORT --n_clusters $CLUSTERS --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=1 --n_clients=2 --out_fol="$PWD/$OUT_FOL" & 
-# sleep 2 # Sleep for 2s to give the server enough time to start
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=2 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=2 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
+mkdir "$PWD/$OUT_FOL"
+# UDEC using EUROMDS
+python3 $SERVER --address=$PORT --n_clusters $CLUSTERS --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=2 --out_fol="$PWD/$OUT_FOL" & 
+sleep 2 # Sleep for 2s to give the server enough time to start
+python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=2 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
+python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=2 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
 
-# # This will allow you to use CTRL+C to stop all background processes
-# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-# wait
-# mkdir "$PWD/results/DEC_2CEUROMDS{$DS}_FED_$LETTER-K$CLUSTERS"
-# mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_2CEUROMDS{$DS}_FED_$LETTER-K$CLUSTERS"/
-# sleep 10
-# rmdir "$PWD/$OUT_FOL"
+# This will allow you to use CTRL+C to stop all background processes
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
+wait
+mkdir "$PWD/results/DEC_2CEUROMDS{$DS}_FED_$LETTER-K$CLUSTERS"
+mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_2CEUROMDS{$DS}_FED_$LETTER-K$CLUSTERS"/
+sleep 10
+rmdir "$PWD/$OUT_FOL"
 
 # mkdir "$PWD/$OUT_FOL"
 # # UDEC using EUROMDS
@@ -153,77 +153,77 @@ fi
 # sleep 10
 # rmdir "$PWD/$OUT_FOL"
 
-mkdir "$PWD/$OUT_FOL"
-# UDEC using EUROMDS
-python3 $SERVER --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=10 --out_fol="$PWD/$OUT_FOL" & 
-sleep 2 # Sleep for 2s to give the server enough time to start
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=4 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=5 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=6 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=7 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=8 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=9 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# mkdir "$PWD/$OUT_FOL"
+# # UDEC using EUROMDS
+# python3 $SERVER --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=10 --out_fol="$PWD/$OUT_FOL" & 
+# sleep 2 # Sleep for 2s to give the server enough time to start
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=4 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=5 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=6 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=7 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=8 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=9 $DATASET --out_fol="$PWD/$OUT_FOL" &
 
-# This will allow you to use CTRL+C to stop all background processes
-trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-wait
-mkdir "$PWD/results/DEC_10CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"
-mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_10CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"/
-sleep 10
-rmdir "$PWD/$OUT_FOL"
+# # This will allow you to use CTRL+C to stop all background processes
+# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
+# wait
+# mkdir "$PWD/results/DEC_10CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"
+# mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_10CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"/
+# sleep 10
+# rmdir "$PWD/$OUT_FOL"
 
-mkdir "$PWD/$OUT_FOL"
-# UDEC using EUROMDS
-python3 $SERVER --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=12 --out_fol="$PWD/$OUT_FOL" & 
-sleep 2 # Sleep for 2s to give the server enough time to start
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=4 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=5 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=6 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=7 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=8 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=9 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=10 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=11 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# mkdir "$PWD/$OUT_FOL"
+# # UDEC using EUROMDS
+# python3 $SERVER --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=12 --out_fol="$PWD/$OUT_FOL" & 
+# sleep 2 # Sleep for 2s to give the server enough time to start
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=4 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=5 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=6 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=7 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=8 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=9 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=10 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=11 $DATASET --out_fol="$PWD/$OUT_FOL" &
 
-# This will allow you to use CTRL+C to stop all background processes
-trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-wait
-mkdir "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"
-mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"/
-sleep 10
-rmdir "$PWD/$OUT_FOL"
+# # This will allow you to use CTRL+C to stop all background processes
+# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
+# wait
+# mkdir "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"
+# mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"/
+# sleep 10
+# rmdir "$PWD/$OUT_FOL"
 
-mkdir "$PWD/$OUT_FOL"
-# UDEC using EUROMDS
-python3 $SERVER --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=14 --out_fol="$PWD/$OUT_FOL" & 
-sleep 2 # Sleep for 2s to give the server enough time to start
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=4 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=5 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=6 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=7 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=8 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=9 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=10 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=11 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=12 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=13 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# mkdir "$PWD/$OUT_FOL"
+# # UDEC using EUROMDS
+# python3 $SERVER --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=14 --out_fol="$PWD/$OUT_FOL" & 
+# sleep 2 # Sleep for 2s to give the server enough time to start
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=4 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=5 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=6 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=7 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=8 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=9 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=10 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=11 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=12 $DATASET --out_fol="$PWD/$OUT_FOL" &
+# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=13 $DATASET --out_fol="$PWD/$OUT_FOL" &
 
-# This will allow you to use CTRL+C to stop all background processes
-trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-wait
-mkdir "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"
-mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"/
-sleep 10
-rmdir "$PWD/$OUT_FOL"
+# # This will allow you to use CTRL+C to stop all background processes
+# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
+# wait
+# mkdir "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"
+# mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"/
+# sleep 10
+# rmdir "$PWD/$OUT_FOL"
