@@ -5,7 +5,7 @@ export PYTHONPATH="$PWD:$PYTHONPATH"
 
 echo "Number of clusters $1"
 CLUSTERS="$1"
-echo "Letter defining network set up $2"
+echo "Letter defining model set up $2"
 LETTER="$2"
 echo "Port for server communication $3"
 PORT="[::]:$3"
@@ -20,6 +20,8 @@ FILL="--fill"
 DS="fill"
 fi
 echo "Dataset type chosen $DS"
+echo "Max number of clients to simulate $6"
+MAX_N_CLIENTS=$6
 
 DATASET="--groups Genetics --groups CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D"
 SERVER="clustering/py/server.py"
@@ -82,148 +84,27 @@ AE_EPOCHS="1"
 fi
 
 mkdir "$PWD/$OUT_FOL"
+for (( j=2; j<=$MAX_N_CLIENTS; j++ ))
+do
+N_CLIENTS=$j
+echo "Simulating the federated set up with $N_CLIENTS clients."
+
 # UDEC using EUROMDS
-python3 $SERVER --address=$PORT --n_clusters $CLUSTERS --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=2 --out_fol="$PWD/$OUT_FOL" & 
+python3 $SERVER --address $PORT --n_clusters $CLUSTERS --strategy k-fed --kmeans_epochs 1 --ae_epochs $AE_EPOCHS --cluster_epochs 10000 --n_clients $N_CLIENTS --out_fol "$PWD/$OUT_FOL" & 
 sleep 2 # Sleep for 2s to give the server enough time to start
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=2 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
-python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=2 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
+
+for (( i=0; i<$N_CLIENTS; i++ ))
+do
+echo "Launching client $i."
+python3 $CLIENT $DS $U_NORM --tied --dropout $DROPOUT --ran_flip $RAN_FLIP --n_clusters $CLUSTERS --server $PORT --n_clients $N_CLIENTS --client_id $i $DATASET --out_fol "$PWD/$OUT_FOL" --verbose &
+done
 
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
-mkdir "$PWD/results/DEC_2CEUROMDS{$DS}_FED_$LETTER-K$CLUSTERS"
-mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_2CEUROMDS{$DS}_FED_$LETTER-K$CLUSTERS"/
+mkdir "$PWD/results/DEC_{$N_CLIENTS}CEUROMDS{$DS}_FED_{$LETTER}_K{$CLUSTERS}"
+mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_{$N_CLIENTS}CEUROMDS{$DS}_FED_{$LETTER}_K{$CLUSTERS}"/
 sleep 10
+
+done
 rmdir "$PWD/$OUT_FOL"
-
-# mkdir "$PWD/$OUT_FOL"
-# # UDEC using EUROMDS
-# python3 $SERVER --address=$PORT --n_clusters $CLUSTERS --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=4 --out_fol="$PWD/$OUT_FOL" & 
-# sleep 2 # Sleep for 2s to give the server enough time to start
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=4 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=4 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=4 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=4 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
-
-# # This will allow you to use CTRL+C to stop all background processes
-# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-# wait
-# mkdir "$PWD/results/DEC_4CEUROMDS{$DS}_FED_$LETTER-K$CLUSTERS"
-# mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_4CEUROMDS{$DS}_FED_$LETTER-K$CLUSTERS"/
-# sleep 10
-# rmdir "$PWD/$OUT_FOL"
-
-# mkdir "$PWD/$OUT_FOL"
-# # UDEC using EUROMDS
-# python3 $SERVER --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=6 --out_fol="$PWD/$OUT_FOL" & 
-# sleep 2 # Sleep for 2s to give the server enough time to start
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=6 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=6 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=6 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=6 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=6 --tied --client_id=4 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=6 --tied --client_id=5 $DATASET --out_fol="$PWD/$OUT_FOL" &
-
-# # This will allow you to use CTRL+C to stop all background processes
-# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-# wait
-# mkdir "$PWD/results/DEC_6CEUROMDS{$DS}_FED_$LETTER-K$CLUSTERS"
-# mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_6CEUROMDS{$DS}_FED_$LETTER-K$CLUSTERS"/
-# sleep 10
-# rmdir "$PWD/$OUT_FOL"
-
-# mkdir "$PWD/$OUT_FOL"
-# # UDEC using EUROMDS
-# python3 $SERVER --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=8 --out_fol="$PWD/$OUT_FOL" & 
-# sleep 2 # Sleep for 2s to give the server enough time to start
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=8 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=8 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=8 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=8 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=8 --tied --client_id=4 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=8 --tied --client_id=5 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=8 --tied --client_id=6 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=8 --tied --client_id=7 $DATASET --out_fol="$PWD/$OUT_FOL" &
-
-# # This will allow you to use CTRL+C to stop all background processes
-# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-# wait
-# mkdir "$PWD/results/DEC_8CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"
-# mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_8CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"/
-# sleep 10
-# rmdir "$PWD/$OUT_FOL"
-
-# mkdir "$PWD/$OUT_FOL"
-# # UDEC using EUROMDS
-# python3 $SERVER --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=10 --out_fol="$PWD/$OUT_FOL" & 
-# sleep 2 # Sleep for 2s to give the server enough time to start
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=4 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=5 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=6 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=7 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=8 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=10 --tied --client_id=9 $DATASET --out_fol="$PWD/$OUT_FOL" &
-
-# # This will allow you to use CTRL+C to stop all background processes
-# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-# wait
-# mkdir "$PWD/results/DEC_10CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"
-# mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_10CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"/
-# sleep 10
-# rmdir "$PWD/$OUT_FOL"
-
-# mkdir "$PWD/$OUT_FOL"
-# # UDEC using EUROMDS
-# python3 $SERVER --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=12 --out_fol="$PWD/$OUT_FOL" & 
-# sleep 2 # Sleep for 2s to give the server enough time to start
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=4 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=5 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=6 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=7 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=8 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=9 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=10 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=12 --tied --client_id=11 $DATASET --out_fol="$PWD/$OUT_FOL" &
-
-# # This will allow you to use CTRL+C to stop all background processes
-# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-# wait
-# mkdir "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"
-# mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"/
-# sleep 10
-# rmdir "$PWD/$OUT_FOL"
-
-# mkdir "$PWD/$OUT_FOL"
-# # UDEC using EUROMDS
-# python3 $SERVER --n_clusters $CLUSTERS --address=$PORT --strategy=k-fed --kmeans_epochs=1 --ae_epochs=$AE_EPOCHS --cluster_epochs=10000 --n_clients=14 --out_fol="$PWD/$OUT_FOL" & 
-# sleep 2 # Sleep for 2s to give the server enough time to start
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=0 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=1 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=2 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=3 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=4 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=5 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=6 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=7 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=8 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=9 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=10 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=11 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=12 $DATASET --out_fol="$PWD/$OUT_FOL" &
-# python3 $CLIENT $DS $U_NORM --verbose --n_clusters $CLUSTERS --dropout $DROPOUT --ran_flip $RAN_FLIP --server=$PORT --n_clients=14 --tied --client_id=13 $DATASET --out_fol="$PWD/$OUT_FOL" &
-
-# # This will allow you to use CTRL+C to stop all background processes
-# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
-# wait
-# mkdir "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"
-# mv "$PWD/$OUT_FOL/"/* "$PWD/results/DEC_12CEUROMDS{$DS}_FED_$LETTER-k$CLUSTERS"/
-# sleep 10
-# rmdir "$PWD/$OUT_FOL"
