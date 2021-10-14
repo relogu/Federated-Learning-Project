@@ -74,7 +74,7 @@ N_CLIENTS=$j
 echo "Simulating the federated set up with $N_CLIENTS clients."
 
 # UDEC using EUROMDS
-nohup time python3 $SERVER \
+nohup python3 $SERVER \
     --address $PORT \
     --n_clusters $CLUSTERS \
     --strategy k-fed \
@@ -86,7 +86,7 @@ sleep 2 # Sleep for 2s to give the server enough time to start
 for (( i=0; i<$N_CLIENTS; i++ ))
 do
 echo "Launching client $i."
-nohup time python3 $CLIENT \
+nohup python3 $CLIENT \
     $U_NORM --tied --dropout $DROPOUT --ran_flip $RAN_FLIP \
     $DATASET $DS \
     --n_clusters $CLUSTERS \
