@@ -21,7 +21,7 @@ trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
 mkdir "$PWD/results/EUROMDSrrrr_clustergan10k"
 mv "$PWD/output_fed_clustergan"/* "$PWD/results/EUROMDSrrrr_clustergan10k"/
-#python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSrrrr_clustergan10k --in_folder="$PWD/output_fed_clustergan"
+#python3 py/scripts/plot_metrics.py -f="$PWD" --prefix=EUROMDSfinal_clustergan10k --in_folder="$PWD/results/EUROMDSfinal_clustergan10k"
 sleep 10
 rmdir "$PWD/output_fed_clustergan"
 
