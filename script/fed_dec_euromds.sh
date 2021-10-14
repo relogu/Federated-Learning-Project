@@ -68,7 +68,7 @@ training_setup () {
 training_setup
 
 mkdir "$PWD/$OUT_FOL"
-for (( j=2; j<=$MAX_N_CLIENTS; j++ )) # stopped at 8, 9 todo
+for (( j=9; j<=$MAX_N_CLIENTS; j++ )) # stopped at 8, 9 todo
 do
 N_CLIENTS=$j
 echo "Simulating the federated set up with $N_CLIENTS clients."
