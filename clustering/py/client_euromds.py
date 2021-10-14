@@ -6,10 +6,7 @@ Created on Wed Mar 13 14:25:15 2021
 @author: relogu
 """
 import argparse
-import math
 import os
-import pathlib
-import random
 import sys
 from argparse import RawTextHelpFormatter
 
@@ -17,22 +14,12 @@ from argparse import RawTextHelpFormatter
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 import flwr as fl
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import torch
-import umap
-import hdbscan
-from flwr.dataset.utils.common import create_lda_partitions, create_partitions
-from sklearn import datasets
-from sklearn.cluster import KMeans
-from sklearn.model_selection import KFold
-from tensorflow.keras.initializers import VarianceScaling, RandomNormal
-from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.initializers import RandomNormal
 
 import py.my_clients as clients
-import py.metrics as my_metrics
 import py.dataset_util as data_util
 # for debug connection
 os.environ["GRPC_VERBOSITY"] = "none"
@@ -67,7 +54,6 @@ def parse_args():
                         required=True,
                         type=int,
                         default=2,
-                        #choices=[2, 3, 4, 5, 6, 7, 8],
                         action='store',
                         help='number of total clients in the FL setting')
     parser.add_argument('--fold_n',
@@ -281,9 +267,6 @@ if __name__ == "__main__":
             int((2/3)*(n_features)),
             int((2.5)*(n_features)),
             N_CLUSTERS]  # DEC paper proportions
-    # init = VarianceScaling(scale=1. / 3.,
-    #                        mode='fan_in',
-    #                        distribution="uniform") # old
     init = RandomNormal(mean=0.0,
                         stddev=0.01) # DEC paper
 

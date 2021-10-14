@@ -8,14 +8,13 @@ Created on Wen Aug 4 10:37:10 2021
 import numpy as np
 
 import tensorflow as tf
-from tensorflow.keras.layers import InputLayer, Dense, Dropout, GaussianNoise
+from tensorflow.keras.layers import InputLayer, Dense, Dropout
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.constraints import UnitNorm
-import tensorflow_probability as tfp
 from tensorflow_probability import distributions as tfd
 from tensorflow_probability import layers as tfpl
 
-from py.udec.net import DenseTied, ClusteringLayer, FlippingNoise, WeightsOrthogonalityConstraint
+from py.dec.net import DenseTied, ClusteringLayer, FlippingNoise, WeightsOrthogonalityConstraint
 
 # some string for verbose outputs
 encoder_layer_name = 'encoder_%d'

@@ -17,16 +17,16 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 import tensorflow as tf
 from tensorflow.keras.optimizers import SGD
-from tensorflow.keras.optimizers.schedules import InverseTimeDecay
-from tensorflow.keras.initializers import VarianceScaling, RandomNormal
+from tensorflow.keras.initializers import RandomNormal
 from sklearn.cluster import KMeans
-from sklearn.metrics import log_loss
 
 from flwr.common.typing import Parameters
 
 import py.dataset_util as data_util
 import py.metrics as my_metrics
-from py.udec.util import create_denoising_autoencoder, create_tied_denoising_autoencoder, create_prob_autoencoder, create_tied_prob_autoencoder, create_clustering_model, target_distribution
+from py.dec.util import (create_denoising_autoencoder, create_tied_denoising_autoencoder,
+                         create_prob_autoencoder, create_tied_prob_autoencoder,
+                         create_clustering_model, target_distribution)
 from py.dumping.plots import print_confusion_matrix
 from py.dumping.output import dump_pred_dict, dump_result_dict
 

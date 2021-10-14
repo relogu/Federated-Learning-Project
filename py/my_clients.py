@@ -6,29 +6,21 @@ Created on Fri May 14 13:55:15 2021
 @author: relogu
 """
 import warnings
-import math
 import os
 from itertools import chain as ichain
-from typing import OrderedDict, Dict
+from typing import OrderedDict
 import pathlib
 
-import flwr as fl
 import numpy as np
 import torch
-import torchvision
 from py.clustergan.dense_model import DiscriminatorDense, EncoderDense, GeneratorDense
 from py.clustergan.cnn_model import DiscriminatorCNN, EncoderCNN, GeneratorCNN
 from py.clustergan.util import calc_gradient_penalty, sample_z
 
 from flwr.client import NumPyClient
-from flwr.common import (FitRes, Parameters, Scalar, Weights,
-                         parameters_to_weights)
-from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy import FedAvg
+from flwr.common import Parameters
 from sklearn.cluster import KMeans
-from sklearn.ensemble._hist_gradient_boosting import loss
 from tensorflow.keras.optimizers import SGD
-from tensorflow.keras.optimizers.schedules import InverseTimeDecay
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
@@ -36,7 +28,9 @@ from torchvision.utils import save_image
 import py.metrics as my_metrics
 from py.dataset_util import split_dataset, PrepareData, PrepareDataSimple
 from py.util import check_weights_dict
-from py.udec.util import create_denoising_autoencoder, create_tied_denoising_autoencoder, create_prob_autoencoder, create_tied_prob_autoencoder, create_clustering_model, target_distribution
+from py.dec.util import (create_denoising_autoencoder, create_tied_denoising_autoencoder,
+                         create_prob_autoencoder, create_tied_prob_autoencoder,
+                         create_clustering_model, target_distribution)
 from py.dumping.output import dump_pred_dict, dump_result_dict
 from py.dumping.plots import print_confusion_matrix, plot_lifelines_pred
 
@@ -911,9 +905,14 @@ class KMeansEmbedClusteringClient(NumPyClient):
         metrics["eval_loss"] = loss
         metrics["eval_accuracy"] = accuracy
         metrics["eval_r_accuracy"] = r_accuracy
-        metrics["train_loss"] = self.last_histo.history['loss'][-1]
-        metrics["train_accuracy"] = self.last_histo.history['accuracy'][-1]
-        metrics["train_r_accuracy"] = self.last_histo.history['rounded_accuracy'][-1]
+        if self.last_histo is not None:
+            metrics["train_loss"] = self.last_histo.history['loss'][-1]
+            metrics["train_accuracy"] = self.last_histo.history['accuracy'][-1]
+            metrics["train_r_accuracy"] = self.last_histo.history['rounded_accuracy'][-1]
+        else:
+            metrics["train_loss"] = 0.0
+            metrics["train_accuracy"] = 0.0
+            metrics["train_r_accuracy"] = 0.0
         if self.dump_metrics:
             filename = '_ae_ft' if finetune else '_ae'
             dump_result_dict('client_'+str(self.client_id)+filename, metrics,

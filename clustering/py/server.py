@@ -8,25 +8,16 @@ Created on Wed Mar 13 14:25:15 2021
 
 import argparse
 import os
-import pathlib
-import sys
 from argparse import RawTextHelpFormatter
 from functools import partial
-from typing import Callable, Dict, List, Optional, Tuple
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 import flwr as fl
-from flwr.common import FitRes, Weights
-from flwr.server.client_proxy import ClientProxy
-from flwr.server.strategy import FedAvg
-from sklearn.cluster import KMeans
-
 import py.my_strategies as strategies
 from py.server_fit_config import (clustergan_on_fit_config,
                                   udec_clustering_on_fit_config,
-                                  kfed_clustering_on_fit_config,
                                   simple_clustering_on_fit_config,
                                   simple_kmeans_on_fit_config)
 
@@ -50,7 +41,6 @@ def parse_args():
                         required=True,
                         type=int,
                         default=2,
-                        #choices=[2, 3, 4, 5, 6, 7, 8],
                         action='store',
                         help='minimum number of active clients to perform an iteration step')
     parser.add_argument('--strategy',
