@@ -11,14 +11,10 @@ import pathlib
 import warnings
 from pathlib import Path
 from typing import Union
-from collections import Counter
 
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy
 import pandas as pd
-import sklearn
-import tensorflow as tf
 import torch
 from torch.utils.data import Dataset
 from sklearn import datasets
@@ -96,7 +92,7 @@ def get_euromds_cols(accept_nan: int = 0,
     cols = df_groups['data']
     return list(cols)
 
-
+# pylint: 
 def get_euromds_dataset(accept_nan: int = 0,
                         groups: list[str] = None,
                         exclude_cols: list[str] = None,
