@@ -6,8 +6,6 @@ Created on Tue Jun 22 19:11:01 2021
 @author: relogu
 """
 import numpy as np
-import scipy
-import sklearn
 import tensorflow as tf
 from scipy.optimize import linear_sum_assignment as linear_assignment
 from sklearn.metrics import (adjusted_mutual_info_score, adjusted_rand_score,

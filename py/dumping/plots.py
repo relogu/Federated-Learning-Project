@@ -12,7 +12,7 @@ import seaborn as sns
 import sklearn
 from lifelines import KaplanMeierFitter
 from pathlib import Path
-from typing import Union, Dict
+from typing import Union
 
 
 def plot_points_2d(x, y):
