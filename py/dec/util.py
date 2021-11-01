@@ -14,7 +14,8 @@ from tensorflow.keras.constraints import UnitNorm
 from tensorflow_probability import distributions as tfd
 from tensorflow_probability import layers as tfpl
 
-from py.dec.net import DenseTied, ClusteringLayer, FlippingNoise, WeightsOrthogonalityConstraint
+from .layers import DenseTied, ClusteringLayer, FlippingNoise
+from .constraints import WeightsOrthogonalityConstraint
 
 # some string for verbose outputs
 encoder_layer_name = 'encoder_%d'
@@ -406,6 +407,40 @@ def create_prob_autoencoder(dims,
         decoder.summary()
 
     return (autoencoder, encoder, decoder)
+
+def create_autoencoder(net_arch, up_frequencies):
+    if net_arch['binary']:
+        if net_arch['tied']:
+            return create_tied_prob_autoencoder(
+                net_arch['dims'],
+                init=net_arch['init'],
+                dropout=net_arch['dropout'],
+                act=net_arch['act'])
+        else:
+            return create_prob_autoencoder(
+                net_arch['dims'],
+                init=net_arch['init'],
+                dropout=net_arch['dropout'],
+                act=net_arch['act'])
+    else:
+        if net_arch['tied']:
+            return create_tied_denoising_autoencoder(
+                net_arch['dims'],
+                up_freq=up_frequencies,
+                init=net_arch['init'],
+                dropout_rate=net_arch['dropout'],
+                act=net_arch['act'],
+                ortho=net_arch['ortho'],
+                u_norm=net_arch['u_norm'],
+                noise_rate=net_arch['ran_flip'])
+        else:
+            return create_denoising_autoencoder(
+                net_arch['dims'],
+                up_freq=up_frequencies,
+                init=net_arch['init'],
+                dropout_rate=net_arch['dropout'],
+                act=net_arch['act'],
+                noise_rate=net_arch['ran_flip'])
 
 
 def create_clustering_model(n_clusters, encoder):

@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 
 from py.clustergan.util import initialize_weights, softmax
-from py.clustergan.bsn import BinaryNet, StochasticBinaryActivation, DeterministicBinaryActivation
+from py.clustergan.bsn import StochasticBinaryActivation
 
 network_setup_string = "Setting up {}...\n"
 
