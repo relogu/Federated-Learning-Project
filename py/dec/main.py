@@ -24,6 +24,7 @@ from flwr.common.typing import Parameters
 
 import py.dataset_util as data_util
 import py.metrics as my_metrics
+import py.losses as my_losses
 from py.dec.util import (create_denoising_autoencoder, create_tied_denoising_autoencoder,
                          create_prob_autoencoder, create_tied_prob_autoencoder,
                          create_clustering_model, target_distribution)
@@ -128,7 +129,7 @@ def get_parser():
                         dest='cl_lr',
                         required=False,
                         type=float,
-                        default=0.1,
+                        default=0.01,
                         action='store',
                         help='clustering model learning rate')
     parser.add_argument('--update_interval',
@@ -189,7 +190,7 @@ if __name__ == "__main__":
         'cl_epochs': args.cl_epochs,
         'update_interval': args.update_interval,
         # bce (specific for binary, overfit w/o dropout),#'mse' (no overfit w/o dropout)#,#(general)
-        'ae_loss': 'binary_crossentropy',
+        'ae_loss': my_losses.FocalLoss,#'mse',#tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM),#'binary_crossentropy',
         'cl_loss': 'kld',
         'seed': args.seed}
 
@@ -296,9 +297,9 @@ if __name__ == "__main__":
         #                    momentum=config['ae_momentum'],
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs'])  # old
         ae_optimizer = SGD(
-            learning_rate=config['ae_lr'],
-            momentum=config['ae_momentum'],
-            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+            learning_rate=0.01,#config['ae_lr'],
+            momentum=config['ae_momentum'])
+            #decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
         autoencoder.compile(
             metrics=[my_metrics.rounded_accuracy, 'accuracy'],
             optimizer=ae_optimizer,
@@ -343,9 +344,9 @@ if __name__ == "__main__":
         #                    momentum=config['ae_momentum'],
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs'])  # old
         ae_optimizer = SGD(
-            learning_rate=config['ae_lr'],
-            momentum=config['ae_momentum'],
-            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+            learning_rate=0.01,#config['ae_lr'],
+            momentum=config['ae_momentum'])
+            #decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
         
         autoencoder.compile(
             metrics=[my_metrics.rounded_accuracy, 'accuracy'],
@@ -394,6 +395,10 @@ if __name__ == "__main__":
                     random_state=config['seed'])
     # fitting clusters' centers using k-means
     kmeans.fit(encoder.predict(x_train))
+    # saving the model weights
+    parameters = np.array([kmeans.cluster_centers_])
+    print('Saving initial centroids')
+    np.savez(path_to_out/'initial_centroids', parameters)    
 
     # training the clustering model
     clustering_model = create_clustering_model(
@@ -401,7 +406,7 @@ if __name__ == "__main__":
         encoder)
     # compiling the clustering model
     cl_optimizer = SGD(
-        learning_rate=config['cl_lr'],
+        learning_rate=0.001,#config['cl_lr'],
         momentum=config['cl_momentum'])
     clustering_model.compile(
         optimizer=cl_optimizer,
@@ -409,20 +414,30 @@ if __name__ == "__main__":
     clustering_model.get_layer(
         name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
     y_old = None
-    for i in range(int(config['cl_epochs'])):
-        if i % config['update_interval'] == 0:
+    print('Initializing the target distribution')
+    q = clustering_model.predict(x_train, verbose=0)
+    # update the auxiliary target distribution p
+    p = target_distribution(q)
+    train_loss, eval_loss = 0.1, 0
+    #for i in range(int(config['cl_epochs'])):
+    i = 0
+    while True:
+        i+=1
+        # if i % 20 == 0:#config['update_interval'] == 0:
+        if train_loss < eval_loss:
             print('Updating the target distribution')
             q = clustering_model.predict(x_train, verbose=0)
             # update the auxiliary target distribution p
             p = target_distribution(q)
         history = clustering_model.fit(x=x_train, y=p, verbose=2,
                                        batch_size=config['batch_size'])
+        train_loss = history.history['loss'][0]
         # evaluation
         q_eval = clustering_model.predict(x_test, verbose=0)
         # update the auxiliary target distribution p
         p_eval = target_distribution(q_eval)
         # retrieving loss
-        loss = clustering_model.evaluate(x_test, p_eval, verbose=2)
+        eval_loss = clustering_model.evaluate(x_test, p_eval, verbose=2)
         # evaluate the clustering performance using some metrics
         y_pred = q_eval.argmax(1)
         # getting the cycle accuracy of evaluation set
@@ -449,7 +464,8 @@ if __name__ == "__main__":
                 print_confusion_matrix(
                     y_test, y_pred,
                     path_to_out=path_to_out)
-            print(out_1 % (i+1, int(config['cl_epochs']), acc, nmi, ami, ari, ran, homo))
+            print('DEC Clustering\nEpoch %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' % \
+                (i, acc, nmi, ami, ari, ran, homo))
             print('Eval cycle accuracy is {}'.format(eval_cycle_acc))
             # dumping and retrieving the results
             metrics = {"accuracy": acc,
@@ -461,22 +477,22 @@ if __name__ == "__main__":
             result = metrics.copy()
         result["eval_cycle_accuracy"] = eval_cycle_acc
         result["train_cycle_accuracy"] = train_cycle_acc
-        result['eval_loss'] = loss
-        result['train_loss'] = history.history['loss'][0]
-        result['round'] = i+1
+        result['eval_loss'] = eval_loss
+        result['train_loss'] = train_loss
+        result['round'] = i
         if id_test is not None:
             pred = {'ID': id_test,
                     'label': y_pred}
             dump_pred_dict('pred', pred,
                            path_to_out=path_to_out)
         # check for required convergence
-        if i > 0:
+        if i > 1:
             tol = float(1 - my_metrics.acc(y_pred, y_old))
             if i%100 and args.verbose:
                 print("Current label change ratio is {}, i.e. {}/{} samples". \
                     format(tol, int(tol*len(x_test)), len(x_test)))
-            if tol < 0.001 and i > 2000: # from DEC paper
-                print("Final label change ratio is {}, i.e. {}/{} samples, reached at {} iteration". \
+            if tol < 0.001 and eval_loss < 0.1:# and eval_cycle_acc > 0.9:# and i > 2000: # from DEC paper
+                print("Final label change ratio is {}, i.e. {}/{} samples, reached after {} iteration". \
                     format(tol, int(tol*len(x_test)), len(x_test), i))
                 break
             else:
