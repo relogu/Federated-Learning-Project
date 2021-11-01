@@ -20,8 +20,12 @@ from torchvision import datasets
 from torchvision import transforms
 from torchvision.utils import save_image
 
-import py.metrics as my_metrics
-import py.dataset_util as data_util
+print(sys.path)
+
+from py.dataset_util import (EUROMDS_GROUPS, get_euromds_dataset, get_euromds_ids,
+                             get_outcome_euromds_dataset, get_euromds_cols,
+                             split_dataset, PrepareData)
+from py.metrics import acc, nmi, ami, ari, homo, ran
 from py.clustergan.util import sample_z, calc_gradient_penalty
 from py.clustergan.dense_model import GeneratorDense, DiscriminatorDense, EncoderDense
 from py.clustergan.cnn_model import GeneratorCNN, DiscriminatorCNN, EncoderCNN
@@ -51,7 +55,7 @@ def get_parser():
                         action='store_true', help="Flag for Wasserstein metric")
     parser.add_argument("-a", "--hardware_acc", dest="cuda_flag", action='store_true',
                         help="Flag for hardware acceleration using cuda (if available)")
-    parser.add_argument("-f", "--folder", dest="out_folder",
+    parser.add_argument("-f", "--output_folder", dest="out_folder",
                         type=type(str('')), help="Folder to output images")
     parser.add_argument('-g', '--groups', dest='groups', required=True,
                         action='append', help='which groups of variables to use for EUROMDS dataset')
@@ -63,6 +67,8 @@ def get_parser():
                         help='Limiting the number of cores used')
     parser.add_argument('--plotting', action='store_true', default=False,
                         help='Flag for plottin confusion matrix')
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help='Flag for verbosity')
     '''
     parser.add_argument('--stochastic', action='store_true', default=False,
                         help='Use stochastic activations instead of deterministic [active iff `--binary`]')
@@ -173,19 +179,19 @@ if __name__ == "__main__":
 
     else:
         for g in args.groups:
-            if g not in data_util.EUROMDS_GROUPS:
+            if g not in EUROMDS_GROUPS:
                 print('One of the given groups is not allowed.\nAllowed groups: {}'.\
-                    format(data_util.EUROMDS_GROUPS))
+                    format(EUROMDS_GROUPS))
                 sys.exit()
         for c in args.ex_col:
-            if c not in data_util.get_euromds_cols():
+            if c not in get_euromds_cols():
                 print('One of the given columns is not allowed.\nAllowed columns: {}'.\
-                    format(data_util.get_euromds_cols()))
+                    format(get_euromds_cols()))
                 sys.exit()
         # getting the entire dataset
-        x = data_util.get_euromds_dataset(groups=args.groups, exclude_cols=args.ex_col)
+        x = get_euromds_dataset(groups=args.groups, exclude_cols=args.ex_col)
         # getting labels from HDP
-        prob = data_util.get_euromds_dataset(groups=['HDP'])
+        prob = get_euromds_dataset(groups=['HDP'])
         y = []
         for label, row in prob.iterrows():
             if np.sum(row) > 0:
@@ -194,15 +200,15 @@ if __name__ == "__main__":
                 y.append(-1)
         y = np.array(y)
         # getting the outcomes
-        outcomes = data_util.get_outcome_euromds_dataset()
+        outcomes = get_outcome_euromds_dataset()
         # getting IDs
-        ids = data_util.get_euromds_ids()
+        ids = get_euromds_ids()
         n_features = len(x.columns)
         x = np.array(x)
         outcomes = np.array(outcomes)
         ids = np.array(ids)
         # cross-val
-        train_idx, test_idx = data_util.split_dataset(
+        train_idx, test_idx = split_dataset(
             x=x,
             splits=5,
             fold_n=0)
@@ -216,32 +222,42 @@ if __name__ == "__main__":
         id_test = ids[test_idx]
         outcomes_test = outcomes[test_idx]
         dataloader = DataLoader(
-            data_util.PrepareData(x=x_train,
+            PrepareData(x=x_train,
                                   y=y_train,
                                   ids=id_train,
                                   outcomes=outcomes_train),
             batch_size=batch_size)
         testloader = DataLoader(
-            data_util.PrepareData(x=x_test,
+            PrepareData(x=x_test,
                                   y=y_test,
                                   ids=id_test,
                                   outcomes=outcomes_test),
             batch_size=batch_size)
+        
+        # setting the autoencoder layers
+        dims = [x.shape[-1],
+                int((2/3)*(n_features)),
+                int((2/3)*(n_features)),
+                int((2.5)*(n_features)),
+                ]  # DEC paper proportions
         config = {
-            'gen_dims': [int(4*n_features), int(3*n_features), int(2*n_features), x.shape[-1]],
-            'enc_dims': [int(x.shape[-1]), int(4*n_features), int(3*n_features), int(2*n_features)],
-            'disc_dims': [int(x.shape[-1]), int(2*n_features), int(3*n_features), int(4*n_features)]
+            'enc_dims': dims,
+            'disc_dims': dims,
+            'gen_dims': dims.reverse(),
         }
-        generator = GeneratorDense(latent_dim=latent_dim,
-                                   n_c=n_c,
-                                   gen_dims=config['gen_dims'],
-                                   x_shape=x.shape[-1],
-                                   use_binary=bsn)
-        encoder = EncoderDense(latent_dim=latent_dim,
-                               enc_dims=config['enc_dims'],
-                               n_c=n_c)
+        generator = GeneratorDense(
+            latent_dim=latent_dim,
+            n_c=n_c,
+            gen_dims=config['gen_dims'],
+            x_shape=x.shape[-1],
+            use_binary=bsn)
+        encoder = EncoderDense(
+            latent_dim=latent_dim,
+            enc_dims=config['enc_dims'],
+            n_c=n_c)
         discriminator = DiscriminatorDense(
-            disc_dims=config['disc_dims'], wass_metric=wass_metric)
+            disc_dims=config['disc_dims'],
+            wass_metric=wass_metric)
 
     torch.autograd.set_detect_anomaly(True)
 
@@ -405,17 +421,17 @@ if __name__ == "__main__":
         computed_labels = np.array(computed_labels, dtype=object)
 
         # computing metrics
-        acc = my_metrics.acc(t_label.detach().cpu().numpy(),
+        _acc = acc(t_label.detach().cpu().numpy(),
                              computed_labels)
-        nmi = my_metrics.nmi(t_label.detach().cpu().numpy(),
+        _nmi = nmi(t_label.detach().cpu().numpy(),
                              computed_labels)
-        ami = my_metrics.ami(t_label.detach().cpu().numpy(),
+        _ami = ami(t_label.detach().cpu().numpy(),
                              computed_labels)
-        ari = my_metrics.ari(t_label.detach().cpu().numpy(),
+        _ari = ari(t_label.detach().cpu().numpy(),
                              computed_labels)
-        ran = my_metrics.ran(t_label.detach().cpu().numpy(),
+        _ran = ran(t_label.detach().cpu().numpy(),
                              computed_labels)
-        homo = my_metrics.homo(t_label.detach().cpu().numpy(),
+        _homo = homo(t_label.detach().cpu().numpy(),
                                computed_labels)
         if args.plotting and args.dataset == 'euromds':
             # plotting outcomes on the labels
@@ -429,12 +445,12 @@ if __name__ == "__main__":
                 y_pred=computed_labels,
                 path_to_out=path_to_out)
         # dumping and retrieving the results
-        metrics = {"accuracy": acc,
-                   "normalized_mutual_info_score": nmi,
-                   "adjusted_mutual_info_score": ami,
-                   "adjusted_rand_score": ari,
-                   "rand_score": ran,
-                   "homogeneity_score": homo}
+        metrics = {"accuracy": _acc,
+                   "normalized_mutual_info_score": _nmi,
+                   "adjusted_mutual_info_score": _ami,
+                   "adjusted_rand_score": _ari,
+                   "rand_score": _ran,
+                   "homogeneity_score": _homo}
         result = metrics.copy()
 
         # Generate sample instances from encoding
@@ -509,21 +525,21 @@ if __name__ == "__main__":
                     'label': computed_labels}
             dump_pred_dict(filename='pred', pred=pred,
                            path_to_out=path_to_out)
+        
+        if args.verbose:
+            print("[Epoch %d/%d] \n"
+                "\tModel Losses: [D: %f] [GE: %f]" % \
+                    (epoch+1,
+                    n_epochs,
+                    d_loss.item(),
+                    ge_loss.item())
+                )
 
-        print("[Epoch %d/%d] \n"
-              "\tModel Losses: [D: %f] [GE: %f]" % (epoch+1,
-                                                    n_epochs,
-                                                    d_loss.item(),
-                                                    ge_loss.item())
-              )
-
-        print("\tCycle Losses: [x: %f] [z_n: %f] [z_c: %f]" % (img_mse_loss.item(),
-                                                               lat_mse_loss.item(),
-                                                               lat_xe_loss.item())
-              )
-
-        print('Epoch %d/%d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' %
-              (epoch+1, n_epochs, acc, nmi, ami, ari, ran, homo))
+            print("\tCycle Losses: [x: %f] [z_n: %f] [z_c: %f]" % \
+                (img_mse_loss.item(),
+                lat_mse_loss.item(),
+                lat_xe_loss.item())
+                )
 
         g_par = np.array([val.cpu().numpy()
                  for _, val in generator.state_dict().items()], dtype=object)
