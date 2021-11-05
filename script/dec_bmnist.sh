@@ -35,7 +35,7 @@ U_NORM="--u_norm"
 AE_EPOCHS="5000"
 # entire dataset
 
-nohup time python3 $SCRIPT $FILL $ORTHO \
+nohup python3 $SCRIPT $FILL $ORTHO \
     --ae_epochs $AE_EPOCHS \
     --cl_epochs 20000 \
     --update_interval 140 \
