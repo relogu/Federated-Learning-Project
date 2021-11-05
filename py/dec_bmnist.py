@@ -5,6 +5,7 @@ Created on Wen Aug 4 10:37:10 2021
 
 @author: relogu
 """
+from tensorflow.python.keras.initializers.initializers_v2 import GlorotUniform
 from py.dumping.output import dump_pred_dict, dump_result_dict
 from py.dumping.plots import print_confusion_matrix
 from py.dec.util import (create_denoising_autoencoder, create_tied_denoising_autoencoder,
@@ -15,9 +16,11 @@ import py.metrics as my_metrics
 import py.dataset_util as data_util
 from flwr.common.typing import Parameters
 from sklearn.cluster import KMeans
-from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.initializers import RandomNormal, VarianceScaling
 from tensorflow.keras.optimizers import SGD
 import tensorflow as tf
+import tensorflow_addons.losses as tfa_losses
+import tensorflow_addons.metrics as tfa_metrics
 import argparse
 import os
 import pathlib
@@ -152,27 +155,17 @@ if __name__ == "__main__":
         'kmeans_epochs': 300,
         'kmeans_n_init': 25,
         'ae_epochs': args.ae_epochs,
-        'ae_lr': 0.0001,  # 0.01, # DEC paper
+        'ae_lr': 0.01,  # 0.01, # DEC paper
         'ae_momentum': 0.9,
         'cl_lr': args.cl_lr,
         'cl_momentum': 0.9,
         'cl_epochs': args.cl_epochs,
         'update_interval': args.update_interval,
-        # bce (specific for binary, overfit w/o dropout),#'mse' (no overfit w/o dropout)#,#(general)
-        # 'mse',#tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM),#'binary_crossentropy',
-        # my_losses.ComboLoss (nan)
-        # 'binary_crossentropy' (seems decent)
-        # 'mse' (seems bad)
-        # my_losses.DiceBCELoss (seems decent)
-        # my_losses.FocalLoss (bad),
-        # my_losses.IoULoss (good) 
-        # my_losses.TverskyLoss (explode in finetuning(need very low lr, 1e-4), results seem good)
-        # my_losses.FocalTverskyLoss (explode in finetuning(need very low lr, 1e-4), results seem good)
-        # my_losses.CosineSimilarityLoss (bad reconstruction)
-        'ae_loss': 'binary_crossentropy',
+        'ae_loss': my_losses.DiceBCELoss,
         'cl_loss': 'kld',
         'seed': args.seed}
-
+    
+    print('AE loss is {}'.format(config['ae_loss']))
     # preparing dataset
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
     x_train, x_test = np.round(x_train.reshape(x_train.shape[0], 784)/255), np.round(x_test.reshape(x_test.shape[0], 784)/255)
@@ -183,11 +176,12 @@ if __name__ == "__main__":
             int((2/3)*(n_features)),
             int((2.5)*(n_features)),
             args.n_clusters]  # DEC paper proportions
-    # init = VarianceScaling(scale=1. / 3.,
+    # init = VarianceScaling(scale=1. / 2.,#3.,
     #                        mode='fan_in',
     #                        distribution="uniform") # old
-    init = RandomNormal(mean=0.0,
-                        stddev=0.2)  # stddev=0.01) # DEC paper, is better
+    # init = RandomNormal(mean=0.0,
+    #                     stddev=0.2)  # stddev=0.01) # DEC paper, is better
+    init = GlorotUniform(seed=51550)
 
     config['ae_dims'] = dims
     config['ae_init'] = init
@@ -224,10 +218,12 @@ if __name__ == "__main__":
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs'])  # old
         ae_optimizer = SGD(
             learning_rate=config['ae_lr'],
-            momentum=config['ae_momentum'])#,
-            #decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+            momentum=config['ae_momentum'],
+            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
         autoencoder.compile(
-            metrics=[my_metrics.rounded_accuracy, 'accuracy'],
+            metrics=[my_metrics.rounded_accuracy,
+                     'accuracy',
+                     tfa_metrics.HammingLoss(mode='multilabel', threshold=0.55)],
             optimizer=ae_optimizer,
             loss=config['ae_loss']
         )
@@ -271,11 +267,13 @@ if __name__ == "__main__":
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs'])  # old
         ae_optimizer = SGD(
             learning_rate=config['ae_lr'],
-            momentum=config['ae_momentum'])#,
-            #decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+            momentum=config['ae_momentum'],
+            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
 
         autoencoder.compile(
-            metrics=[my_metrics.rounded_accuracy, 'accuracy'],
+            metrics=[my_metrics.rounded_accuracy,
+                     'accuracy',
+                     tfa_metrics.HammingLoss(mode='multilabel', threshold=0.55)],
             optimizer=ae_optimizer,
             loss=config['ae_loss']
         )
