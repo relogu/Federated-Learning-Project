@@ -15,7 +15,6 @@ from typing import Union, Callable, Dict
 from pathlib import Path
 from py.dec.util import create_autoencoder
 from py.dumping.output import dump_result_dict
-from py.metrics import acc
 
 class AutoencoderClient(NumPyClient):
     """Client object, to set client performed operations."""
