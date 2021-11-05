@@ -30,6 +30,7 @@ class KMeansClient(NumPyClient):
         # get dataset
         self.client_id = client_id
         self.train, self.test = get_data_fn(client_id)
+        self.config = config
         self.autoencoder, self.encoder, self.decoder = create_autoencoder(
             config, None
         )
@@ -83,8 +84,12 @@ class KMeansClient(NumPyClient):
         metrics = {}
         loss = 0.0
         # predicting labels
-        self.kmeans._cluster_centers = parameters
-        y_pred = self.kmeans.predict(
+        self.kmeans = KMeans(init=np.array(parameters),
+                             n_clusters=self.config['n_clusters'],
+                             max_iter=self.config['kmeans_max_iter'],
+                             n_init=1,
+                             random_state=self.config['seed'])
+        y_pred = self.kmeans.fit_predict(
             self.encoder.predict(self.test['x']))
         # evaluating metrics
         acc = my_metrics.acc(self.test['y'], y_pred)
@@ -94,15 +99,15 @@ class KMeansClient(NumPyClient):
         ran = my_metrics.ran(self.test['y'], y_pred)
         homo = my_metrics.homo(self.test['y'], y_pred)
         if config['verbose']:
-            print('Client %d, FedIter %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' % \
+            print('Client %s, FedIter %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' % \
                 (self.client_id, config['actual_round'], acc, nmi, ami, ari, ran, homo))
         # dumping and retrieving the results
         metrics = {"accuracy": acc,
-                    "normalized_mutual_info_score": nmi,
-                    "adjusted_mutual_info_score": ami,
-                    "adjusted_rand_score": ari,
-                    "rand_score": ran,
-                    "homogeneity_score": homo}
+                   "normalized_mutual_info_score": nmi,
+                   "adjusted_mutual_info_score": ami,
+                   "adjusted_rand_score": ari,
+                   "rand_score": ran,
+                   "homogeneity_score": homo}
         if config['dump_metrics']:
             metrics['client'] = self.client_id
             metrics['round'] = config['actual_round']
