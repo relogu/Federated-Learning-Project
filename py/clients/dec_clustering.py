@@ -76,7 +76,6 @@ class DECClient(NumPyClient):
         self.y_pred_filename = 'client_{}_dec_y_pred.npz'.format(self.client_id)
         self.p_filename = 'client_{}_dec_p.npz'.format(self.client_id)
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
-        print('end init')
     
     # def get_properties(self, ins: PropertiesIns) -> PropertiesRes:
     def get_properties(self, ins):
@@ -93,26 +92,41 @@ class DECClient(NumPyClient):
             (self.client_id, config['actual_round'], config['total_rounds']))
         # getting new weights
         self.clustering_model.set_weights(parameters)
-        # fitting clustering model
-        if config['update_interval']:
-            print('Updating auxiliary distribution')
-            self.update_interval = False
+        if config['train']:
+            # fitting clustering model
+            if config['update_interval']:
+                print('Updating auxiliary distribution')
+                self.update_interval = False
+                q = self.clustering_model.predict(self.train['x'], verbose=0)
+                # update the auxiliary target distribution p
+                p = target_distribution(q)
+                np.savez(self.out_dir/self.p_filename, *p)
+            else:
+                param: Parameters = np.load(
+                    self.out_dir/self.p_filename,
+                    allow_pickle=True)
+                p = np.array([param[par] for par in param])
+            for _ in range(int(self.local_epochs)):
+                self.clustering_model.fit(
+                    x=self.train['x'],
+                    y=p,
+                    verbose=0)
             q = self.clustering_model.predict(self.train['x'], verbose=0)
-            # update the auxiliary target distribution p
-            p = target_distribution(q)
-            np.savez(self.out_dir/self.p_filename, *p)
+            train_y_pred = q.argmax(1)
+            if (self.out_dir/self.y_pred_filename).exists():
+                param: Parameters = np.load(
+                    self.out_dir/self.y_pred_filename,
+                    allow_pickle=True)
+                train_y_old = np.array([param[a] for a in param])
+                tol = 1 - my_metrics.acc(train_y_pred, train_y_old)
+            else:
+                tol = 1.0
+            np.savez(self.out_dir/self.y_pred_filename,
+                    *train_y_pred)
         else:
-            param: Parameters = np.load(
-                self.out_dir/self.p_filename,
-                allow_pickle=True)
-            p = np.array([param[par] for par in param])
-        for _ in range(int(self.local_epochs)):
-            self.clustering_model.fit(
-                x=self.train['x'],
-                y=p,
-                verbose=0)
+            print("No train")
         # returning the parameters necessary for FedAvg
-        return self.clustering_model.get_weights(), len(self.train['x']), {}
+        return self.clustering_model.get_weights(), len(self.train['x']), {'tol': tol}
 
     def _classes_evaluate(self, y_pred, config):
         metrics = {}
@@ -168,17 +182,7 @@ class DECClient(NumPyClient):
             verbose=0).argmax(1)
         metrics['eval_cycle_accuracy'] = my_metrics.acc(eval_y_pred, y_ae_pred)
         del y_ae_pred
-
-        if (self.out_dir/self.y_pred_filename).exists():
-            param: Parameters = np.load(
-                self.out_dir/self.y_pred_filename,
-                allow_pickle=True)
-            eval_y_old = np.array([param[a] for a in param])
-            metrics['tol'] = 1 - my_metrics.acc(eval_y_pred, eval_y_old)
-        else:
-            metrics['tol'] = 1.0
-        np.savez(self.out_dir/self.y_pred_filename,
-                 *eval_y_pred)
+        
         metrics.update(self._classes_evaluate(eval_y_pred, config))
         metrics['client'] = self.client_id
         metrics['round'] = config['actual_round']
