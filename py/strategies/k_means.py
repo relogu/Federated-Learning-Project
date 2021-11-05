@@ -90,7 +90,6 @@ class KMeansStrategy(FedAvg):
             base_centroids = np.concatenate(
                 (base_centroids, [other_centroids[idx]]), axis=0)
             basis_length = base_centroids.shape[0]
-            print(base_centroids.shape)
         # Save base_centroids
         print(f"Saving base centroids...")
         np.savez(self.out_dir/'agg_clusters_centers.npz', *base_centroids)
