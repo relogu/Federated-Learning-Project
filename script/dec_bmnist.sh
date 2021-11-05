@@ -38,7 +38,7 @@ AE_EPOCHS="5000"
 nohup time python3 $SCRIPT $FILL $ORTHO \
     --ae_epochs $AE_EPOCHS \
     --cl_epochs 20000 \
-    --update_interval 20 \
+    --update_interval 140 \
     --n_clusters $CLUSTERS \
     --dropout $DROPOUT \
     --ran_flip $RAN_FLIP \
