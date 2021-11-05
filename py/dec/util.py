@@ -98,7 +98,8 @@ def create_denoising_autoencoder(dims,
     
     # adding dropout
     if dropout_rate > 0.0:
-        print('Adding dropout of rate {}'.format(dropout_rate))
+        if verbose:
+            print('Adding dropout of rate {}'.format(dropout_rate))
         idx = np.arange(start=3, stop=int((2*len(dims))-2), step=2)
         for i in idx:
             encoder_layers.insert(i, Dropout(rate=dropout_rate))
@@ -197,7 +198,8 @@ def create_tied_denoising_autoencoder(dims,
     
     # adding dropout
     if dropout_rate > 0.0:
-        print('Adding dropout of rate {}'.format(dropout_rate))
+        if verbose:
+            print('Adding dropout of rate {}'.format(dropout_rate))
         idx = np.arange(start=3, stop=int((2*len(dims))-2), step=2)
         for i in idx:
             encoder_layers.insert(i, Dropout(rate=dropout_rate))
