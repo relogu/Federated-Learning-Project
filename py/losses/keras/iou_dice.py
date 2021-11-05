@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 
 
-def IoULoss(targets, inputs, smooth=1e-6):
+def IoUDiceLoss(targets, inputs, smooth=1e-6):
     """
     The IoU metric, or Jaccard Index, is similar to the Dice metric and is
     calculated as the ratio between the overlap of the positive instances
@@ -22,4 +22,6 @@ def IoULoss(targets, inputs, smooth=1e-6):
     union = total - intersection
 
     iou = (intersection + smooth) / (union + smooth)
-    return 1 - iou
+    dice = (2*intersection + smooth) / \
+        (K.sum(c_targets) + K.sum(inputs) + smooth)
+    return 2 - dice -iou
