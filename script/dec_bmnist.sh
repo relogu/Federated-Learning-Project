@@ -22,6 +22,7 @@ if [ $4 == "y" ]
 then
 ORTHO="--ortho"
 fi
+echo "Use loss $5"
 
 LETTER=""
 SCRIPT="py/dec_bmnist.py"
@@ -37,6 +38,7 @@ AE_EPOCHS="5000"
 
 nohup python3 $SCRIPT $FILL $ORTHO \
     --ae_epochs $AE_EPOCHS \
+    --ae_loss $5 \
     --cl_epochs 20000 \
     --update_interval 140 \
     --n_clusters $CLUSTERS \

@@ -11,7 +11,7 @@ from py.dumping.plots import print_confusion_matrix
 from py.dec.util import (create_denoising_autoencoder, create_tied_denoising_autoencoder,
                          create_prob_autoencoder, create_tied_prob_autoencoder,
                          create_clustering_model, target_distribution)
-import losses.keras as my_losses
+from losses import get_keras_loss_names, get_keras_loss
 import py.metrics as my_metrics
 import py.dataset_util as data_util
 from flwr.common.typing import Parameters
@@ -25,7 +25,6 @@ import argparse
 import os
 import pathlib
 import numpy as np
-import sys
 import pickle
 
 # Make TensorFlow log less verbose
@@ -54,6 +53,14 @@ def get_parser():
                         default=50000,
                         action='store',
                         help='number of epochs for the autoencoder pre-training')
+    parser.add_argument('--ae_loss',
+                        dest='ae_loss',
+                        required=True,
+                        type=type(''),
+                        default='mse',
+                        choices=get_keras_loss_names(),
+                        action='store',
+                        help='algorithm identifier')
     parser.add_argument('--cl_epochs',
                         dest='cl_epochs',
                         required=False,
@@ -155,13 +162,13 @@ if __name__ == "__main__":
         'kmeans_epochs': 300,
         'kmeans_n_init': 25,
         'ae_epochs': args.ae_epochs,
-        'ae_lr': 0.01,  # 0.01, # DEC paper
+        'ae_lr': 0.001,  # 0.01, # DEC paper
         'ae_momentum': 0.9,
         'cl_lr': args.cl_lr,
         'cl_momentum': 0.9,
         'cl_epochs': args.cl_epochs,
         'update_interval': args.update_interval,
-        'ae_loss': my_losses.DiceBCELoss,
+        'ae_loss': get_keras_loss(args.ae_loss),
         'cl_loss': 'kld',
         'seed': args.seed}
     
@@ -218,8 +225,8 @@ if __name__ == "__main__":
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs'])  # old
         ae_optimizer = SGD(
             learning_rate=config['ae_lr'],
-            momentum=config['ae_momentum'],
-            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+            momentum=config['ae_momentum'])#,
+            # decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
         autoencoder.compile(
             metrics=[my_metrics.rounded_accuracy,
                      'accuracy',
@@ -267,8 +274,8 @@ if __name__ == "__main__":
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs'])  # old
         ae_optimizer = SGD(
             learning_rate=config['ae_lr'],
-            momentum=config['ae_momentum'],
-            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+            momentum=config['ae_momentum'])#,
+            # decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
 
         autoencoder.compile(
             metrics=[my_metrics.rounded_accuracy,

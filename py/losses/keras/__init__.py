@@ -8,6 +8,7 @@ from .tversky import TverskyLoss
 from .cosine_similarity import CosineSimilarityLoss
 from .iou_cosine import IoUCosineLoss
 from .iou_dice import IoUDiceLoss
+from .dice_mse import DiceMSELoss
 
 __all__ = [
     "ComboLoss",
@@ -20,4 +21,5 @@ __all__ = [
     "CosineSimilarityLoss",
     "IoUCosineLoss",
     "IoUDiceLoss",
+    "DiceMSELoss",
 ]
