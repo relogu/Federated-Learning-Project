@@ -5,12 +5,13 @@ Created on Wen Aug 4 10:37:10 2021
 
 @author: relogu
 """
+from tensorflow.python.keras.initializers.initializers_v2 import GlorotUniform
 from py.dumping.output import dump_pred_dict, dump_result_dict
 from py.dumping.plots import print_confusion_matrix
 from py.dec.util import (create_denoising_autoencoder, create_tied_denoising_autoencoder,
                          create_prob_autoencoder, create_tied_prob_autoencoder,
                          create_clustering_model, target_distribution)
-import losses.keras as my_losses
+from losses import get_keras_loss_names, get_keras_loss
 import py.metrics as my_metrics
 import py.dataset_util as data_util
 from flwr.common.typing import Parameters
@@ -18,6 +19,8 @@ from sklearn.cluster import KMeans
 from tensorflow.keras.initializers import RandomNormal
 from tensorflow.keras.optimizers import SGD
 import tensorflow as tf
+import tensorflow_addons.losses as tfa_losses
+import tensorflow_addons.metrics as tfa_metrics
 import argparse
 import os
 import pathlib
@@ -62,6 +65,14 @@ def get_parser():
                         default=50000,
                         action='store',
                         help='number of epochs for the autoencoder pre-training')
+    parser.add_argument('--ae_loss',
+                        dest='ae_loss',
+                        required=True,
+                        type=type(''),
+                        default='mse',
+                        choices=get_keras_loss_names(),
+                        action='store',
+                        help='Loss function for autoencoder training')
     parser.add_argument('--cl_epochs',
                         dest='cl_epochs',
                         required=False,
@@ -156,33 +167,6 @@ if __name__ == "__main__":
         path_to_out = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
     os.makedirs(path_to_out, exist_ok=True)
-    # initializing common configuration dict
-    config = {
-        'batch_size': args.batch_size,
-        'n_clusters': args.n_clusters,
-        'kmeans_epochs': 300,
-        'kmeans_n_init': 25,
-        'ae_epochs': args.ae_epochs,
-        'ae_lr': 0.1,  # 0.01, # DEC paper
-        'ae_momentum': 0.9,
-        'cl_lr': args.cl_lr,
-        'cl_momentum': 0.9,
-        'cl_epochs': args.cl_epochs,
-        'update_interval': args.update_interval,
-        # bce (specific for binary, overfit w/o dropout),#'mse' (no overfit w/o dropout)#,#(general)
-        # 'mse',#tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM),#'binary_crossentropy',
-        # my_losses.ComboLoss (nan)
-        # 'binary_crossentropy' (seems decent)
-        # 'mse' (seems bad)
-        # my_losses.DiceBCELoss (seems decent)
-        # my_losses.FocalLoss (bad),
-        # my_losses.IoULoss (good) 
-        # my_losses.TverskyLoss (explode in finetuning(need very low lr, 1e-4), results seem good)
-        # my_losses.FocalTverskyLoss (explode in finetuning(need very low lr, 1e-4), results seem good)
-        # my_losses.CosineSimilarityLoss (bad reconstruction)
-        'ae_loss': my_losses.IoUDiceLoss,
-        'cl_loss': 'kld',
-        'seed': args.seed}
 
     # preparing dataset
     for g in args.groups:
@@ -195,6 +179,7 @@ if __name__ == "__main__":
             print('One of the given columns is not allowed.\nAllowed columns: {}'.
                   format(data_util.get_euromds_cols()))
             sys.exit()
+
     # getting the entire dataset
     print("Filling? {}".format(args.fill))
     if args.fill:
@@ -221,22 +206,46 @@ if __name__ == "__main__":
     outcomes = np.array(outcomes[['outcome_3', 'outcome_2']])
     # getting IDs
     ids = data_util.get_euromds_ids()
-    # setting the autoencoder layers
-    dims = [x.shape[-1],
+    
+    # initializing common configuration dict
+    config = {
+        'batch_size': args.batch_size,
+        'n_clusters': args.n_clusters,
+        'kmeans_epochs': 300,
+        'kmeans_n_init': 25,
+        'ae_epochs': args.ae_epochs,
+        # 'ae_optimizer': SGD(learning_rate=config['ae_lr'],
+        #                    momentum=config['ae_momentum'],
+        #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
+        'ae_optimizer': SGD(
+            learning_rate=0.001, # 0.01 # DEC paper
+            momentum=0.9),
+            # decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+        # 'ae_init': VarianceScaling(scale=1. / 2.,#3.,
+        #                        mode='fan_in',
+        #                        distribution="uniform"), # old
+        # 'ae_init': RandomNormal(mean=0.0,
+        #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
+        'ae_init': GlorotUniform(seed=51550),
+        'ae_dims': [n_features,
             int((2/3)*(n_features)),
             int((2/3)*(n_features)),
             int((2.5)*(n_features)),
-            args.n_clusters]  # DEC paper proportions
-    # init = VarianceScaling(scale=1. / 3.,
-    #                        mode='fan_in',
-    #                        distribution="uniform") # old
-    init = RandomNormal(mean=0.0,
-                        stddev=0.2)  # stddev=0.01) # DEC paper, is better
-
-    config['ae_dims'] = dims
-    config['ae_init'] = init
-    # 'relu' --> DEC paper # 'selu' --> is better for binary
-    config['ae_act'] = 'selu'
+            args.n_clusters],  # DEC paper proportions
+        # 'relu' --> DEC paper # 'selu' --> is better for binary
+        'ae_act': 'selu',
+        'ae_metrics': [my_metrics.rounded_accuracy,
+                       'accuracy',
+                       tfa_metrics.HammingLoss(mode='multilabel', threshold=0.55)],
+        'cl_lr': args.cl_lr,
+        'cl_momentum': 0.9,
+        'cl_epochs': args.cl_epochs,
+        'update_interval': args.update_interval,
+        'ae_loss': get_keras_loss(args.ae_loss),
+        'cl_loss': 'kld',
+        'seed': args.seed}
+    
+    print('AE loss is {}'.format(config['ae_loss']))
 
     up_frequencies = np.array([np.array(np.count_nonzero(
         x[:, i])/x.shape[0]) for i in range(n_features)])
@@ -263,24 +272,19 @@ if __name__ == "__main__":
                 autoencoder, encoder, decoder = create_denoising_autoencoder(
                     config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'],
                     dropout_rate=args.dropout, act=config['ae_act'])
-        # ae_optimizer = SGD(learning_rate=config['ae_lr'],
-        #                    momentum=config['ae_momentum'],
-        #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs'])  # old
-        ae_optimizer = SGD(
-            learning_rate=0.01,  # config['ae_lr'],
-            momentum=config['ae_momentum'],
-            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+        
         autoencoder.compile(
-            metrics=[my_metrics.rounded_accuracy, 'accuracy'],
-            optimizer=ae_optimizer,
+            metrics=config['ae_metrics'],
+            optimizer=config['ae_optimizer'],
             loss=config['ae_loss']
         )
+        
         # fitting the autoencoder
         history = autoencoder.fit(x=x,
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(config['ae_epochs']),
-                                  verbose=1)
+                                  verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
         parameters = np.array(encoder.get_weights(), dtype=object)
@@ -308,27 +312,20 @@ if __name__ == "__main__":
                     config['ae_dims'], noise_rate=0.0, act=config['ae_act'])
 
         encoder.set_weights(weights)
-
-        # ae_optimizer = SGD(learning_rate=config['ae_lr'],
-        #                    momentum=config['ae_momentum'],
-        #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs'])  # old
-        ae_optimizer = SGD(
-            learning_rate=0.01,  # config['ae_lr'],
-            momentum=config['ae_momentum'],
-            decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
-
+        
         autoencoder.compile(
-            metrics=[my_metrics.rounded_accuracy, 'accuracy'],
-            optimizer=ae_optimizer,
+            metrics=config['ae_metrics'],
+            optimizer=config['ae_optimizer'],
             loss=config['ae_loss']
         )
+        
         autoencoder.summary()
         # fitting again the autoencoder
         history = autoencoder.fit(x=x,
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(2*config['ae_epochs']),
-                                  verbose=1)
+                                  verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
         parameters = np.array(encoder.get_weights(), dtype=object)
