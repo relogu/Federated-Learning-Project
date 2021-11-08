@@ -410,6 +410,77 @@ def create_prob_autoencoder(dims,
 
     return (autoencoder, encoder, decoder)
 
+
+def create_dec_sae(dims,
+                   init='glorot_uniform',
+                   dropout_rate: float = 0.2):
+    """
+    Fully connected auto-encoder model, symmetric, using DenseTied layers.
+    Arguments:
+        dims: list of number of units in each layer of encoder. dims[0] is input dim, dims[-1] is units in hidden layer.
+            The decoder is symmetric with encoder. So number of layers of the auto-encoder is 2*len(dims)-1
+        up_freq: list of frequencies of the up values in the training set
+        act: activation, not applied to Input, Hidden and Output layers
+        init: initializator of the layers' weights
+        verbose: print some useful information on the layers' complexity
+    return:
+        (autoencoder, encoder, decoder), Model of autoencoder, Model of encoder, Model of decoder
+    """
+    # getting encoder and decoder layers output dim
+    encoder_dims = dims[1:]
+    decoder_dims = list(reversed(dims))[1:]
+    # input data
+    input_img = InputLayer(input_shape=(dims[0],), name='input_img')
+    # input labels
+    input_lbl = InputLayer(input_shape=(dims[-1],), name='input_lbl')
+    # encoder
+    encoder_layers = []
+    encoder_layers.append(input_img)
+    # internal layers in encoder
+    for i in range(len(encoder_dims)):
+        act = 'relu'
+        if i == len(encoder_dims)-1:
+            act = None
+        x = Dense(units=encoder_dims[i],
+                  activation=act,
+                  kernel_initializer=init,
+                  use_bias=True,
+                  name=encoder_layer_name % i)
+        encoder_layers.append(x)
+
+    # decoder
+    decoder_layers = []
+    decoder_layers.append(input_lbl)
+    # internal layers in decoder
+    for i in range(len(decoder_dims)):
+        act = 'relu'
+        if i == len(decoder_dims)-1:
+            act = None
+        x = Dense(units=decoder_dims[i],
+                  activation=act,
+                  kernel_initializer=init,
+                  use_bias=True,
+                  name=decoder_layer_name % i)
+        decoder_layers.append(x)
+    
+    # adding dropout
+    if dropout_rate > 0.0:
+        idx = np.arange(start=1, stop=int((2*len(dims))), step=2)
+        for i in idx:
+            encoder_layers.insert(i, Dropout(rate=dropout_rate))
+    
+    # autoencoder
+    autoencoder_layers = []
+    autoencoder_layers = autoencoder_layers + encoder_layers
+    autoencoder_layers = autoencoder_layers + decoder_layers[1:]
+
+    # defining models
+    autoencoder = Sequential(autoencoder_layers, name='AE')
+    encoder = Sequential(encoder_layers, name='encoder')
+    decoder = Sequential(decoder_layers, name='decoder')
+
+    return (autoencoder, encoder, decoder)
+
 def create_autoencoder(net_arch, up_frequencies):
     if net_arch['binary']:
         if net_arch['tied']:
