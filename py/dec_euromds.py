@@ -5,21 +5,18 @@ Created on Wen Aug 4 10:37:10 2021
 
 @author: relogu
 """
-from tensorflow.python.keras.initializers.initializers_v2 import GlorotUniform
+
 from py.dumping.output import dump_pred_dict, dump_result_dict
 from py.dumping.plots import print_confusion_matrix
-from py.dec.util import (create_denoising_autoencoder, create_tied_denoising_autoencoder,
-                         create_prob_autoencoder, create_tied_prob_autoencoder,
-                         create_clustering_model, target_distribution)
+from py.dec.util import (create_autoencoder, create_clustering_model, target_distribution)
 from losses import get_keras_loss_names, get_keras_loss
 import py.metrics as my_metrics
 import py.dataset_util as data_util
 from flwr.common.typing import Parameters
 from sklearn.cluster import KMeans
-from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.initializers import RandomNormal, GlorotUniform
 from tensorflow.keras.optimizers import SGD
 import tensorflow as tf
-import tensorflow_addons.losses as tfa_losses
 import tensorflow_addons.metrics as tfa_metrics
 import argparse
 import os
@@ -30,10 +27,6 @@ import pickle
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-
-
-out_1 = 'UDEC\nEpoch %d/%d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f'
-
 
 def get_parser():
     parser = argparse.ArgumentParser(description="UDE Training Script")
@@ -98,14 +91,14 @@ def get_parser():
     parser.add_argument('--dropout',
                         dest='dropout',
                         type=float,
-                        default=0.05,
+                        default=0.20,
                         required=False,
                         action='store',
                         help='Flag for dropout layer in autoencoder')
     parser.add_argument('--ran_flip',
                         dest='ran_flip',
                         type=float,
-                        default=0.25,
+                        default=0.20,
                         required=False,
                         action='store',
                         help='Flag for RandomFlipping layer in autoencoder')
@@ -130,7 +123,7 @@ def get_parser():
                         dest='update_interval',
                         required=False,
                         type=int,
-                        default=100,
+                        default=20,
                         action='store',
                         help='set the update interval for the clusters distribution')
     parser.add_argument('--seed',
@@ -213,32 +206,39 @@ if __name__ == "__main__":
         'n_clusters': args.n_clusters,
         'kmeans_epochs': 300,
         'kmeans_n_init': 25,
+        'binary': args.binary,
+        'tied': args.tied,
+        'dropout': args.dropout,
+        'ortho': args.ortho,
+        'u_norm': args.u_norm,
+        'ran_flip': args.ran_flip,
         'ae_epochs': args.ae_epochs,
         # 'ae_optimizer': SGD(learning_rate=config['ae_lr'],
         #                    momentum=config['ae_momentum'],
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
         'ae_optimizer': SGD(
-            learning_rate=0.001, # 0.01 # DEC paper
-            momentum=0.9),
-            # decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
-        # 'ae_init': VarianceScaling(scale=1. / 2.,#3.,
+            learning_rate=0.1,
+            momentum=0.9,
+            decay=float(9/((2/5)*int(args.ae_epochs)))),
+        # 'init': VarianceScaling(scale=1. / 2.,#3.,
         #                        mode='fan_in',
         #                        distribution="uniform"), # old
-        # 'ae_init': RandomNormal(mean=0.0,
+        # 'init': RandomNormal(mean=0.0,
         #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
-        'ae_init': GlorotUniform(seed=51550),
-        'ae_dims': [n_features,
-            int((2/3)*(n_features)),
-            int((2/3)*(n_features)),
-            int((2.5)*(n_features)),
+        'init': GlorotUniform(seed=51550),
+        'dims': [n_features,
+            500,
+            500,
+            2000,
             args.n_clusters],  # DEC paper proportions
         # 'relu' --> DEC paper # 'selu' --> is better for binary
-        'ae_act': 'selu',
+        'act': 'selu',
         'ae_metrics': [my_metrics.rounded_accuracy,
                        'accuracy',
-                       tfa_metrics.HammingLoss(mode='multilabel', threshold=0.55)],
-        'cl_lr': args.cl_lr,
-        'cl_momentum': 0.9,
+                       tfa_metrics.HammingLoss(mode='multilabel', threshold=0.50)],
+        'cl_optimizer': SGD(
+            learning_rate=args.cl_lr,
+            momentum=0.9),
         'cl_epochs': args.cl_epochs,
         'update_interval': args.update_interval,
         'ae_loss': get_keras_loss(args.ae_loss),
@@ -254,24 +254,8 @@ if __name__ == "__main__":
     pretrained_weights = path_to_out/'encoder.npz'
     if not pretrained_weights.exists():
         print('There are no existing weights in the output folder for the autoencoder')
-        if args.binary:
-            if args.tied:
-                autoencoder, encoder, decoder = create_tied_prob_autoencoder(
-                    config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act=config['ae_act'])
-            else:
-                autoencoder, encoder, decoder = create_prob_autoencoder(
-                    config['ae_dims'], init=config['ae_init'], dropout_rate=args.dropout, act=config['ae_act'])
-        else:
-            print('Freq :{}'.format(up_frequencies))
-            if args.tied:
-                autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'],
-                    dropout_rate=args.dropout, act=config['ae_act'],
-                    ortho=args.ortho, u_norm=args.u_norm, noise_rate=args.ran_flip)
-            else:
-                autoencoder, encoder, decoder = create_denoising_autoencoder(
-                    config['ae_dims'], up_freq=up_frequencies, init=config['ae_init'],
-                    dropout_rate=args.dropout, act=config['ae_act'])
+        
+        autoencoder, encoder, decoder = create_autoencoder(config, up_frequencies)
         
         autoencoder.compile(
             metrics=config['ae_metrics'],
@@ -295,21 +279,9 @@ if __name__ == "__main__":
         param: Parameters = np.load(pretrained_weights, allow_pickle=True)
         weights = param['arr_0']
         # no dropout, keep denoising
-        if args.binary:
-            if args.tied:
-                autoencoder, encoder, decoder = create_tied_prob_autoencoder(
-                    config['ae_dims'], act=config['ae_act'])
-            else:
-                autoencoder, encoder, decoder = create_prob_autoencoder(
-                    config['ae_dims'], act=config['ae_act'])
-        else:
-            if args.tied:
-                autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                    config['ae_dims'], noise_rate=0.0, act=config['ae_act'],
-                    ortho=args.ortho, u_norm=args.u_norm)
-            else:
-                autoencoder, encoder, decoder = create_denoising_autoencoder(
-                    config['ae_dims'], noise_rate=0.0, act=config['ae_act'])
+        config['dropout'] = 0.0
+        config['ran_flip'] = 0.0
+        autoencoder, encoder, decoder = create_autoencoder(config, None)
 
         encoder.set_weights(weights)
         
@@ -332,21 +304,7 @@ if __name__ == "__main__":
         np.savez(path_to_out/'encoder_ft', parameters)
 
     # clean from the auxialiary layer for the clustering model
-    if args.binary:
-        if args.tied:
-            autoencoder, encoder, decoder = create_tied_prob_autoencoder(
-                config['ae_dims'], act=config['ae_act'])
-        else:
-            autoencoder, encoder, decoder = create_prob_autoencoder(
-                config['ae_dims'], act=config['ae_act'])
-    else:
-        if args.tied:
-            autoencoder, encoder, decoder = create_tied_denoising_autoencoder(
-                config['ae_dims'], act=config['ae_act'], noise_rate=0.0,
-                ortho=args.ortho, u_norm=args.u_norm)
-        else:
-            autoencoder, encoder, decoder = create_denoising_autoencoder(
-                config['ae_dims'], act=config['ae_act'])
+    autoencoder, encoder, decoder = create_autoencoder(config, None)
 
     param: Parameters = np.load(trained_weights, allow_pickle=True)
     weights = param['arr_0']
@@ -370,11 +328,8 @@ if __name__ == "__main__":
         config['n_clusters'],
         encoder)
     # compiling the clustering model
-    cl_optimizer = SGD(
-        learning_rate=0.001,  # config['cl_lr'],
-        momentum=config['cl_momentum'])
     clustering_model.compile(
-        optimizer=cl_optimizer,
+        optimizer=config['cl_optimizer'],
         loss=config['cl_loss'])
     clustering_model.get_layer(
         name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
@@ -388,7 +343,7 @@ if __name__ == "__main__":
     i = 0
     while True:
         i += 1
-        if i % 20 == 1:#config['update_interval'] == 0:
+        if i % config['update_interval'] == 1:
             # if train_loss < eval_loss:
             print('Updating the target distribution')
             train_q = clustering_model.predict(x, verbose=0)
@@ -450,7 +405,7 @@ if __name__ == "__main__":
             if i % 100 and args.verbose:
                 print("Current label change ratio is {}, i.e. {}/{} samples".
                       format(tol, int(tol*len(x)), len(x)))
-            if tol < 0.001 and eval_loss < 0.1:  # and eval_cycle_acc > 0.9:# and i > 2000: # from DEC paper
+            if tol < 0.001:  # and eval_cycle_acc > 0.9:# and i > 2000: # from DEC paper
                 print("Final label change ratio is {}, i.e. {}/{} samples, reached after {} iteration".
                       format(tol, int(tol*len(x)), len(x), i))
                 break
