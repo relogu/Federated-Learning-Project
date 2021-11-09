@@ -95,7 +95,7 @@ if __name__ == "__main__":
         'kmeans_n_init': 25,
         'ae_epochs': 50000,
         'ae_optimizer': SGD(
-            learning_rate=0.01,
+            learning_rate=0.1,
             momentum=0.9,
             decay=float(9/((2/5)*500000))),
         'ae_init': RandomNormal(mean=0.0,
@@ -106,7 +106,9 @@ if __name__ == "__main__":
             2000,
             10],
         'ae_metrics': [],
-        'cl_momentum': 0.9,
+        'cl_optimizer': SGD(
+            learning_rate=0.01,
+            momentum=0.9),
         'update_interval': args.update_interval,
         'ae_loss': 'mse',
         'cl_loss': 'kld',
@@ -196,11 +198,8 @@ if __name__ == "__main__":
         config['n_clusters'],
         encoder)
     # compiling the clustering model
-    cl_optimizer = SGD(
-        learning_rate=0.01,
-        momentum=config['cl_momentum'])
     clustering_model.compile(
-        optimizer=cl_optimizer,
+        optimizer=config['cl_optimizer'],
         loss=config['cl_loss'])
     clustering_model.get_layer(
         name='clustering').set_weights(np.array([kmeans.cluster_centers_]))

@@ -171,9 +171,9 @@ if __name__ == "__main__":
         #                    momentum=config['ae_momentum'],
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
         'ae_optimizer': SGD(
-            learning_rate=0.001, # 0.01 # DEC paper
-            momentum=0.9),
-            # decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+            learning_rate=0.1,
+            momentum=0.9,
+            decay=float(9/((2/5)*int(args.ae_epochs)))),
         # 'ae_init': VarianceScaling(scale=1. / 2.,#3.,
         #                        mode='fan_in',
         #                        distribution="uniform"), # old
@@ -181,17 +181,18 @@ if __name__ == "__main__":
         #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
         'ae_init': GlorotUniform(seed=51550),
         'ae_dims': [n_features,
-            int((2/3)*(n_features)),
-            int((2/3)*(n_features)),
-            int((2.5)*(n_features)),
+            500,
+            500,
+            2000,
             args.n_clusters],  # DEC paper proportions
         # 'relu' --> DEC paper # 'selu' --> is better for binary
         'ae_act': 'selu',
         'ae_metrics': [my_metrics.rounded_accuracy,
                        'accuracy',
-                       tfa_metrics.HammingLoss(mode='multilabel', threshold=0.55)],
-        'cl_lr': args.cl_lr,
-        'cl_momentum': 0.9,
+                       tfa_metrics.HammingLoss(mode='multilabel', threshold=0.50)],
+        'cl_optimizer': SGD(
+            learning_rate=args.cl_lr,
+            momentum=0.9),
         'cl_epochs': args.cl_epochs,
         'update_interval': args.update_interval,
         'ae_loss': get_keras_loss(args.ae_loss),
@@ -324,11 +325,8 @@ if __name__ == "__main__":
         config['n_clusters'],
         encoder)
     # compiling the clustering model
-    cl_optimizer = SGD(
-        learning_rate=0.1,  # config['cl_lr'],
-        momentum=config['cl_momentum'])
     clustering_model.compile(
-        optimizer=cl_optimizer,
+        optimizer=config['cl_optimizer'],
         loss=config['cl_loss'])
     clustering_model.get_layer(
         name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
@@ -342,7 +340,7 @@ if __name__ == "__main__":
     i = 0
     while True:
         i += 1
-        if i % 20 == 1:#config['update_interval'] == 0:
+        if i % config['update_interval'] == 1:
             # if train_loss < eval_loss:
             print('Updating the target distribution')
             train_q = clustering_model.predict(x_train, verbose=0)
@@ -371,24 +369,12 @@ if __name__ == "__main__":
         if y_train is not None and args.verbose:
             acc = my_metrics.acc(y_train, y_pred)
             nmi = my_metrics.nmi(y_train, y_pred)
-            ami = my_metrics.ami(y_train, y_pred)
-            ari = my_metrics.ari(y_train, y_pred)
-            ran = my_metrics.ran(y_train, y_pred)
-            homo = my_metrics.homo(y_train, y_pred)
-            if args.plotting and i % 10 == 0:  # print confusion matrix
-                print_confusion_matrix(
-                    y_train, y_pred,
-                    path_to_out=path_to_out)
-            print('DEC Clustering\nEpoch %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' %
-                  (i, acc, nmi, ami, ari, ran, homo))
+            print('DEC Clustering\nEpoch %d\n\tacc %.5f\n\tnmi %.5f' %
+                  (i, acc, nmi))
             print('Cycle accuracy is {}'.format(cycle_acc))
             # dumping and retrieving the results
             metrics = {'accuracy': acc,
-                       'normalized_mutual_info_score': nmi,
-                       'adjusted_mutual_info_score': ami,
-                       'adjusted_rand_score': ari,
-                       'rand_score': ran,
-                       'homogeneity_score': homo}
+                       'normalized_mutual_info_score': nmi,}
             result = metrics.copy()
         result['cycle_accuracy'] = cycle_acc
         result['loss'] = eval_loss
