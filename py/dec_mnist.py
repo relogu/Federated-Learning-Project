@@ -5,19 +5,14 @@ Created on Wen Aug 4 10:37:10 2021
 
 @author: relogu
 """
-from py.dumping.output import dump_pred_dict, dump_result_dict
-from py.dumping.plots import print_confusion_matrix
+from py.dumping.output import dump_result_dict
 from py.dec.util import (create_dec_sae, create_clustering_model, target_distribution)
-from losses import get_keras_loss_names, get_keras_loss
 import py.metrics as my_metrics
-import py.dataset_util as data_util
 from flwr.common.typing import Parameters
 from sklearn.cluster import KMeans
-from tensorflow.keras.initializers import RandomNormal, VarianceScaling, GlorotUniform
+from tensorflow.keras.initializers import RandomNormal
 from tensorflow.keras.optimizers import SGD
 import tensorflow as tf
-import tensorflow_addons.losses as tfa_losses
-import tensorflow_addons.metrics as tfa_metrics
 import argparse
 import os
 import pathlib
@@ -26,9 +21,6 @@ import pickle
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-
-
-out_1 = 'UDEC\nEpoch %d/%d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f'
 
 
 def get_parser():
@@ -72,7 +64,6 @@ def get_parser():
 
 
 if __name__ == "__main__":
-    # configuration
     # get parameters
     args = get_parser().parse_args()
     # disable possible gpu devices (add hard acc, selection)
@@ -102,7 +93,7 @@ if __name__ == "__main__":
         'n_clusters': args.n_clusters,
         'kmeans_epochs': 300,
         'kmeans_n_init': 25,
-        'ae_epochs': 10,
+        'ae_epochs': 50000,
         'ae_optimizer': SGD(
             learning_rate=0.01,
             momentum=0.9,
