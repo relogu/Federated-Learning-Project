@@ -20,7 +20,7 @@ import numpy as np
 import pickle
 
 # Make TensorFlow log less verbose
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+#os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 
 def get_parser():
