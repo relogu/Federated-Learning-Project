@@ -18,10 +18,10 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["RAY_DISABLE_IMPORT_WARNING"] = "1"
 
 from tensorflow.keras.optimizers import SGD
-from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.initializers import RandomNormal, VarianceScaling, GlorotUniform
 
 import py.metrics as my_metrics
-import losses.keras as my_losses
+from losses import get_keras_loss_names, get_keras_loss
 from clients import AutoencoderClient, DECClient, KMeansClient
 from strategies import SaveModelStrategy, KMeansStrategy, DECModelStrategy
 
@@ -41,6 +41,35 @@ def get_parser():
                         default=10,
                         type=int,
                         help="Define the number of clusters to identify")
+    parser.add_argument('--ae_epochs',
+                        dest='ae_epochs',
+                        required=False,
+                        type=int,
+                        default=50000,
+                        action='store',
+                        help='number of epochs for the autoencoder pre-training')
+    parser.add_argument('--ae_loss',
+                        dest='ae_loss',
+                        required=True,
+                        type=type(''),
+                        default='mse',
+                        choices=get_keras_loss_names(),
+                        action='store',
+                        help='Loss function for autoencoder training')
+    parser.add_argument('--cl_epochs',
+                        dest='cl_epochs',
+                        required=False,
+                        type=int,
+                        default=10000,
+                        action='store',
+                        help='number of epochs for the clustering step')
+    parser.add_argument('--update_interval',
+                        dest='update_interval',
+                        required=False,
+                        type=int,
+                        default=100,
+                        action='store',
+                        help='set the update interval for the clusters distribution')
     parser.add_argument('--seed',
                         dest='seed',
                         required=False,
@@ -48,6 +77,11 @@ def get_parser():
                         default=51550,
                         action='store',
                         help='set the seed for the random generator of the whole dataset')
+    parser.add_argument('--dump_metrics',
+                        dest='dump_metrics',
+                        required=False,
+                        action='store_true',
+                        help='Flag for dumping metrics during training and evaluation')
     parser.add_argument('-v', '--verbose',
                         dest='verbose',
                         required=False,
@@ -120,12 +154,21 @@ if __name__ == "__main__":
         'train_metrics': [my_metrics.rounded_accuracy, 'accuracy'],
         'batch_size': 64,
         'local_epochs': 1,
-        # ?? decay=float(9/((2/5)*int(config['ae_epochs']))))  # from DEC paper
+        # 'ae_optimizer': SGD(learning_rate=config['ae_lr'],
+        #                    momentum=config['ae_momentum'],
+        #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
         'optimizer': SGD(
-            learning_rate=0.01,
+            learning_rate=0.001, # 0.01 # DEC paper
             momentum=0.9),
+            # decay=float(9/((2/5)*int(config['epochs']))))  # from DEC paper
+        # 'init': VarianceScaling(scale=1. / 2.,#3.,
+        #                        mode='fan_in',
+        #                        distribution="uniform"), # old
+        # 'init': RandomNormal(mean=0.0,
+        #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
+        'init': GlorotUniform(seed=51550),
         # to be properly defined
-        'loss': my_losses.FocalLoss,#'mse',#tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM),#'binary_crossentropy',
+        'loss': get_keras_loss(args.ae_loss),
         'binary': False,
         'tied': True,
         'dims': [n_features,
@@ -133,9 +176,6 @@ if __name__ == "__main__":
                  int((2/3)*(n_features)),
                  int((2.5)*(n_features)),
                  args.n_clusters],  # DEC paper proportions
-        'init': RandomNormal(
-            mean=0.0,
-            stddev=0.2), #stddev=0.01) # DEC paper, is better
         'dropout': 0.2,
         'ran_flip': 0.2,  
         'act': 'selu',
@@ -164,7 +204,7 @@ if __name__ == "__main__":
                                  get_data_fn=get_ae_dataset_fn,
                                  output_folder=path_to_out)
     # Define on_fit_config_fn
-    pretrain_rounds = 1000 # TODO: get param from arguments
+    pretrain_rounds = args.ae_epochs
     def on_fit_config_pae_fn(rnd: int):
         # Must have 'last', 'model' for server necessities; 
         # 'actual_round', 'total_rounds' for client necessities
@@ -176,7 +216,7 @@ if __name__ == "__main__":
     def on_eval_config_pae_fn(rnd: int):
         # Must have 'dump_metrics', 'filename', 'verbose', 'actual_round'
         # for client necessities
-        return {'dump_metrics': False, # TODO: get param from arguments
+        return {'dump_metrics': args.dump_metrics,
                 # to output metrics in client_*_pretrain_ae.dat
                 'filename': '_pretrain_ae',
                 'verbose': args.verbose,
@@ -211,7 +251,7 @@ if __name__ == "__main__":
                                  get_data_fn=get_ae_dataset_fn,
                                  output_folder=path_to_out)
     # Define on_fit_config_fn
-    finetune_rounds = 2*pretrain_rounds # TODO: get param from arguments
+    finetune_rounds = 2*pretrain_rounds
     def on_fit_config_fae_fn(rnd: int):
         # Must have 'last', 'model' for server necessities; 
         # 'actual_round', 'total_rounds' for client necessities
@@ -223,7 +263,7 @@ if __name__ == "__main__":
     def on_eval_config_fae_fn(rnd: int):
         # Must have 'dump_metrics', 'filename', 'verbose', 'actual_round'
         # for client necessities
-        return {'dump_metrics': False, # TODO: get param from arguments
+        return {'dump_metrics': args.dump_metrics,
                 # to output metrics in client_*_finetune_ae.dat
                 'filename': '_finetune_ae',
                 'verbose': args.verbose,
@@ -292,7 +332,7 @@ if __name__ == "__main__":
     def on_eval_config_kmeans_fn(rnd: int):
         # Must have 'dump_metrics', 'verbose', 'actual_round'
         # for client necessities
-        return {'dump_metrics': False, # TODO: get param from arguments
+        return {'dump_metrics': args.dump_metrics,
                 'verbose': args.verbose,
                 'actual_round': rnd,
                 'total_rounds': kmeans_rounds}
@@ -313,12 +353,10 @@ if __name__ == "__main__":
                                    strategy=current_strategy,
                                    ray_init_args=ray_config)
     ## DEC CLUSTERING
-    # # Define dec dataset fn, same as kmeans
-    # def get_dec_dataset_fn(cid: str):
-    #     return None
+    # DEC dataset fn is the same as kmeans
     # Define DEC configuration
     config['optimizer'] = SGD(
-        learning_rate=0.001,
+        learning_rate=0.1,
         momentum=0.9)
     config['local_epochs'] = 1
     config['loss'] = 'kld'
@@ -330,7 +368,7 @@ if __name__ == "__main__":
                          get_data_fn=get_kmeans_dataset_fn,
                          output_folder=path_to_out)
     # Define on_fit_config_fn
-    dec_rounds = 1000 # TODO: get param from arguments
+    dec_rounds = args.cl_epochs
     def on_fit_config_dec_fn(train: bool, rnd: int):
         # Must have 'last', 'model' for server necessities; 
         # 'actual_round', 'total_rounds', 'update_interval', 
@@ -339,13 +377,13 @@ if __name__ == "__main__":
                 'last': rnd==dec_rounds,
                 'actual_round': rnd,
                 'total_rounds': dec_rounds,
-                'update_interval': (rnd%140==1),
+                'update_interval': (rnd%args.update_interval==1),
                 'train': train}
     # Define on_evaluate_config_fn
     def on_eval_config_dec_fn(rnd: int):
         # Must have 'dump_metrics', 'verbose', 'actual_round'
         # for client necessities; 'n_clusters' for server necessities
-        return {'dump_metrics': False, # TODO: get param from arguments
+        return {'dump_metrics': args.dump_metrics,
                 'verbose': args.verbose,
                 'actual_round': rnd,
                 'total_rounds': dec_rounds,
