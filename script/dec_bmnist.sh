@@ -23,6 +23,7 @@ then
 ORTHO="--ortho"
 fi
 echo "Use loss $5"
+echo "Ae epochs $6"
 
 LETTER=""
 SCRIPT="py/dec_bmnist.py"
@@ -33,7 +34,7 @@ LETTER="z"
 DROPOUT="0.20"
 RAN_FLIP="0.20"
 U_NORM="--u_norm"
-AE_EPOCHS="5000"
+AE_EPOCHS=$6
 # entire dataset
 
 nohup python3 $SCRIPT $FILL $ORTHO \
