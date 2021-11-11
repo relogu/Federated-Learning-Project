@@ -20,7 +20,7 @@ def preprocess(dataset):
 def get_parser():
     # TODO: descriptor
     parser = argparse.ArgumentParser(
-        description="FLOWER experiment for simulating the FEMNIST training")
+        description="")
     parser.add_argument("--out_fol",
                         dest="out_folder",
                         type=type(str('')),
@@ -38,8 +38,8 @@ if __name__ == "__main__":
     else:
         path_to_out = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
-    (path_to_out/'femnist'/'train').mkdir(parents=True, exist_ok=True)
-    (path_to_out/'femnist'/'test').mkdir(parents=True, exist_ok=True)
+    (path_to_out/'bfemnist'/'train').mkdir(parents=True, exist_ok=True)
+    (path_to_out/'bfemnist'/'test').mkdir(parents=True, exist_ok=True)
     
     train, test = tff.simulation.datasets.emnist.load_data(
         only_digits=True, cache_dir=None
@@ -56,12 +56,12 @@ if __name__ == "__main__":
             'x': np.round(c_x_train).tolist(),
             'y': np.round(c_y_train).tolist(),
         }
-        with open(path_to_out/'femnist'/'train'/'{}.json'.format(client), 'x') as file:
+        with open(path_to_out/'bfemnist'/'train'/'{}.json'.format(client), 'x') as file:
             json.dump(c_train, file)
         c_test = {
             'x': np.round(c_x_test).tolist(),
             'y': np.round(c_y_test).tolist(),
         }
-        with open(path_to_out/'femnist'/'test'/'{}.json'.format(client), 'x') as file:
+        with open(path_to_out/'bfemnist'/'test'/'{}.json'.format(client), 'x') as file:
             json.dump(c_test, file)
         
