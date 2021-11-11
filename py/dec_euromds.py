@@ -211,10 +211,11 @@ if __name__ == "__main__":
     def lr_step_decay(epoch, lr):
         # lr is divided by 10 every 20000 rounds
         drop_rate = 10
-        epoch_drop = int(2*args.ae_epochs/5)
-        if epoch > epoch_drop:
+        epoch_drop = int((2/5)*args.ae_epochs)
+        lr = initial_learning_rate
+        if epoch >= epoch_drop:
             lr = initial_learning_rate/drop_rate
-        if epoch > 2*epoch_drop:
+        if epoch >= 2*epoch_drop:
             lr = lr/drop_rate
         return lr
     

@@ -163,6 +163,7 @@ if __name__ == "__main__":
         # lr is divided by 10 every 20000 rounds
         drop_rate = 10
         epoch_drop = 20000
+        lr = initial_learning_rate
         if epoch > epoch_drop:
             lr = initial_learning_rate/drop_rate
         if epoch > 2*epoch_drop:
