@@ -15,8 +15,8 @@ from typing import Union, Callable, Dict
 from pathlib import Path
 from sklearn.cluster import KMeans
 import py.metrics as my_metrics
-from py.dec.util import create_autoencoder
 from py.dumping.output import dump_result_dict
+from tensorflow.keras.optimizers import SGD
 
 class KMeansClient(NumPyClient):
     """Client object, to set client performed operations."""
@@ -31,12 +31,12 @@ class KMeansClient(NumPyClient):
         self.client_id = client_id
         self.train, self.test = get_data_fn(client_id)
         self.config = config
-        self.autoencoder, self.encoder, self.decoder = create_autoencoder(
-            config, None
+        self.autoencoder, self.encoder, self.decoder = config['create_ae_fn'](
+            **config['config_ae_args']
         )
         self.autoencoder.compile(
             metrics=config['train_metrics'],
-            optimizer=config['optimizer'],
+            optimizer=SGD(),
             loss=config['loss']
         )
 
@@ -57,7 +57,7 @@ class KMeansClient(NumPyClient):
         self.kmeans = KMeans(init=config['k_means_init'],
                              n_clusters=config['n_clusters'],
                              max_iter=config['kmeans_max_iter'],
-                             n_init=config['kmeans_n_init'],  # number of different random initializations
+                             n_init=config['kmeans_n_init'],
                              random_state=config['seed'])
         self.clusters_centers = []
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}

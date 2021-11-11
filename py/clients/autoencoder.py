@@ -13,8 +13,8 @@ from flwr.common import Parameters
 from flwr.common.typing import Scalar
 from typing import Union, Callable, Dict
 from pathlib import Path
-from py.dec.util import create_autoencoder
 from py.dumping.output import dump_result_dict
+from tensorflow.keras.optimizers import SGD
 
 class AutoencoderClient(NumPyClient):
     """Client object, to set client performed operations."""
@@ -33,22 +33,11 @@ class AutoencoderClient(NumPyClient):
         # train metrics
         self.train_metrics = config['train_metrics']
         # optimizer
-        self.optimizer = config['optimizer']
+        self.optimizer_lr_fn = config['optimizer_lr_fn']
         # loss
         self.loss = config['loss']
         self.batch_size = config['batch_size']
         self.local_epochs = config['local_epochs']
-        # network arch
-        self.net_arch = config
-        self.binary = config['binary']
-        self.tied = config['tied']
-        self.dims = config['dims']
-        self.init = config['init']
-        self.dropout = config['dropout']
-        self.act = config['act']
-        self.ortho = config['ortho']
-        self.u_norm = config['u_norm']
-        self.ran_flip = config['ran_flip']
         
         if output_folder is None:
             self.out_dir = output_folder
@@ -56,21 +45,12 @@ class AutoencoderClient(NumPyClient):
             self.out_dir = Path(output_folder)
             os.makedirs(self.out_dir, exist_ok=True)
         
-        # TODO: solve frequencies problem
-        # take the local frequencies?
-        # make a global step with all the clients involved?
-        # do something else?
-        filename = self.out_dir / \
-            'agg_weights_up_frequencies.npz'
-        print('Found frequencies')
-        param: Parameters = np.load(filename, allow_pickle=True)
-        up_frequencies = param['arr_0']
-        self.autoencoder, self.encoder, self.decoder = create_autoencoder(
-            config, up_frequencies
+        self.autoencoder, self.encoder, self.decoder = config['create_ae_fn'](
+            **config['config_ae_args']
         )
         self.autoencoder.compile(
             metrics=config['train_metrics'],
-            optimizer=config['optimizer'],
+            optimizer=SGD(),
             loss=config['loss']
         )
         # in case of finetuning traing type
@@ -82,7 +62,6 @@ class AutoencoderClient(NumPyClient):
             weights = param['arr_0']
             self.encoder.set_weights(weights)
         # general initializations
-        self.last_histo = None
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
     
     # def get_properties(self, ins: PropertiesIns) -> PropertiesRes:
@@ -99,6 +78,13 @@ class AutoencoderClient(NumPyClient):
         print("Client %s, Federated Round %d/%d, step: %s" % \
             (self.client_id, config['actual_round'], config['total_rounds'], self.step))
         self.encoder.set_weights(parameters)
+        self.autoencoder.compile(
+            metrics=self.train_metrics,
+            optimizer=SGD(
+                learning_rate=self.optimizer_lr_fn(config['actual_round']),
+                momentum=0.9),
+            loss=self.loss
+        )
         # fitting the autoencoder
         self.autoencoder.fit(x=self.train,
                              y=self.train,

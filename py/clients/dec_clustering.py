@@ -51,8 +51,8 @@ class DECClient(NumPyClient):
         param: Parameters = np.load(
             tmp, allow_pickle=True)
         weights = param['arr_0']
-        self.autoencoder, encoder, decoder = create_autoencoder(
-            config, None
+        self.autoencoder, encoder, decoder = config['create_ae_fn'](
+            **config['config_ae_args']
         )
         encoder.set_weights(weights)
         # initializing clustering model
