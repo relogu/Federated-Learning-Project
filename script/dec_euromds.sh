@@ -79,7 +79,7 @@ RAN_FLIP="0.20"
 U_NORM="--u_norm"
 AE_EPOCHS=$6
 
-nohup time python3 $SCRIPT $FILL $ORTHO \
+nohup python3 $SCRIPT $FILL $ORTHO \
     --ae_epochs $AE_EPOCHS \
     --ae_loss $5 \
     --cl_epochs 20000 \

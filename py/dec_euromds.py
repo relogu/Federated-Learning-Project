@@ -160,6 +160,10 @@ if __name__ == "__main__":
         path_to_out = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
     os.makedirs(path_to_out, exist_ok=True)
+    
+    # Restrict keras to use only 2 GPUs
+    gpus = tf.config.list_physical_devices('GPU')
+    tf.config.set_visible_devices(gpus[4:6], 'GPU')
 
     # preparing dataset
     for g in args.groups:
