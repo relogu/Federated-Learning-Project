@@ -2,6 +2,7 @@
 
 echo $PWD
 export PYTHONPATH="$PWD:$PYTHONPATH"
+
 echo "Number of clusters $1"
 CLUSTERS="$1"
 echo "Output folder $2"
@@ -21,10 +22,12 @@ if [ $4 == "y" ]
 then
 ORTHO="--ortho"
 fi
+echo "Use loss $5"
+echo "AE epochs $6"
 
 DATASET="--groups Genetics --groups CNA --ex_col UTX --ex_col CSF3R --ex_col SETBP1 --ex_col PPM1D"
 LETTER=""
-SCRIPT="py/udec/main.py"
+SCRIPT="py/dec_euromds.py"
 
 training_setup () {
     echo "The setup selected for training is $LETTER"
@@ -67,13 +70,20 @@ training_setup () {
 
 
 mkdir "$PWD/$OUT_FOL"
-for LETTER in "a" "b" "c" "d" "e" "f" "g"
-do
-training_setup
-# entire dataset
+# for LETTER in "a" "b" "c" "d" "e" "f" "g"
+# do
+# training_setup
+LETTER="z"
+DROPOUT="0.20"
+RAN_FLIP="0.20"
+U_NORM="--u_norm"
+AE_EPOCHS=$6
+
 nohup time python3 $SCRIPT $FILL $ORTHO \
     --ae_epochs $AE_EPOCHS \
+    --ae_loss $5 \
     --cl_epochs 20000 \
+    --update_interval 3 \
     --n_clusters $CLUSTERS \
     --dropout $DROPOUT \
     --ran_flip $RAN_FLIP \
@@ -83,8 +93,3 @@ nohup time python3 $SCRIPT $FILL $ORTHO \
     --verbose >> "$PWD/$OUT_FOL/log.txt"
 wait
 sleep 5
-mkdir "$PWD/results/DEC_EUROMDS{$DS}_single_{$LETTER}_{$ORTHO}_K$CLUSTERS"
-mv "$PWD/$OUT_FOL"/* "$PWD/results/DEC_EUROMDS{$DS}_single_{$LETTER}_{$ORTHO}_K$CLUSTERS"/
-sleep 10
-done
-rmdir "$PWD/$OUT_FOL"
