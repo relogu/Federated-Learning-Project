@@ -82,6 +82,11 @@ if __name__ == "__main__":
     print('Output folder {}'.format(path_to_out))
     os.makedirs(path_to_out, exist_ok=True)
     
+    # Restrict keras to use only 2 GPUs
+    gpus = tf.config.list_physical_devices('GPU')
+    tf.config.set_visible_devices(gpus[0], 'GPU')
+    tf.config.set_visible_devices(gpus[1], 'GPU')
+    
     # preparing dataset
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
     n_features = int(x_train.shape[1]*x_train.shape[2])
