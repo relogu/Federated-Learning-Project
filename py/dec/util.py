@@ -65,6 +65,8 @@ def create_denoising_autoencoder(dims,
     encoder_layers.append(input_img)
     # internal layers in encoder
     for i in range(len(encoder_dims)):
+        if i == len(encoder_dims)-1:
+            act = None
         x = Dense(units=encoder_dims[i],
                   activation=act,
                   kernel_initializer=init,
