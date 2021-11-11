@@ -25,6 +25,8 @@ from losses import get_keras_loss_names, get_keras_loss
 from clients import AutoencoderClient, DECClient, KMeansClient
 from strategies import SaveModelStrategy, KMeansStrategy, DECModelStrategy
 
+from py.dec.util import create_autoencoder
+
 def get_parser():
     # TODO: descriptor
     parser = argparse.ArgumentParser(
@@ -67,7 +69,7 @@ def get_parser():
                         dest='update_interval',
                         required=False,
                         type=int,
-                        default=100,
+                        default=140,
                         action='store',
                         help='set the update interval for the clusters distribution')
     parser.add_argument('--seed',
@@ -125,7 +127,7 @@ if __name__ == "__main__":
 
     # Prepare FEMNIST dataset
     n_clients = len(list((path_to_in/'train').glob('*.json')))
-    clients_ids = [a.parts[-1] for a in list((path_to_in/'train').glob('*.json'))]
+    clients_ids = [a.parts[-1].split('.')[0] for a in list((path_to_in/'train').glob('*.json'))]
     idx = np.random.choice(range(n_clients), args.n_clients)
     n_clients = args.n_clients
     clients_ids = [clients_ids[i] for i in idx]
@@ -135,12 +137,10 @@ if __name__ == "__main__":
     list_freq = []
     n_features = 784
     for client in clients_ids:
-        with open(path_to_in/'train'/client, 'r') as file:
+        with open(path_to_in/'train'/str(client+'.json'), 'r') as file:
             f = json.load(file)
         x_train = np.array(f['x'])
         x_train = x_train.reshape((x_train.shape[0], x_train.shape[2]))
-        y_train = np.array(f['y'])
-        y_train = y_train.reshape((y_train.shape[0], y_train.shape[2]))
         up_frequencies = np.array([np.array(np.count_nonzero(
             x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
         list_freq.append(up_frequencies)
@@ -149,6 +149,9 @@ if __name__ == "__main__":
     np.savez(path_to_out/'agg_weights_up_frequencies.npz', list_freq)
     ## PRETRAIN AE
     # Define AE configuration
+    def lr_scheduler_fn(actual_round: int):
+        # lr is divided by 10 every 20000 rounds
+        return 0.1 - actual_round * (0.01-0.1) / 20000
     config = {
         'training_type': 'pretrain',
         'train_metrics': [my_metrics.rounded_accuracy, 'accuracy'],
@@ -157,41 +160,45 @@ if __name__ == "__main__":
         # 'ae_optimizer': SGD(learning_rate=config['ae_lr'],
         #                    momentum=config['ae_momentum'],
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
-        'optimizer': SGD(
-            learning_rate=0.001, # 0.01 # DEC paper
-            momentum=0.9),
-            # decay=float(9/((2/5)*int(config['epochs']))))  # from DEC paper
-        # 'init': VarianceScaling(scale=1. / 2.,#3.,
-        #                        mode='fan_in',
-        #                        distribution="uniform"), # old
-        # 'init': RandomNormal(mean=0.0,
-        #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
-        'init': GlorotUniform(seed=51550),
+        'optimizer_lr_fn': lr_scheduler_fn,
+        'create_ae_fn': create_autoencoder,
+        'config_ae_args': {
+            'net_arch': {
+                'binary': False,
+                'tied': True,
+                'dims': [n_features,
+                         500,
+                         500,
+                         2000,
+                         args.n_clusters],
+                # 'init': VarianceScaling(scale=1. / 2.,#3.,
+                #                        mode='fan_in',
+                #                        distribution="uniform"), # old
+                # 'init': RandomNormal(mean=0.0,
+                #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
+                'init': GlorotUniform(seed=51550),
+                'dropout': 0.2,
+                'ran_flip': 0.2,  
+                'act': 'selu',
+                'ortho': False,
+                'u_norm': True,          
+            },
+            'up_frequencies': list_freq,
+        },
         # to be properly defined
         'loss': get_keras_loss(args.ae_loss),
-        'binary': False,
-        'tied': True,
-        'dims': [n_features,
-                 int((2/3)*(n_features)),
-                 int((2/3)*(n_features)),
-                 int((2.5)*(n_features)),
-                 args.n_clusters],  # DEC paper proportions
-        'dropout': 0.2,
-        'ran_flip': 0.2,  
-        'act': 'selu',
-        'ortho': False,
-        'u_norm': True,          
+        
     }
     # Define get dataset fn for AE
     common_rand_state = np.random.randint(10000)
     def get_ae_dataset_fn(cid: str):
         # Must return (train, test) given the client_id as str
         # starting from parameters light in memory
-        with open(path_to_in/'train'/client, 'r') as file:
+        with open(path_to_in/'train'/str(cid+'.json'), 'r') as file:
             f = json.load(file)
             x_train = np.array(f['x'])
             x_train = x_train.reshape((x_train.shape[0], x_train.shape[2]))
-        with open(path_to_in/'test'/client, 'r') as file:
+        with open(path_to_in/'test'/str(cid+'.json'), 'r') as file:
             f = json.load(file)
             x_test = np.array(f['x'])
             x_test = x_test.reshape((x_test.shape[0], x_test.shape[2]))
@@ -227,8 +234,8 @@ if __name__ == "__main__":
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_pae_fn,
         on_evaluate_config_fn=on_eval_config_pae_fn,
-        fraction_fit=0.01,
-        fraction_eval=0.01,
+        min_fit_clients=args.n_clients,
+        min_eval_clients=args.n_clients,
     )
     # Launch the simulation
     fl.simulation.start_simulation(client_fn=pae_client_fn,
@@ -241,8 +248,8 @@ if __name__ == "__main__":
     ## FINETUNE AE
     # Refine AE configuration
     config['training_type'] = 'finetune'
-    config['dropout'] = 0.0
-    config['ran_flip'] = 0.0
+    config['config_ae_args']['net_arch']['dropout'] = 0.0
+    config['config_ae_args']['net_arch']['ran_flip'] = 0.0
     # Define the client fn
     def fae_client_fn(cid: str):
         # Create a single client instance from client id
@@ -274,6 +281,8 @@ if __name__ == "__main__":
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_fae_fn,
         on_evaluate_config_fn=on_eval_config_fae_fn,
+        min_fit_clients=args.n_clients,
+        min_eval_clients=args.n_clients,
     )
     # Launch the simulation
     fl.simulation.start_simulation(client_fn=fae_client_fn,
@@ -289,18 +298,18 @@ if __name__ == "__main__":
         # Must return (train, test) given the client_id as str
         # starting from parameters light in memory, both train
         # and test are dictionaries with 'x' and 'y' fields
-        with open(path_to_in/'train'/client, 'r') as file:
+        with open(path_to_in/'train'/str(cid+'.json'), 'r') as file:
             f = json.load(file)
             x_train = np.array(f['x'])
             x_train = x_train.reshape((x_train.shape[0], x_train.shape[2]))
             y_train = np.array(f['y'])
-            y_train = y_train.reshape((y_train.shape[0], y_train.shape[2]))
-        with open(path_to_in/'test'/client, 'r') as file:
+            y_train = y_train.reshape((y_train.shape[0]))
+        with open(path_to_in/'test'/str(cid+'.json'), 'r') as file:
             f = json.load(file)
             x_test = np.array(f['x'])
             x_test = x_test.reshape((x_test.shape[0], x_test.shape[2]))
             y_test = np.array(f['y'])
-            y_test = y_test.reshape((y_test.shape[0], y_test.shape[2]))
+            y_test = y_test.reshape((y_test.shape[0]))
         return ({'x': x_train,
                 'y': y_train},
                 {'x': x_test,
@@ -343,6 +352,7 @@ if __name__ == "__main__":
         on_fit_config_fn=on_fit_config_kmeans_fn,
         on_evaluate_config_fn=on_eval_config_kmeans_fn,
         min_fit_clients=args.n_clients,
+        min_eval_clients=args.n_clients,
     )
     # Launch the simulation
     fl.simulation.start_simulation(client_fn=kmeans_client_fn,
@@ -374,7 +384,7 @@ if __name__ == "__main__":
         # 'actual_round', 'total_rounds', 'update_interval', 
         # 'train_or_not_param' for client necessities
         return {'model': 'dec',
-                'last': rnd==dec_rounds,
+                'last': ((not train) or rnd==dec_rounds),
                 'actual_round': rnd,
                 'total_rounds': dec_rounds,
                 'update_interval': (rnd%args.update_interval==1),
@@ -393,8 +403,8 @@ if __name__ == "__main__":
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_dec_fn,
         on_evaluate_config_fn=on_eval_config_dec_fn,
-        fraction_fit=0.01,
-        fraction_eval=0.01,
+        min_fit_clients=args.n_clients,
+        min_eval_clients=args.n_clients,
     )
     # Launch the simulation
     fl.simulation.start_simulation(client_fn=dec_client_fn,

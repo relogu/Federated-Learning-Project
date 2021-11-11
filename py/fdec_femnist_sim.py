@@ -8,9 +8,11 @@ Created on Fri Oct 29 13:55:15 2021
 import flwr as fl
 import numpy as np
 import os
-import sys
 import pathlib
 import argparse
+import json
+
+from py.dec.util import create_dec_sae
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -18,40 +20,21 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["RAY_DISABLE_IMPORT_WARNING"] = "1"
 
 from tensorflow.keras.optimizers import SGD
-from tensorflow.keras.initializers import RandomNormal, VarianceScaling, GlorotUniform
+from tensorflow.keras.initializers import RandomNormal
 
-import py.dataset_util as data_util
 import py.metrics as my_metrics
-from losses import get_keras_loss_names, get_keras_loss
 from clients import AutoencoderClient, DECClient, KMeansClient
 from strategies import SaveModelStrategy, KMeansStrategy, DECModelStrategy
-
-from py.dec.util import create_autoencoder
 
 def get_parser():
     # TODO: descriptor
     parser = argparse.ArgumentParser(
         description="FLOWER experiment for simulating the FEMNIST training")
-    parser.add_argument('--groups',
-                        dest='groups',
-                        required=True,
-                        action='append',
-                        help='which groups of variables to use for EUROMDS dataset')
-    parser.add_argument('--ex_col',
-                        dest='ex_col',
-                        required=True,
-                        action='append',
-                        help='which columns to exclude for EUROMDS dataset')
-    parser.add_argument('--fill',
-                        dest='fill',
-                        required=False,
-                        action='store_true',
-                        help='Flag for fill NaNs in dataset')
     parser.add_argument('--n_clients',
                         dest='n_clients',
                         required=True,
                         type=int,
-                        default=2,
+                        default=1000,
                         action='store',
                         help='number of total clients in the FL setting')
     parser.add_argument("--n_clusters",
@@ -66,14 +49,6 @@ def get_parser():
                         default=50000,
                         action='store',
                         help='number of epochs for the autoencoder pre-training')
-    parser.add_argument('--ae_loss',
-                        dest='ae_loss',
-                        required=True,
-                        type=type(''),
-                        default='mse',
-                        choices=get_keras_loss_names(),
-                        action='store',
-                        help='Loss function for autoencoder training')
     parser.add_argument('--cl_epochs',
                         dest='cl_epochs',
                         required=False,
@@ -85,7 +60,7 @@ def get_parser():
                         dest='update_interval',
                         required=False,
                         type=int,
-                        default=20,
+                        default=140,
                         action='store',
                         help='set the update interval for the clusters distribution')
     parser.add_argument('--seed',
@@ -109,6 +84,10 @@ def get_parser():
                         dest="out_folder",
                         type=type(str('')),
                         help="Folder to output images")
+    parser.add_argument("--in_fol",
+                        dest="in_folder",
+                        type=type(str('')),
+                        help="Folder to input images")
     # TODO: add arguments
     return parser
     
@@ -125,48 +104,25 @@ if __name__ == "__main__":
     else:
         path_to_out = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
+    # Define input folder
+    if args.in_folder is None:
+        path_to_in = pathlib.Path(__file__).parent.parent.absolute()/'input'
+    else:
+        path_to_in = pathlib.Path(args.in_folder)
+    print('input folder {}'.format(path_to_in))
     
     # This might be changed
-    client_resources = {'num_cpus': 10}
+    client_resources = {'num_cpus': 1}
     # (optional) Specify ray config, for sure it is to be changed
     ray_config = {'include_dashboard': False}
 
-    # Prepare EURMDS dataset
-    for g in args.groups:
-        if g not in data_util.EUROMDS_GROUPS:
-            print('One of the given groups is not allowed.\nAllowed groups: {}'.
-                  format(data_util.EUROMDS_GROUPS))
-            sys.exit()
-    for c in args.ex_col:
-        if c not in data_util.get_euromds_cols():
-            print('One of the given columns is not allowed.\nAllowed columns: {}'.
-                  format(data_util.get_euromds_cols()))
-            sys.exit()
-    # Get dataset slice chosen
-    print("Filling? {}".format(args.fill))
-    fill = 2044 if args.fill else 0
-    x = data_util.get_euromds_dataset(groups=args.groups,
-                                      exclude_cols=args.ex_col,
-                                      accept_nan=fill)
-    # Get the number of features selected
-    n_features = len(x.columns)
-    x = np.array(x)
-    # Separate test and train sets
-    initial_state = np.random.randint(10000)
-    train_idx, test_idx = data_util.split_dataset(
-        x=x,
-        splits=5, # 80-20 for test-train
-        shuffle=True,
-        fold_n=0, # select first fold
-        r_state=initial_state # set the seed
-    )
-    x_train, x_test = x[train_idx], x[test_idx]
-    ## FREQUENCIES
-    # Get frenquencies for building random flipping layer
-    up_frequencies = np.array([np.array(np.count_nonzero(
-        x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
-    np.savez(path_to_out/'agg_weights_up_frequencies.npz', up_frequencies)
-    del x, x_train, x_test
+    # Prepare FEMNIST dataset
+    n_clients = len(list((path_to_in/'train').glob('*.json')))
+    clients_ids = [a.parts[-1].split('.')[0] for a in list((path_to_in/'train').glob('*.json'))]
+    idx = np.random.choice(range(n_clients), args.n_clients)
+    n_clients = args.n_clients
+    clients_ids = [clients_ids[i] for i in idx]
+    print('Training for {} clients'.format(len(clients_ids)))
     ## PRETRAIN AE
     # Define AE configuration
     def lr_scheduler_fn(actual_round: int):
@@ -175,62 +131,38 @@ if __name__ == "__main__":
     config = {
         'training_type': 'pretrain',
         'train_metrics': [my_metrics.rounded_accuracy, 'accuracy'],
-        'batch_size': 10,
+        'batch_size': 64,
         'local_epochs': 1,
         'optimizer_lr_fn': lr_scheduler_fn,
-        'create_ae_fn': create_autoencoder,
+        'create_ae_fn': create_dec_sae,
         'config_ae_args': {
-            'net_arch': {
-                'binary': False,
-                'tied': True,
-                'dims': [n_features,
-                        int((2/3)*(n_features)),
-                        int((2/3)*(n_features)),
-                        int((2.5)*(n_features)),
-                        args.n_clusters],  # DEC paper proportions
-                # 'init': VarianceScaling(scale=1. / 2.,#3.,
-                #                        mode='fan_in',
-                #                        distribution="uniform"), # old
-                # 'init': RandomNormal(mean=0.0,
-                #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
-                'init': GlorotUniform(seed=51550),
-                'dropout': 0.2,
-                'ran_flip': 0.2,  
-                'act': 'selu',
-                'ortho': False,
-                'u_norm': True,          
-            },
-            'up_frequencies': up_frequencies,
+          'dims': [784,
+                 500,
+                 500,
+                 2000,
+                 10],
+          'init': RandomNormal(mean=0.0,
+                             stddev=0.01),
+          'dropout_rate': 0.2,
         },
-        # to be properly defined
-        'loss': get_keras_loss(args.ae_loss),
+        'loss': 'mse',
+        'binary': False,
+        'tied': True,
     }
     # Define get dataset fn for AE
     common_rand_state = np.random.randint(10000)
     def get_ae_dataset_fn(cid: str):
         # Must return (train, test) given the client_id as str
         # starting from parameters light in memory
-        client_id = int(cid)
-        x = np.array(data_util.get_euromds_dataset(
-            groups=args.groups,
-            exclude_cols=args.ex_col,
-            accept_nan=fill))
-        x_train, x_test = x[train_idx], x[test_idx]
-        client_train, _ = data_util.split_dataset(
-            x=x_train,
-            splits=args.n_clients,
-            shuffle=True,
-            fold_n=client_id, # select the client
-            r_state=common_rand_state # set common seed
-        )
-        client_test, _ = data_util.split_dataset(
-            x=x_test,
-            splits=args.n_clients,
-            shuffle=True,
-            fold_n=client_id, # select the client
-            r_state=common_rand_state # set common seed
-        )
-        return x_train[client_train], x_test[client_test]
+        with open(path_to_in/'train'/str(cid+'.json'), 'r') as file:
+            f = json.load(file)
+            x_train = np.array(f['x'])
+            x_train = x_train.reshape((x_train.shape[0], x_train.shape[2]))
+        with open(path_to_in/'test'/str(cid+'.json'), 'r') as file:
+            f = json.load(file)
+            x_test = np.array(f['x'])
+            x_test = x_test.reshape((x_test.shape[0], x_test.shape[2]))
+        return x_train, x_test
     # Define the client fn
     def pae_client_fn(cid: str):
         # Create a single client instance from client id
@@ -262,11 +194,13 @@ if __name__ == "__main__":
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_pae_fn,
         on_evaluate_config_fn=on_eval_config_pae_fn,
+        min_fit_clients=args.n_clients,
+        min_eval_clients=args.n_clients,
     )
     # Launch the simulation
     fl.simulation.start_simulation(client_fn=pae_client_fn,
                                    num_clients=args.n_clients,
-                                   clients_ids=[str(c) for c in list(range(args.n_clients))],
+                                   clients_ids=clients_ids,
                                    client_resources=client_resources,
                                    num_rounds = pretrain_rounds,
                                    strategy=current_strategy,
@@ -274,8 +208,7 @@ if __name__ == "__main__":
     ## FINETUNE AE
     # Refine AE configuration
     config['training_type'] = 'finetune'
-    config['config_ae_args']['net_arch']['dropout'] = 0.0
-    config['config_ae_args']['net_arch']['ran_flip'] = 0.0
+    config['dropout'] = 0.0
     # Define the client fn
     def fae_client_fn(cid: str):
         # Create a single client instance from client id
@@ -307,11 +240,13 @@ if __name__ == "__main__":
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_fae_fn,
         on_evaluate_config_fn=on_eval_config_fae_fn,
+        min_fit_clients=args.n_clients,
+        min_eval_clients=args.n_clients,
     )
     # Launch the simulation
     fl.simulation.start_simulation(client_fn=fae_client_fn,
                                    num_clients=args.n_clients,
-                                   clients_ids=[str(c) for c in list(range(args.n_clients))],
+                                   clients_ids=clients_ids,
                                    client_resources=client_resources,
                                    num_rounds = finetune_rounds,
                                    strategy=current_strategy,
@@ -322,40 +257,22 @@ if __name__ == "__main__":
         # Must return (train, test) given the client_id as str
         # starting from parameters light in memory, both train
         # and test are dictionaries with 'x' and 'y' fields
-        client_id = int(cid)
-        x = np.array(data_util.get_euromds_dataset(
-            groups=args.groups,
-            exclude_cols=args.ex_col,
-            accept_nan=fill))
-        x_train, x_test = x[train_idx], x[test_idx]
-        prob = data_util.get_euromds_dataset(groups=['HDP'])
-        y = []
-        for label, row in prob.iterrows():
-            if np.sum(row) > 0:
-                y.append(row.argmax())
-            else:
-                y.append(-1)
-        y = np.array(y)
-        del prob
-        y_train, y_test = y[train_idx], y[test_idx]
-        client_train, _ = data_util.split_dataset(
-            x=x_train,
-            splits=args.n_clients,
-            shuffle=True,
-            fold_n=client_id, # select the client
-            r_state=common_rand_state # set common seed
-        )
-        client_test, _ = data_util.split_dataset(
-            x=x_test,
-            splits=args.n_clients,
-            shuffle=True,
-            fold_n=client_id, # select the client
-            r_state=common_rand_state # set common seed
-        )
-        return ({'x': x_train[client_train],
-                'y': y_train[client_train]},
-                {'x': x_test[client_test],
-                'y': y_test[client_test]})
+        with open(path_to_in/'train'/str(cid+'.json'), 'r') as file:
+            f = json.load(file)
+            x_train = np.array(f['x'])
+            x_train = x_train.reshape((x_train.shape[0], x_train.shape[2]))
+            y_train = np.array(f['y'])
+            y_train = y_train.reshape((y_train.shape[0]))
+        with open(path_to_in/'test'/str(cid+'.json'), 'r') as file:
+            f = json.load(file)
+            x_test = np.array(f['x'])
+            x_test = x_test.reshape((x_test.shape[0], x_test.shape[2]))
+            y_test = np.array(f['y'])
+            y_test = y_test.reshape((y_test.shape[0]))
+        return ({'x': x_train,
+                'y': y_train},
+                {'x': x_test,
+                'y': y_test})
     # Define k-means configuration
     config['k_means_init'] = 'k-means++'
     config['n_clusters'] = args.n_clusters
@@ -394,24 +311,24 @@ if __name__ == "__main__":
         on_fit_config_fn=on_fit_config_kmeans_fn,
         on_evaluate_config_fn=on_eval_config_kmeans_fn,
         min_fit_clients=args.n_clients,
+        min_eval_clients=args.n_clients,
     )
-    # # Launch the simulation
+    # Launch the simulation
     fl.simulation.start_simulation(client_fn=kmeans_client_fn,
                                    num_clients=args.n_clients,
-                                   clients_ids=[str(c) for c in list(range(args.n_clients))],
+                                   clients_ids=clients_ids,
                                    client_resources=client_resources,
                                    num_rounds=kmeans_rounds,
                                    strategy=current_strategy,
                                    ray_init_args=ray_config)
-    
     ## DEC CLUSTERING
+    # DEC dataset fn is the same as kmeans
     # Define DEC configuration
     config['optimizer'] = SGD(
-        learning_rate=0.001,
+        learning_rate=0.1,
         momentum=0.9)
     config['local_epochs'] = 1
     config['loss'] = 'kld'
-    config['batch_size'] = 10
     # Define the client fn
     def dec_client_fn(cid: str):
         # Create a single client instance from client id
@@ -426,7 +343,7 @@ if __name__ == "__main__":
         # 'actual_round', 'total_rounds', 'update_interval', 
         # 'train_or_not_param' for client necessities
         return {'model': 'dec',
-                'last': ((not train) or rnd==dec_rounds),
+                'last': rnd==dec_rounds,
                 'actual_round': rnd,
                 'total_rounds': dec_rounds,
                 'update_interval': (rnd%args.update_interval==1),
@@ -445,11 +362,13 @@ if __name__ == "__main__":
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_dec_fn,
         on_evaluate_config_fn=on_eval_config_dec_fn,
+        min_fit_clients=args.n_clients,
+        min_eval_clients=args.n_clients,
     )
     # Launch the simulation
     fl.simulation.start_simulation(client_fn=dec_client_fn,
                                    num_clients=args.n_clients,
-                                   clients_ids=[str(c) for c in list(range(args.n_clients))],
+                                   clients_ids=clients_ids,
                                    client_resources=client_resources,
                                    num_rounds=dec_rounds,
                                    strategy=current_strategy,
