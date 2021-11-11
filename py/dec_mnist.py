@@ -13,6 +13,7 @@ from sklearn.cluster import KMeans
 from tensorflow.keras.initializers import RandomNormal
 from tensorflow.keras.optimizers import SGD
 import tensorflow as tf
+from tensorflow.keras.callbacks import LearningRateScheduler
 import argparse
 import os
 import pathlib
@@ -92,6 +93,17 @@ if __name__ == "__main__":
     x_train, x_test = x_train.reshape(x_train.shape[0], n_features)/255, x_test.reshape(x_test.shape[0], n_features)/255
     
     # initializing common configuration dict
+    initial_learning_rate = 0.1
+    
+    def lr_step_decay(epoch, lr):
+        # lr is divided by 10 every 20000 rounds
+        drop_rate = 10
+        epoch_drop = 20000
+        if epoch > epoch_drop:
+            lr = initial_learning_rate/drop_rate
+        if epoch > 2*epoch_drop:
+            lr = 2*initial_learning_rate/drop_rate
+        return lr
     config = {
         'batch_size': 256,
         'n_clusters': args.n_clusters,
@@ -100,8 +112,7 @@ if __name__ == "__main__":
         'ae_epochs': 50000,
         'ae_optimizer': SGD(
             learning_rate=0.1,
-            momentum=0.9,
-            decay=float(9/((2/5)*500000))),
+            momentum=0.9),
         'ae_init': RandomNormal(mean=0.0,
                                 stddev=0.01),
         'ae_dims': [784,
@@ -138,6 +149,7 @@ if __name__ == "__main__":
                                   batch_size=config['batch_size'],
                                   epochs=int(config['ae_epochs']),
                                   validation_data=(x_test, x_test),
+                                  callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
                                   verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
@@ -168,6 +180,7 @@ if __name__ == "__main__":
                                   batch_size=config['batch_size'],
                                   epochs=int(2*config['ae_epochs']),
                                   validation_data=(x_test, x_test),
+                                  callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
                                   verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)

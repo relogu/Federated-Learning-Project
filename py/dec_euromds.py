@@ -17,6 +17,7 @@ from sklearn.cluster import KMeans
 from tensorflow.keras.initializers import RandomNormal, GlorotUniform
 from tensorflow.keras.optimizers import SGD
 import tensorflow as tf
+from tensorflow.keras.callbacks import LearningRateScheduler
 import tensorflow_addons.metrics as tfa_metrics
 import argparse
 import os
@@ -116,7 +117,7 @@ def get_parser():
                         dest='cl_lr',
                         required=False,
                         type=float,
-                        default=0.01,
+                        default=0.1,
                         action='store',
                         help='clustering model learning rate')
     parser.add_argument('--update_interval',
@@ -205,6 +206,18 @@ if __name__ == "__main__":
     ids = data_util.get_euromds_ids()
     
     # initializing common configuration dict
+    initial_learning_rate = 0.1
+    
+    def lr_step_decay(epoch, lr):
+        # lr is divided by 10 every 20000 rounds
+        drop_rate = 10
+        epoch_drop = int(2*args.ae_epochs/5)
+        if epoch > epoch_drop:
+            lr = initial_learning_rate/drop_rate
+        if epoch > 2*epoch_drop:
+            lr = 2*initial_learning_rate/drop_rate
+        return lr
+    
     config = {
         'batch_size': args.batch_size,
         'n_clusters': args.n_clusters,
@@ -222,8 +235,7 @@ if __name__ == "__main__":
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
         'ae_optimizer': SGD(
             learning_rate=0.1,
-            momentum=0.9,
-            decay=float(9/((2/5)*int(args.ae_epochs)))),
+            momentum=0.9),
         # 'init': VarianceScaling(scale=1. / 2.,#3.,
         #                        mode='fan_in',
         #                        distribution="uniform"), # old
@@ -231,10 +243,10 @@ if __name__ == "__main__":
         #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
         'init': GlorotUniform(seed=51550),
         'dims': [n_features,
-            500,
-            500,
-            2000,
-            args.n_clusters],  # DEC paper proportions
+                int((2/3)*(n_features)),
+                int((2/3)*(n_features)),
+                int((2.5)*(n_features)),
+                args.n_clusters],  # DEC paper proportions
         # 'relu' --> DEC paper # 'selu' --> is better for binary
         'act': 'selu',
         'ae_metrics': [my_metrics.rounded_accuracy,
@@ -272,6 +284,7 @@ if __name__ == "__main__":
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(config['ae_epochs']),
+                                  callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
                                   verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
@@ -301,6 +314,7 @@ if __name__ == "__main__":
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(2*config['ae_epochs']),
+                                  callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
                                   verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
