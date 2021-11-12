@@ -187,7 +187,8 @@ if __name__ == "__main__":
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
         'ae_optimizer': SGD(
             learning_rate=0.1,
-            momentum=0.9),
+            momentum=0.9,#),
+            decay=(0.1-0.0001)/args.ae_epochs),
         # 'init': VarianceScaling(scale=1. / 2.,#3.,
         #                        mode='fan_in',
         #                        distribution="uniform"), # old
@@ -237,7 +238,7 @@ if __name__ == "__main__":
                                   batch_size=config['batch_size'],
                                   epochs=int(config['ae_epochs']),
                                   validation_data=(x_test, x_test),
-                                  callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
+                                  #callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
                                   verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
@@ -267,7 +268,7 @@ if __name__ == "__main__":
                                   batch_size=config['batch_size'],
                                   epochs=int(2*config['ae_epochs']),
                                   validation_data=(x_test, x_test),
-                                  callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
+                                  #callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
                                   verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
