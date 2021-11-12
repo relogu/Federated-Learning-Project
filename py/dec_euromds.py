@@ -219,11 +219,6 @@ if __name__ == "__main__":
             lr = lr/drop_rate
         return lr
     
-    def lr_constant_decay(epoch, lr):
-        rate = 10 / int((2/5)*args.ae_epochs)
-        lr = initial_learning_rate - epoch * rate
-        return lr
-    
     config = {
         'batch_size': args.batch_size,
         'n_clusters': args.n_clusters,
@@ -241,7 +236,8 @@ if __name__ == "__main__":
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
         'ae_optimizer': SGD(
             learning_rate=0.1,
-            momentum=0.9),
+            momentum=0.9,#),
+            decay=(0.1-0.0001)/args.ae_epochs),
         # 'init': VarianceScaling(scale=1. / 2.,#3.,
         #                        mode='fan_in',
         #                        distribution="uniform"), # old
@@ -290,7 +286,7 @@ if __name__ == "__main__":
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(config['ae_epochs']),
-                                  callbacks=[LearningRateScheduler(lr_constant_decay, verbose=1)],
+                                  #callbacks=[LearningRateScheduler(lr_constant_decay, verbose=1)],
                                   verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
@@ -320,7 +316,7 @@ if __name__ == "__main__":
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(2*config['ae_epochs']),
-                                  callbacks=[LearningRateScheduler(lr_constant_decay, verbose=1)],
+                                  #callbacks=[LearningRateScheduler(lr_constant_decay, verbose=1)],
                                   verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
