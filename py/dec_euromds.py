@@ -219,6 +219,11 @@ if __name__ == "__main__":
             lr = lr/drop_rate
         return lr
     
+    def lr_constant_decay(epoch, lr):
+        rate = 10 / int((2/5)*args.ae_epochs)
+        lr = initial_learning_rate - epoch * rate
+        return lr
+    
     config = {
         'batch_size': args.batch_size,
         'n_clusters': args.n_clusters,
@@ -285,7 +290,7 @@ if __name__ == "__main__":
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(config['ae_epochs']),
-                                  callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
+                                  callbacks=[LearningRateScheduler(lr_constant_decay, verbose=1)],
                                   verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
@@ -315,7 +320,7 @@ if __name__ == "__main__":
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(2*config['ae_epochs']),
-                                  callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
+                                  callbacks=[LearningRateScheduler(lr_constant_decay, verbose=1)],
                                   verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
