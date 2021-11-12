@@ -244,9 +244,9 @@ if __name__ == "__main__":
         #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
         'init': GlorotUniform(seed=51550),
         'dims': [n_features,
-                int((2/3)*(n_features)),
-                int((2/3)*(n_features)),
-                int((2.5)*(n_features)),
+                int((2)*(n_features)),#int((2/3)*(n_features)),
+                int((2)*(n_features)),#int((2/3)*(n_features)),
+                int((3)*(n_features)),#int((2.5)*(n_features)),
                 args.n_clusters],  # DEC paper proportions
         # 'relu' --> DEC paper # 'selu' --> is better for binary
         'act': 'selu',
