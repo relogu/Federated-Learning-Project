@@ -298,7 +298,8 @@ if __name__ == "__main__":
     # training the clustering model
     clustering_model = create_clustering_model(
         config['n_clusters'],
-        encoder)
+        encoder,
+        alpha=config['dims'][-1]-1)
     # compiling the clustering model
     clustering_model.compile(
         optimizer=config['cl_optimizer'],

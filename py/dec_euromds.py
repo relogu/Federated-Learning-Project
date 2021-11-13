@@ -250,7 +250,7 @@ if __name__ == "__main__":
                 500,#2000,#int((3)*(n_features)),#int((2.5)*(n_features)),
                 5],#args.n_clusters],  # DEC paper proportions
         # 'relu' --> DEC paper # 'selu' --> is better for binary
-        'act': 'selu',
+        'act': 'relu',
         'ae_metrics': [my_metrics.rounded_accuracy,
                        'accuracy',
                        tfa_metrics.HammingLoss(mode='multilabel', threshold=0.50)],
