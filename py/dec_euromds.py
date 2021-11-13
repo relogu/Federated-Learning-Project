@@ -117,7 +117,7 @@ def get_parser():
                         dest='cl_lr',
                         required=False,
                         type=float,
-                        default=0.1,
+                        default=0.01,
                         action='store',
                         help='clustering model learning rate')
     parser.add_argument('--update_interval',
