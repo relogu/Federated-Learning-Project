@@ -518,9 +518,9 @@ def create_autoencoder(net_arch, up_frequencies):
                 noise_rate=net_arch['ran_flip'])
 
 
-def create_clustering_model(n_clusters, encoder):
+def create_clustering_model(n_clusters, encoder, alpha: float = 1.0):
     clustering_layer = ClusteringLayer(
-        n_clusters, name='clustering')(encoder.output)
+        n_clusters, name='clustering', alpha=alpha)(encoder.output)
     return Model(inputs=encoder.input, outputs=clustering_layer)
 
 
