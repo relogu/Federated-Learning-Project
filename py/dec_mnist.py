@@ -101,9 +101,7 @@ if __name__ == "__main__":
         epoch_drop = 20000
         lr = initial_learning_rate
         if epoch > epoch_drop:
-            lr = initial_learning_rate/drop_rate
-        if epoch > 2*epoch_drop:
-            lr = lr/drop_rate
+            lr = initial_learning_rate/(drop_rate**int(epoch/epoch_drop))
         return lr
     config = {
         'batch_size': 256,
