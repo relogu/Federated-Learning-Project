@@ -199,13 +199,13 @@ if __name__ == "__main__":
     encoder.set_weights(weights)
 
     # get an estimate for clusters centers using k-means
-    kmeans = KMeans(init='k-means++',
-                    n_clusters=config['n_clusters'],
-                    # number of different random initializations
-                    n_init=config['kmeans_n_init'],
-                    random_state=config['seed'])
-    # fitting clusters' centers using k-means
-    kmeans.fit(encoder.predict(x_train))
+    kmeans = KMeans(
+        init='k-means++',
+        n_clusters=config['n_clusters'],
+        # number of different random initializations
+        n_init=config['kmeans_n_init'],
+        random_state=config['seed']
+    ).fit(encoder(x_train).numpy())
     # saving the model weights
     parameters = np.array([kmeans.cluster_centers_])
     print('Saving initial centroids')
