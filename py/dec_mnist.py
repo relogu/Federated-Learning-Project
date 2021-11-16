@@ -128,13 +128,15 @@ if __name__ == "__main__":
         'cl_loss': 'kld',
         'seed': args.seed}
 
-    # pre-train the autoencoder
+    # Gready Layer-Wise pretrain of the autoencoder
     pretrained_weights = path_to_out/'encoder.npz'
     if not pretrained_weights.exists():
         print('There are no existing weights in the output folder for the autoencoder')
+        
         autoencoder, encoder, decoder = create_dec_sae(
             dims=config['ae_dims'],
             init=config['ae_init'])
+        print(autoencoder.summary())
         
         autoencoder.compile(
             metrics=config['ae_metrics'],
@@ -212,7 +214,8 @@ if __name__ == "__main__":
     # training the clustering model
     clustering_model = create_clustering_model(
         config['n_clusters'],
-        encoder)
+        encoder,
+        alpha=9)
     # compiling the clustering model
     clustering_model.compile(
         optimizer=config['cl_optimizer'],
