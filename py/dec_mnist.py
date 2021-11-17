@@ -46,7 +46,7 @@ def get_parser():
                         dest='update_interval',
                         required=False,
                         type=int,
-                        default=140,
+                        default=160,
                         action='store',
                         help='set the update interval for the clusters distribution')
     parser.add_argument('--seed',
@@ -301,5 +301,8 @@ if __name__ == "__main__":
                          path_to_out=path_to_out)
 
     # saving the model weights
-    parameters = np.array(clustering_model.get_weights(), dtype=object)
-    np.savez(path_to_out/'clustering', parameters)
+    parameters = np.array(encoder.get_weights(), dtype=object)
+    np.savez(path_to_out/'encoder_final', parameters)
+
+    parameters = np.array(clustering_model.get_layer(name='clustering').get_weights(), dtype=object)
+    np.savez(path_to_out/'final_centroids', parameters)

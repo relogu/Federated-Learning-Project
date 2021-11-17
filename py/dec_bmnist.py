@@ -375,5 +375,8 @@ if __name__ == "__main__":
                          path_to_out=path_to_out)
 
     # saving the model weights
-    parameters = np.array(clustering_model.get_weights(), dtype=object)
-    np.savez(path_to_out/'clustering', parameters)
+    parameters = np.array(encoder.get_weights(), dtype=object)
+    np.savez(path_to_out/'encoder_final', parameters)
+
+    parameters = np.array(clustering_model.get_layer(name='clustering').get_weights(), dtype=object)
+    np.savez(path_to_out/'final_centroids', parameters)
