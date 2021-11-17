@@ -136,6 +136,7 @@ if __name__ == "__main__":
         autoencoder, encoder, decoder = create_dec_sae(
             dims=config['ae_dims'],
             init=config['ae_init'])
+        
         print(autoencoder.summary())
         
         autoencoder.compile(
@@ -151,13 +152,13 @@ if __name__ == "__main__":
                                   epochs=int(config['ae_epochs']),
                                   validation_data=(x_test, x_test),
                                   callbacks=[LearningRateScheduler(lr_step_decay, verbose=1),
-                                             EarlyStopping(
-                                      patience=10,
-                                      verbose=1,
-                                      mode="auto",
-                                      baseline=None,
-                                      restore_best_weights=False,
-                                  )],
+                                            #  EarlyStopping(
+                                            #      patience=10,
+                                            #      verbose=1,
+                                            #      mode="auto",
+                                            #      baseline=None,
+                                            #      restore_best_weights=False,)
+                                             ],
                                   verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
@@ -189,13 +190,13 @@ if __name__ == "__main__":
                                   epochs=int(2*config['ae_epochs']),
                                   validation_data=(x_test, x_test),
                                   callbacks=[LearningRateScheduler(lr_step_decay, verbose=1),
-                                             EarlyStopping(
-                                      patience=10,
-                                      verbose=1,
-                                      mode="auto",
-                                      baseline=None,
-                                      restore_best_weights=False,
-                                  )],
+                                            #  EarlyStopping(
+                                            #      patience=10,
+                                            #      verbose=1,
+                                            #      mode="auto",
+                                            #      baseline=None,
+                                            #      restore_best_weights=False,)
+                                             ],
                                   verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
