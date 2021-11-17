@@ -160,8 +160,8 @@ if __name__ == "__main__":
 
     trained_weights = path_to_out/'encoder_ft.npz'
     if not trained_weights.exists():
-        param: Parameters = np.load(pretrained_weights, allow_pickle=True)
-        weights = param['arr_0']
+        param = np.load(pretrained_weights, allow_pickle=True)
+        weights = np.array([param[p] for p in param])[0]
         print('There are no existing weights in the output folder for the autoencoder')
         autoencoder, encoder, decoder = create_dec_sae(
             dims=config['ae_dims'],
@@ -195,8 +195,8 @@ if __name__ == "__main__":
         init=config['ae_init'],
         dropout_rate=0.0)
 
-    param: Parameters = np.load(trained_weights, allow_pickle=True)
-    weights = param['arr_0']
+    param = np.load(trained_weights, allow_pickle=True)
+    weights = np.array([param[p] for p in param])[0]
     encoder.set_weights(weights)
 
     # get an estimate for clusters centers using k-means
