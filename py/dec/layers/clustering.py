@@ -57,8 +57,16 @@ class ClusteringLayer(Layer):
         Return:
             q: student's t-distribution, or soft labels for each sample. shape=(n_samples, n_clusters)
         """
-        q = 1.0 / (1.0 + (K.sum(K.square(K.expand_dims(inputs,
-                   axis=1) - self.clusters), axis=2) / self.alpha))
+        # [[d(x_0, µ_0)**2, d(x_0, µ_1)**2, ... , d(x_0, µ_k)**2],
+        #  [d(x_1, µ_0)**2, d(x_1, µ_1)**2, ... , d(x_1, µ_k)**2], 
+        #  ...,
+        #  [d(x_n, µ_0)**2, d(x_n, µ_1)**2, ... , d(x_n, µ_k)**2]
+        # ] where d(x_i, µ_j) = sqrt((µ_j0-x_i0)^2 + ... + (µ_jd-x_id)^2)
+        # n --> number of samples in the batch
+        # d --> dimension of the feature space
+        # k --> number of clusters
+        dist_ij = K.sum(K.square(K.expand_dims(inputs, axis=1)) - self.clusters, axis=2)
+        q = 1.0 / (1.0 + (dist_ij / self.alpha))
         q **= (self.alpha + 1.0) / 2.0
         # Make sure each sample's 10 values add up to 1.
         q = K.transpose(K.transpose(q) / K.sum(q, axis=1))
