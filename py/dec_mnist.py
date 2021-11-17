@@ -67,6 +67,7 @@ def get_parser():
 if __name__ == "__main__":
     # get parameters
     args = get_parser().parse_args()
+    np.random.seed(51550)
     # disable possible gpu devices (add hard acc, selection)
     if not args.cuda_flag:
         print('No CUDA')
@@ -224,31 +225,35 @@ if __name__ == "__main__":
         name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
     y_old = None
     print('Initializing the target distribution')
-    q = clustering_model.predict(x_train, verbose=0)
+    q = clustering_model(x_train).numpy()
     # update the auxiliary target distribution p
     p = target_distribution(q)
     train_loss, eval_loss = 0.1, 0
     i = 0
     while True:
         i += 1
-        if i % config['update_interval'] == 1:
-            # if train_loss < eval_loss:
-            print('Updating the target distribution')
-            train_q = clustering_model.predict(x_train, verbose=0)
-            # update the auxiliary target distribution p
-            train_p = target_distribution(train_q)
+        # if i % config['update_interval'] == 1:
+        #     # if train_loss < eval_loss:
+        print('Shuffling data')
+        p = np.random.permutation(len(x_train))
+        x_train = x_train[p]
+        print('Updating the target distribution')
+        train_q = clustering_model(x_train).numpy()
+        # update the auxiliary target distribution p
+        train_p = target_distribution(train_q)
         clustering_model.fit(x=x_train,
                              y=train_p,
                              verbose=2,
-                             batch_size=config['batch_size'])
+                             batch_size=config['batch_size'],
+                             steps_per_epoch=config['update_interval'])
         # evaluation
-        q = clustering_model.predict(x_train, verbose=0)
+        q = clustering_model(x_train).numpy()
         # update the auxiliary target distribution p
         p = target_distribution(q)
         # retrieving loss
         loss = clustering_model.evaluate(x_train, p, verbose=2)
         # test
-        q = clustering_model.predict(x_test, verbose=0)
+        q = clustering_model(x_test).numpy()
         # update the auxiliary target distribution p
         p = target_distribution(q)
         # retrieving loss
@@ -257,8 +262,8 @@ if __name__ == "__main__":
         y_pred = q.argmax(1)
         # getting the cycle accuracy of evaluation set
         x_ae_test = autoencoder(x_test)
-        y_ae_pred = clustering_model.predict(
-            np.round(x_ae_test), verbose=0).argmax(1)
+        y_ae_pred = clustering_model(
+            np.round(x_ae_test)).numpy().argmax(1)
         cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
         del y_ae_pred, x_ae_test
         # evaluating metrics
