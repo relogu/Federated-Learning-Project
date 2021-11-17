@@ -107,8 +107,7 @@ if __name__ == "__main__":
     config = {
         'batch_size': 256,
         'n_clusters': args.n_clusters,
-        'kmeans_epochs': 300,
-        'kmeans_n_init': 25,
+        'kmeans_n_init': 20,
         'ae_epochs': 50000,
         'ae_optimizer': SGD(
             learning_rate=0.1,
@@ -200,17 +199,17 @@ if __name__ == "__main__":
     encoder.set_weights(weights)
 
     # get an estimate for clusters centers using k-means
+    z = encoder(x_train).numpy()
     kmeans = KMeans(
         init='k-means++',
         n_clusters=config['n_clusters'],
         # number of different random initializations
         n_init=config['kmeans_n_init'],
-        random_state=config['seed']
-    ).fit(encoder(x_train).numpy())
+    ).fit(z)
     # saving the model weights
-    parameters = np.array([kmeans.cluster_centers_])
+    initial_centroids = np.array([kmeans.cluster_centers_])
     print('Saving initial centroids')
-    np.savez(path_to_out/'initial_centroids', parameters)
+    np.savez(path_to_out/'initial_centroids', initial_centroids)
 
     # training the clustering model
     clustering_model = create_clustering_model(
@@ -222,12 +221,8 @@ if __name__ == "__main__":
         optimizer=config['cl_optimizer'],
         loss=config['cl_loss'])
     clustering_model.get_layer(
-        name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
+        name='clustering').set_weights(initial_centroids)
     y_old = None
-    print('Initializing the target distribution')
-    q = clustering_model(x_train).numpy()
-    # update the auxiliary target distribution p
-    p = target_distribution(q)
     train_loss, eval_loss = 0.1, 0
     i = 0
     while True:
@@ -235,8 +230,8 @@ if __name__ == "__main__":
         # if i % config['update_interval'] == 1:
         #     # if train_loss < eval_loss:
         print('Shuffling data')
-        p = np.random.permutation(len(x_train))
-        x_train = x_train[p]
+        idx = np.random.permutation(len(x_train))
+        x_train = x_train[idx, :]
         print('Updating the target distribution')
         train_q = clustering_model(x_train).numpy()
         # update the auxiliary target distribution p
