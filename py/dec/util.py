@@ -458,11 +458,12 @@ def create_dec_sae(dims,
         act = 'relu'
         if i == len(decoder_dims)-1:
             act = None
-        x = Dense(units=decoder_dims[i],
-                  activation=act,
-                  kernel_initializer=init,
-                  use_bias=True,
-                  name=decoder_layer_name % i)
+        x = DenseTied(tied_to=encoder_layers[len(encoder_layers)-1-i],
+                      units=decoder_dims[i],
+                      activation=act,
+                      kernel_initializer=init,
+                      use_bias=True,
+                      name=decoder_layer_name % i)
         decoder_layers.append(x)
     
     # adding dropout
