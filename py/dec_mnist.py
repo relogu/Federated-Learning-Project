@@ -111,7 +111,8 @@ if __name__ == "__main__":
         'ae_epochs': 50000,
         'ae_optimizer': SGD(
             learning_rate=0.1,
-            momentum=0.9),
+            momentum=0.9,
+            decay=(0.1-0.00001)/50000),
         'ae_init': RandomNormal(mean=0.0,
                                 stddev=0.01),
         'ae_dims': [784,
@@ -151,13 +152,13 @@ if __name__ == "__main__":
                                   batch_size=config['batch_size'],
                                   epochs=int(config['ae_epochs']),
                                   validation_data=(x_test, x_test),
-                                  callbacks=[LearningRateScheduler(lr_step_decay, verbose=1),
-                                            #  EarlyStopping(
-                                            #      patience=10,
-                                            #      verbose=1,
-                                            #      mode="auto",
-                                            #      baseline=None,
-                                            #      restore_best_weights=False,)
+                                  callbacks=[#LearningRateScheduler(lr_step_decay, verbose=1),
+                                             EarlyStopping(
+                                                 patience=1000,
+                                                 verbose=1,
+                                                 mode="auto",
+                                                 baseline=None,
+                                                 restore_best_weights=False,)
                                              ],
                                   verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
@@ -189,13 +190,13 @@ if __name__ == "__main__":
                                   batch_size=config['batch_size'],
                                   epochs=int(2*config['ae_epochs']),
                                   validation_data=(x_test, x_test),
-                                  callbacks=[LearningRateScheduler(lr_step_decay, verbose=1),
-                                            #  EarlyStopping(
-                                            #      patience=10,
-                                            #      verbose=1,
-                                            #      mode="auto",
-                                            #      baseline=None,
-                                            #      restore_best_weights=False,)
+                                  callbacks=[#LearningRateScheduler(lr_step_decay, verbose=1),
+                                             EarlyStopping(
+                                                 patience=1000,
+                                                 verbose=1,
+                                                 mode="auto",
+                                                 baseline=None,
+                                                 restore_best_weights=False,)
                                              ],
                                   verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
