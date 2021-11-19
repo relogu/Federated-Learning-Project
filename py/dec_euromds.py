@@ -6,12 +6,12 @@ Created on Wen Aug 4 10:37:10 2021
 @author: relogu
 """
 
-from py.dumping.output import dump_pred_dict, dump_result_dict
-from py.dumping.plots import print_confusion_matrix
-from py.dec.util import (create_autoencoder, create_clustering_model, target_distribution)
+from dumping.output import dump_pred_dict, dump_result_dict
+from dumping.plots import print_confusion_matrix
+from dec.util import (create_autoencoder, create_clustering_model, target_distribution)
 from losses import get_keras_loss_names, get_keras_loss
-import py.metrics as my_metrics
-import py.dataset_util as data_util
+import metrics as my_metrics
+import dataset_util as data_util
 from flwr.common.typing import Parameters
 from sklearn.cluster import KMeans
 from tensorflow.keras.initializers import RandomNormal, GlorotUniform
@@ -349,13 +349,13 @@ if __name__ == "__main__":
     encoder.set_weights(weights)
 
     # get an estimate for clusters centers using k-means
-    kmeans = KMeans(init='k-means++',
-                    n_clusters=config['n_clusters'],
-                    # number of different random initializations
-                    n_init=config['kmeans_n_init'],
-                    random_state=config['seed'])
-    # fitting clusters' centers using k-means
-    kmeans.fit(encoder.predict(x))
+    kmeans = KMeans(
+        init='k-means++',
+        n_clusters=config['n_clusters'],
+        # number of different random initializations
+        n_init=config['kmeans_n_init'],
+        random_state=config['seed']
+    ).fit(encoder.predict(x))
     # saving the model weights
     parameters = np.array([kmeans.cluster_centers_])
     print('Saving initial centroids')
