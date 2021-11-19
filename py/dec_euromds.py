@@ -185,7 +185,7 @@ if __name__ == "__main__":
     else:
         fill = 0
     x = data_util.get_euromds_dataset(
-        groups=args.groups, exclude_cols=args.ex_col, accept_nan=fill, verbose=args.verbose)
+        groups=args.groups, exclude_cols=args.ex_col, accept_nan=fill, fill_fn=data_util.fillcolumn_prob, verbose=args.verbose)
     # getting the number of features
     n_features = len(x.columns)
     print('Number of features extracted is {}'.format(n_features))
@@ -385,10 +385,10 @@ if __name__ == "__main__":
         # if i % config['update_interval'] == 1:
         #     # if train_loss < eval_loss:
         print('Shuffling data')
-        idx = np.random.permutation(len(x_train))
-        x_train = x_train[idx, :]
+        idx = np.random.permutation(len(x))
+        x = x[idx, :]
         print('Updating the target distribution')
-        train_q = clustering_model(x_train).numpy()
+        train_q = clustering_model(x).numpy()
         # update the auxiliary target distribution p
         train_p = target_distribution(train_q)
         clustering_model.fit(x=x,
