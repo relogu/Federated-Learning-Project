@@ -353,8 +353,7 @@ if __name__ == "__main__":
         init='k-means++',
         n_clusters=config['n_clusters'],
         # number of different random initializations
-        n_init=config['kmeans_n_init'],
-        random_state=config['seed']
+        n_init=config['kmeans_n_init']
     ).fit(encoder.predict(x))
     # saving the model weights
     parameters = np.array([kmeans.cluster_centers_])
