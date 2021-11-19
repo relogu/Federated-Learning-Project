@@ -286,14 +286,16 @@ if __name__ == "__main__":
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(config['ae_epochs']),
-                                  callbacks=[#LearningRateScheduler(lr_step_decay, verbose=1),
-                                             EarlyStopping(
-                                                 patience=1000,
-                                                 verbose=1,
-                                                 mode="auto",
-                                                 baseline=None,
-                                                 restore_best_weights=False,)
-                                             ],
+                                  callbacks=[
+                                    #   LearningRateScheduler(
+                                    #       lr_step_decay, verbose=1),
+                                    #   EarlyStopping(
+                                    #       patience=1000,
+                                    #       verbose=1,
+                                    #       mode="auto",
+                                    #       baseline=None,
+                                    #       restore_best_weights=False,)
+                                  ],
                                   verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
@@ -316,21 +318,23 @@ if __name__ == "__main__":
             optimizer=config['ae_optimizer'],
             loss=config['ae_loss']
         )
-        
+
         autoencoder.summary()
         # fitting again the autoencoder
         history = autoencoder.fit(x=x,
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(2*config['ae_epochs']),
-                                  callbacks=[#LearningRateScheduler(lr_step_decay, verbose=1),
-                                             EarlyStopping(
-                                                 patience=1000,
-                                                 verbose=1,
-                                                 mode="auto",
-                                                 baseline=None,
-                                                 restore_best_weights=False,)
-                                             ],
+                                  callbacks=[
+                                    #   LearningRateScheduler(
+                                    #       lr_step_decay, verbose=1),
+                                    #   EarlyStopping(
+                                    #       patience=1000,
+                                    #       verbose=1,
+                                    #       mode="auto",
+                                    #       baseline=None,
+                                    #       restore_best_weights=False,)
+                                  ],
                                   verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
@@ -378,16 +382,20 @@ if __name__ == "__main__":
     i = 0
     while True:
         i += 1
-        if i % config['update_interval'] == 1:
-            # if train_loss < eval_loss:
-            print('Updating the target distribution')
-            train_q = clustering_model.predict(x, verbose=0)
-            # update the auxiliary target distribution p
-            train_p = target_distribution(train_q)
+        # if i % config['update_interval'] == 1:
+        #     # if train_loss < eval_loss:
+        print('Shuffling data')
+        idx = np.random.permutation(len(x_train))
+        x_train = x_train[idx, :]
+        print('Updating the target distribution')
+        train_q = clustering_model(x_train).numpy()
+        # update the auxiliary target distribution p
+        train_p = target_distribution(train_q)
         clustering_model.fit(x=x,
                              y=train_p,
                              verbose=2,
-                             batch_size=config['batch_size'])
+                             batch_size=config['batch_size'],
+                             steps_per_epoch=config['update_interval'])
         # evaluation
         q = clustering_model.predict(x, verbose=0)
         # update the auxiliary target distribution p
