@@ -58,8 +58,9 @@ def fillcolumn_prob(
     tot = len(ser)
     cna = len(ser[ser.isna()])
     l = ser[ser.notna()]
+    sam = len(l)
     zeros = len(l[l==0])
-    prob = zeros/tot
+    prob = zeros/sam
     if verbose:
         print('Total samples {}, NaN samples {}, prob of 0s {}'. \
             format(tot, cna, prob))
