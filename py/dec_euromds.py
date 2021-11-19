@@ -17,7 +17,7 @@ from sklearn.cluster import KMeans
 from tensorflow.keras.initializers import RandomNormal, GlorotUniform
 from tensorflow.keras.optimizers import SGD
 import tensorflow as tf
-from tensorflow.keras.callbacks import LearningRateScheduler
+from tensorflow.keras.callbacks import LearningRateScheduler, EarlyStopping
 import tensorflow_addons.metrics as tfa_metrics
 import argparse
 import os
@@ -286,7 +286,14 @@ if __name__ == "__main__":
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(config['ae_epochs']),
-                                  #callbacks=[LearningRateScheduler(lr_constant_decay, verbose=1)],
+                                  callbacks=[#LearningRateScheduler(lr_step_decay, verbose=1),
+                                             EarlyStopping(
+                                                 patience=1000,
+                                                 verbose=1,
+                                                 mode="auto",
+                                                 baseline=None,
+                                                 restore_best_weights=False,)
+                                             ],
                                   verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
@@ -316,7 +323,14 @@ if __name__ == "__main__":
                                   y=x,
                                   batch_size=config['batch_size'],
                                   epochs=int(2*config['ae_epochs']),
-                                  #callbacks=[LearningRateScheduler(lr_constant_decay, verbose=1)],
+                                  callbacks=[#LearningRateScheduler(lr_step_decay, verbose=1),
+                                             EarlyStopping(
+                                                 patience=1000,
+                                                 verbose=1,
+                                                 mode="auto",
+                                                 baseline=None,
+                                                 restore_best_weights=False,)
+                                             ],
                                   verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)

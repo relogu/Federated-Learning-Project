@@ -112,7 +112,7 @@ if __name__ == "__main__":
         'ae_optimizer': SGD(
             learning_rate=0.1,
             momentum=0.9,
-            decay=(0.1-0.00001)/50000),
+            decay=(0.1-0.0001)/50000),
         'ae_init': RandomNormal(mean=0.0,
                                 stddev=0.01),
         'ae_dims': [784,
@@ -154,7 +154,7 @@ if __name__ == "__main__":
                                   validation_data=(x_test, x_test),
                                   callbacks=[#LearningRateScheduler(lr_step_decay, verbose=1),
                                              EarlyStopping(
-                                                 patience=1000,
+                                                 patience=5000,
                                                  verbose=1,
                                                  mode="auto",
                                                  baseline=None,
@@ -192,7 +192,7 @@ if __name__ == "__main__":
                                   validation_data=(x_test, x_test),
                                   callbacks=[#LearningRateScheduler(lr_step_decay, verbose=1),
                                              EarlyStopping(
-                                                 patience=1000,
+                                                 patience=5000,
                                                  verbose=1,
                                                  mode="auto",
                                                  baseline=None,
