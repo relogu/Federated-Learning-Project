@@ -10,9 +10,11 @@ import math
 import pathlib
 import warnings
 from pathlib import Path
-from typing import Union
+from typing import Callable, Union
 
 import numpy as np
+from pandas.core.frame import DataFrame
+from pandas.core.series import Series
 import scipy
 import pandas as pd
 import torch
@@ -25,7 +27,11 @@ from tensorflow.keras.datasets import mnist
 EUROMDS_GROUPS = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto',
                   'GeneCyto', 'Demographics', 'Clinical']
 
-def fillcolumn(ser, verbose=False):
+def fillcolumn_stoch(
+    ser: Series,
+    verbose: bool = False
+    ) -> Series:
+    
     tot = len(ser)
     cna = len(ser[ser.isna()])
     l = ser[ser.notna()]
@@ -38,6 +44,26 @@ def fillcolumn(ser, verbose=False):
                          p = [prob, float(1-prob)],
                          size = cna)
     ser.loc[ser.isna()] = m
+    if verbose:
+        cna = len(ser[ser.isna()])
+        print('Once transformed, NaN samples {}'. \
+            format(cna))
+    return ser#.astype(int)
+
+def fillcolumn_prob(
+    ser: Series,
+    verbose: bool = False
+    ) -> Series:
+    
+    tot = len(ser)
+    cna = len(ser[ser.isna()])
+    l = ser[ser.notna()]
+    zeros = len(l[l==0])
+    prob = zeros/tot
+    if verbose:
+        print('Total samples {}, NaN samples {}, prob of 0s {}'. \
+            format(tot, cna, prob))
+    ser.loc[ser.isna()] = [float(1-prob)]*cna
     if verbose:
         cna = len(ser[ser.isna()])
         print('Once transformed, NaN samples {}'. \
@@ -78,8 +104,7 @@ class PrepareData(Dataset):
         return self.x[idx], self.y[idx], self.ids[idx], self.outcomes[idx]
 
 
-def get_euromds_cols(accept_nan: int = 0,
-                     path_to_data: Union[Path, str] = None):
+def get_euromds_cols(path_to_data: Union[Path, str] = None):
     # set the path
     if path_to_data is None:
         parent = pathlib.Path(__file__).parent.parent.absolute()
@@ -98,7 +123,8 @@ def get_euromds_dataset(accept_nan: int = 0,
                         exclude_cols: list[str] = None,
                         path_to_data: Union[Path, str] = None,
                         verbose: bool = False,
-                        seed: int = 51550):
+                        fill_fn: Callable[[Series, bool], Series] = None
+                        ):
     # set the path
     if path_to_data is None:
         parent = pathlib.Path(__file__).parent.parent.absolute()
@@ -141,7 +167,7 @@ def get_euromds_dataset(accept_nan: int = 0,
         if a > accept_nan:
             filtered = filtered.drop(columns=c)
         elif a > 0:
-            filtered.loc[:, c] = fillcolumn(filtered[c], verbose)
+            filtered.loc[:, c] = fill_fn(filtered[c], verbose)
     del main_df
     del groups
     del df_groups
