@@ -104,6 +104,7 @@ if __name__ == "__main__":
         if epoch > epoch_drop:
             lr = initial_learning_rate/(drop_rate**int(epoch/epoch_drop))
         return lr
+    
     config = {
         'batch_size': 256,
         'n_clusters': args.n_clusters,

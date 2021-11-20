@@ -468,7 +468,7 @@ def create_dec_sae(dims,
     
     # adding dropout
     if dropout_rate > 0.0:
-        idx = np.arange(start=1, stop=int((2*len(dims))), step=2)
+        idx = np.arange(start=1, stop=int((2*len(dims))-2), step=2)
         for i in idx:
             encoder_layers.insert(i, Dropout(rate=dropout_rate))
     
