@@ -9,6 +9,7 @@ Created on Wen Aug 4 10:37:10 2021
 from dumping.output import dump_pred_dict, dump_result_dict
 from dumping.plots import print_confusion_matrix
 from dec.util import (create_autoencoder, create_clustering_model, target_distribution)
+from util import compute_centroid_np
 from losses import get_keras_loss_names, get_keras_loss
 import metrics as my_metrics
 import dataset_util as data_util
@@ -274,6 +275,7 @@ if __name__ == "__main__":
         print('There are no existing weights in the output folder for the autoencoder')
         
         autoencoder, encoder, decoder = create_autoencoder(config, up_frequencies)
+        autoencoder.summary()
         
         autoencoder.compile(
             metrics=config['ae_metrics'],
@@ -302,15 +304,17 @@ if __name__ == "__main__":
         parameters = np.array(encoder.get_weights(), dtype=object)
         np.savez(path_to_out/'encoder', parameters)
 
+    # no dropout, keep denoising
+    config['dropout'] = 0.0
+    config['ran_flip'] = 0.0
+
     trained_weights = path_to_out/'encoder_ft.npz'
     if not trained_weights.exists():
         param: Parameters = np.load(pretrained_weights, allow_pickle=True)
         weights = param['arr_0']
-        # no dropout, keep denoising
-        config['dropout'] = 0.0
-        config['ran_flip'] = 0.0
         autoencoder, encoder, decoder = create_autoencoder(config, None)
-
+        autoencoder.summary()
+    
         encoder.set_weights(weights)
         
         autoencoder.compile(
@@ -343,39 +347,50 @@ if __name__ == "__main__":
 
     # clean from the auxialiary layer for the clustering model
     autoencoder, encoder, decoder = create_autoencoder(config, None)
+    autoencoder.summary()
+    encoder.summary()
 
     param: Parameters = np.load(trained_weights, allow_pickle=True)
-    weights = param['arr_0']
+    weights = np.squeeze(np.array([param[p] for p in param]))
     encoder.set_weights(weights)
-
+    for w1, w2 in zip(encoder.get_weights(), autoencoder.get_weights()[:8]):
+        print(np.sum(np.array(w1)- np.array(w2)))
+    
     # get an estimate for clusters centers using k-means
+    z = encoder(x).numpy()
     kmeans = KMeans(
         init='k-means++',
         n_clusters=config['n_clusters'],
         # number of different random initializations
         n_init=config['kmeans_n_init']
-    ).fit(encoder.predict(x))
+    ).fit(z)
+    initial_labels = kmeans.labels_
+    centroids = []
+    for i in np.unique(initial_labels):
+        idx = (initial_labels == i)
+        centroids.append(compute_centroid_np(z[idx,:]))
     # saving the model weights
-    parameters = np.array([kmeans.cluster_centers_])
+    centroids = np.array(kmeans.cluster_centers_)#centroids)
     print('Saving initial centroids')
-    np.savez(path_to_out/'initial_centroids', parameters)
+    np.savez(path_to_out/'initial_centroids', centroids)
+    print('Shape of centroids layer {}'.format(np.array([centroids]).shape))
 
     # training the clustering model
     clustering_model = create_clustering_model(
         config['n_clusters'],
         encoder,
-        alpha=int(config['dims'][-1]-1))
+        alpha=int(config['n_clusters']-1))
     # compiling the clustering model
     clustering_model.compile(
         optimizer=config['cl_optimizer'],
         loss=config['cl_loss'])
     clustering_model.get_layer(
-        name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
-    y_old = None
-    print('Initializing the target distribution')
-    q = clustering_model.predict(x, verbose=0)
-    # update the auxiliary target distribution p
-    p = target_distribution(q)
+        name='clustering').set_weights(np.array([centroids]))
+    clustering_model.summary()
+    for w1, w2 in zip(encoder.get_weights(), clustering_model.get_weights()[:8]):
+        print(np.sum(np.array(w1)- np.array(w2)))
+        
+    y_old = initial_labels
     train_loss, eval_loss = 0.1, 0
     # for i in range(int(config['cl_epochs'])):
     i = 0
@@ -386,17 +401,17 @@ if __name__ == "__main__":
         print('Shuffling data')
         idx = np.random.permutation(len(x))
         x = x[idx, :]
-        print('Updating the target distribution')
+        print('Computing the target distribution')
         train_q = clustering_model(x).numpy()
         # update the auxiliary target distribution p
         train_p = target_distribution(train_q)
         clustering_model.fit(x=x,
                              y=train_p,
                              verbose=2,
-                             batch_size=config['batch_size'],
-                             steps_per_epoch=config['update_interval'])
+                             steps_per_epoch=config['update_interval'],
+                             batch_size=config['batch_size'])
         # evaluation
-        q = clustering_model.predict(x, verbose=0)
+        q = clustering_model(x).numpy()
         # update the auxiliary target distribution p
         p = target_distribution(q)
         # retrieving loss
@@ -404,9 +419,8 @@ if __name__ == "__main__":
         # evaluate the clustering performance using some metrics
         y_pred = q.argmax(1)
         # getting the cycle accuracy of evaluation set
-        x_ae_test = autoencoder(x)
-        y_ae_pred = clustering_model.predict(
-            np.round(x_ae_test), verbose=0).argmax(1)
+        x_ae_test = autoencoder(x).numpy()
+        y_ae_pred = clustering_model(x_ae_test).numpy().argmax(1)
         cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
         del y_ae_pred, x_ae_test
         # evaluating metrics
@@ -420,7 +434,8 @@ if __name__ == "__main__":
             homo = my_metrics.homo(y, y_pred)
             if args.plotting and i % 10 == 0:  # print confusion matrix
                 print_confusion_matrix(
-                    y, y_pred,
+                    y,
+                    y_pred,
                     path_to_out=path_to_out)
             print('DEC Clustering\nEpoch %d\n\tacc %.5f\n\tnmi %.5f\n\tami %.5f\n\tari %.5f\n\tran %.5f\n\thomo %.5f' %
                   (i, acc, nmi, ami, ari, ran, homo))
@@ -442,19 +457,15 @@ if __name__ == "__main__":
             dump_pred_dict('pred', pred,
                            path_to_out=path_to_out)
         # check for required convergence
-        if i > 1:
-            tol = float(1 - my_metrics.acc(y_pred, y_old))
-            if i % 100 and args.verbose:
-                print("Current label change ratio is {}, i.e. {}/{} samples".
-                      format(tol, int(tol*len(x)), len(x)))
-            if tol < 0.001:  # and eval_cycle_acc > 0.9:# and i > 2000: # from DEC paper
-                print("Final label change ratio is {}, i.e. {}/{} samples, reached after {} iteration".
-                      format(tol, int(tol*len(x)), len(x), i))
-                break
-            else:
-                y_old = y_pred.copy()
+        tol = float(1 - my_metrics.acc(y_old, y_pred))
+        if i % 100 and args.verbose:
+            print("Current label change ratio is {}, i.e. {}/{} samples".
+                    format(tol, int(tol*len(x)), len(x)))
+        if tol < 0.001:  # and eval_cycle_acc > 0.9:# and i > 2000: # from DEC paper
+            print("Final label change ratio is {}, i.e. {}/{} samples, reached after {} iteration".
+                    format(tol, int(tol*len(x)), len(x), i))
+            break
         else:
-            tol = 1
             y_old = y_pred.copy()
         result['tol'] = tol
         dump_result_dict('clustering_model', result,
