@@ -9,7 +9,7 @@ Created on Wen Aug 4 10:37:10 2021
 from dumping.output import dump_pred_dict, dump_result_dict
 from dumping.plots import print_confusion_matrix
 from dec.util import (create_autoencoder, create_clustering_model, target_distribution)
-from util import compute_centroid_np
+from util import compute_centroid_np, return_not_binary_indices
 from losses import get_keras_loss_names, get_keras_loss
 import metrics as my_metrics
 import dataset_util as data_util
@@ -265,6 +265,13 @@ if __name__ == "__main__":
         'seed': args.seed}
     
     print('AE loss is {}'.format(config['ae_loss']))
+    
+    nb_idx = return_not_binary_indices(x)
+    b_idx = list(range(len(x[0,:])))[len(nb_idx):]
+    config['ae_metrics'] = [
+        my_metrics.get_rounded_accuracy(idx=b_idx),
+        my_metrics.get_slice_accuracy(idx=nb_idx),
+        tfa_metrics.HammingLoss(mode='multilabel', threshold=0.50)]
 
     up_frequencies = np.array([np.array(np.count_nonzero(
         x[:, i])/x.shape[0]) for i in range(n_features)])
@@ -465,8 +472,7 @@ if __name__ == "__main__":
             print("Final label change ratio is {}, i.e. {}/{} samples, reached after {} iteration".
                     format(tol, int(tol*len(x)), len(x), i))
             break
-        else:
-            y_old = y_pred.copy()
+        y_old = y_pred.copy()
         result['tol'] = tol
         dump_result_dict('clustering_model', result,
                          path_to_out=path_to_out)
