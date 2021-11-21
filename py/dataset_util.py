@@ -70,6 +70,15 @@ def fillcolumn_prob(
         print('Once transformed, NaN samples {}'. \
             format(cna))
     return ser#.astype(int)
+
+def filled_columns_first(df, filled_cols):
+    all_cols = df.columns.tolist()
+    setA = set(all_cols)
+    setB = set(filled_cols)
+    onlyInA = setA.difference(setB)
+    not_filled_cols = list(onlyInA)
+    ordered_cols = filled_cols + not_filled_cols
+    return df[ordered_cols]
     
 class PrepareDataSimple(Dataset):
 
@@ -158,6 +167,7 @@ def get_euromds_dataset(accept_nan: int = 0,
     main_df = main_df[selected_cols]
     # filtering nans
     filtered = main_df.copy()
+    filled_cols = []
     for c in main_df.columns:
         a = len(main_df[main_df[c].isnull()])
         if verbose and a > 0:
@@ -168,7 +178,9 @@ def get_euromds_dataset(accept_nan: int = 0,
         if a > accept_nan:
             filtered = filtered.drop(columns=c)
         elif a > 0:
+            filled_cols.append(c)
             filtered.loc[:, c] = fill_fn(filtered[c], verbose)
+    filtered = filled_columns_first(filtered, filled_cols)
     del main_df
     del groups
     del df_groups

@@ -41,3 +41,25 @@ def acc(y_true, y_pred):
 
 def rounded_accuracy(y_true, y_pred):
     return binary_accuracy(tf.round(y_true), tf.round(y_pred))
+
+def get_rounded_accuracy(idx = None):
+    
+    if idx is not None:
+        def r_accuracy(y_true, y_pred):
+            y_true = y_true[idx]
+            y_pred = y_pred[idx]
+            return rounded_accuracy(y_true, y_pred)
+    else:
+        def r_accuracy(y_true, y_pred):
+            return rounded_accuracy(y_true, y_pred)
+    return r_accuracy
+        
+
+def get_slice_accuracy(idx):
+    
+    def s_accuracy(y_true, y_pred):
+        y_true = y_true[idx]
+        y_pred = y_pred[idx]
+        return binary_accuracy(y_true, y_pred)
+    
+    return s_accuracy

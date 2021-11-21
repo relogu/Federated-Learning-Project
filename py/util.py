@@ -109,3 +109,12 @@ def generate_prob_labels(n_labels: int = 2, n_samples: int = 100, label: int = 0
         if len(vec) == n_labels:
             data.append(vec)
     return data
+
+def return_not_binary_indices(matrix):
+    idx = []
+    for i, column in enumerate(matrix.T):
+        count = len(np.unique(column))
+        if count > 2:
+            idx.append(i)
+    
+    return idx
