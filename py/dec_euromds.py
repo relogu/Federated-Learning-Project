@@ -231,6 +231,7 @@ if __name__ == "__main__":
         'ortho': args.ortho,
         'u_norm': args.u_norm,
         'ran_flip': args.ran_flip,
+        'use_bias': True,
         'ae_epochs': args.ae_epochs,
         # 'ae_optimizer': SGD(learning_rate=config['ae_lr'],
         #                    momentum=config['ae_momentum'],
@@ -408,6 +409,7 @@ if __name__ == "__main__":
         print('Shuffling data')
         idx = np.random.permutation(len(x))
         x = x[idx, :]
+        y_old = y_old[idx]
         print('Computing the target distribution')
         train_q = clustering_model(x).numpy()
         # update the auxiliary target distribution p
