@@ -133,6 +133,7 @@ def create_tied_denoising_autoencoder(dims,
                                       init='glorot_uniform',
                                       noise_rate=0.1,
                                       dropout_rate=0.0,
+                                      use_bias=False,
                                       ortho=False,
                                       u_norm=False,
                                       verbose=False):
@@ -169,6 +170,7 @@ def create_tied_denoising_autoencoder(dims,
                   kernel_regularizer=k_reg,
                   kernel_initializer=init,
                   kernel_constraint=k_con,
+                  use_bias=use_bias,
                   name=encoder_layer_name % i)
         if verbose:
             print(enc_verb.format(
@@ -188,6 +190,7 @@ def create_tied_denoising_autoencoder(dims,
                       activation=act,
                       kernel_regularizer=k_reg,
                       kernel_constraint=k_con,
+                      use_bias=use_bias,
                       name=decoder_layer_name % i)
         if verbose:
             print(dec_tied_verb.format(
@@ -508,7 +511,8 @@ def create_autoencoder(net_arch, up_frequencies):
                 act=net_arch['act'],
                 ortho=net_arch['ortho'],
                 u_norm=net_arch['u_norm'],
-                noise_rate=net_arch['ran_flip'])
+                noise_rate=net_arch['ran_flip'],
+                use_bias=net_arch['use_bias'])
         else:
             return create_denoising_autoencoder(
                 net_arch['dims'],
