@@ -269,6 +269,7 @@ if __name__ == "__main__":
     
     nb_idx = return_not_binary_indices(x)
     b_idx = list(range(len(x[0,:])))[len(nb_idx):]
+    config['b_idx'] = b_idx
     config['ae_metrics'] = [
         my_metrics.get_rounded_accuracy(idx=b_idx),
         my_metrics.get_slice_accuracy(idx=nb_idx),
@@ -276,7 +277,7 @@ if __name__ == "__main__":
         my_metrics.get_slice_log_mse_loss(idx=nb_idx)]
 
     up_frequencies = np.array([np.array(np.count_nonzero(
-        x[:, i])/x.shape[0]) for i in range(n_features)])
+        x[:, i])/x.shape[0]) for i in b_idx])
 
     # pre-train the autoencoder
     pretrained_weights = path_to_out/'encoder.npz'

@@ -5,6 +5,7 @@ Created on Wen Aug 4 10:37:10 2021
 
 @author: relogu
 """
+from typing import List
 import numpy as np
 
 import tensorflow as tf
@@ -128,7 +129,8 @@ def create_denoising_autoencoder(dims,
 
 
 def create_tied_denoising_autoencoder(dims,
-                                      up_freq=None,
+                                      up_freq: List[float] = None,
+                                      b_idx: List[int] = None,
                                       act='relu',
                                       init='glorot_uniform',
                                       noise_rate=0.1,
@@ -199,7 +201,10 @@ def create_tied_denoising_autoencoder(dims,
 
     # adding flipping noise
     if noise_rate > 0.0:
-        encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=noise_rate))
+        encoder_layers.insert(1, FlippingNoise(
+            up_frequencies=up_freq,
+            b_idx=b_idx,
+            rate=noise_rate))
     
     # adding dropout
     if dropout_rate > 0.0:
@@ -506,6 +511,7 @@ def create_autoencoder(net_arch, up_frequencies):
             return create_tied_denoising_autoencoder(
                 net_arch['dims'],
                 up_freq=up_frequencies,
+                b_idx=net_arch['b_idx'],
                 init=net_arch['init'],
                 dropout_rate=net_arch['dropout'],
                 act=net_arch['act'],
