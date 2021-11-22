@@ -12,6 +12,9 @@ from sklearn.metrics import (adjusted_mutual_info_score, adjusted_rand_score,
                              homogeneity_score, normalized_mutual_info_score,
                              rand_score)
 from tensorflow.keras.metrics import binary_accuracy
+from tensorflow.keras.losses import mean_squared_logarithmic_error
+from tensorflow_addons.metrics import hamming_loss_fn
+from typing import List
 
 # definition of the metrics used
 nmi = normalized_mutual_info_score
@@ -42,24 +45,57 @@ def acc(y_true, y_pred):
 def rounded_accuracy(y_true, y_pred):
     return binary_accuracy(tf.round(y_true), tf.round(y_pred))
 
-def get_rounded_accuracy(idx = None):
+def get_rounded_accuracy(idx: List[int] = None):
     
     if idx is not None:
         def r_accuracy(y_true, y_pred):
-            y_true = y_true[idx]
-            y_pred = y_pred[idx]
-            return rounded_accuracy(y_true, y_pred)
+            # y_true = y_true[idx, :]
+            # y_pred = y_pred[idx, :]
+            y_t = tf.gather(y_true, indices=idx)
+            y_p = tf.gather(y_pred, indices=idx)
+            return rounded_accuracy(y_t, y_p)
     else:
         def r_accuracy(y_true, y_pred):
             return rounded_accuracy(y_true, y_pred)
     return r_accuracy
         
 
-def get_slice_accuracy(idx):
+def get_slice_accuracy(idx: List[int] = None):
     
     def s_accuracy(y_true, y_pred):
-        y_true = y_true[idx]
-        y_pred = y_pred[idx]
-        return binary_accuracy(y_true, y_pred)
+        # y_true = y_true[idx, :]
+        # y_pred = y_pred[idx, :]
+        y_t = tf.gather(y_true, indices=idx)
+        y_p = tf.gather(y_pred, indices=idx)
+        return binary_accuracy(y_t, y_p)
     
     return s_accuracy
+
+def get_slice_hamming_loss(
+    mode: str = 'multilabel',
+    threshold: float = 0.5,
+    idx: List[int] = None):
+    
+    if idx is not None:
+        def s_hamming_loss(y_true, y_pred):
+            y_t = tf.gather(y_true, indices=idx)
+            y_p = tf.gather(y_pred, indices=idx)
+            return hamming_loss_fn(y_t, y_p,
+                                   mode=mode,
+                                   threshold=threshold)
+    else:
+        def s_hamming_loss(y_true, y_pred):
+            return hamming_loss_fn(y_true, y_pred,
+                                   mode=mode,
+                                   threshold=threshold)
+    
+    return s_hamming_loss
+
+def get_slice_log_mse_loss(idx: List[int] = None):
+    
+    def s_log_mse_loss(y_true, y_pred):
+        y_t = tf.gather(y_true, indices=idx)
+        y_p = tf.gather(y_pred, indices=idx)
+        return mean_squared_logarithmic_error(y_t, y_p)
+    
+    return s_log_mse_loss
