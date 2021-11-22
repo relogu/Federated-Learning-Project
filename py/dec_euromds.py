@@ -272,7 +272,8 @@ if __name__ == "__main__":
     config['ae_metrics'] = [
         my_metrics.get_rounded_accuracy(idx=b_idx),
         my_metrics.get_slice_accuracy(idx=nb_idx),
-        tfa_metrics.HammingLoss(mode='multilabel', threshold=0.50)]
+        my_metrics.get_slice_hamming_loss(mode='multilabel', threshold=0.50, idx=b_idx),
+        my_metrics.get_slice_log_mse_loss(idx=nb_idx)]
 
     up_frequencies = np.array([np.array(np.count_nonzero(
         x[:, i])/x.shape[0]) for i in range(n_features)])
