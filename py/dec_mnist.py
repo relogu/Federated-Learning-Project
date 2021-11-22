@@ -121,7 +121,7 @@ if __name__ == "__main__":
             500,
             2000,
             10],
-        'ae_metrics': ['accuracy'],
+        'ae_metrics': [my_metrics.rounded_accuracy],
         'cl_optimizer': SGD(
             learning_rate=0.01,
             momentum=0.9),
