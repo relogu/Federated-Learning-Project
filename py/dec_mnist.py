@@ -85,8 +85,8 @@ if __name__ == "__main__":
     os.makedirs(path_to_out, exist_ok=True)
     
     # Restrict keras to use only 2 GPUs
-    gpus = tf.config.list_physical_devices('GPU')
-    tf.config.set_visible_devices(gpus[2:4], 'GPU')
+    # gpus = tf.config.list_physical_devices('GPU')
+    # tf.config.set_visible_devices(gpus[2:4], 'GPU')
     
     # preparing dataset
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
