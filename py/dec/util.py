@@ -172,7 +172,6 @@ def create_tied_denoising_autoencoder(dims,
             activation = None
         x = Dense(units=encoder_dims[i],
                   activation=activation,
-                  activation=act,
                   kernel_regularizer=k_reg,
                   kernel_initializer=init,
                   kernel_constraint=k_con,
