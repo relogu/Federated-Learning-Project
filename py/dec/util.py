@@ -270,8 +270,11 @@ def create_tied_prob_autoencoder(dims,
     encoder_layers.append(input_img)
     # internal layers in encoder
     for i in range(len(encoder_dims)):
+        activation = act
+        if i == len(encoder_dims)-1:
+            activation = None
         x = Dense(units=encoder_dims[i],
-                  activation=act,
+                  activation=activation,
                   # kernel_regularizer=WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0),
                   kernel_initializer=init,
                   # kernel_constraint=UnitNorm(axis=0),
@@ -287,11 +290,12 @@ def create_tied_prob_autoencoder(dims,
     decoder_layers.append(input_lbl)
     # internal layers in decoder
     for i in range(len(decoder_dims)):
+        activation = act
         if i == len(decoder_dims)-1:
-            act = 'sigmoid'
+            activation = 'sigmoid'
         x = DenseTied(tied_to=encoder_layers[len(encoder_layers)-1-i],
                       units=decoder_dims[i],
-                      activation=act,
+                      activation=activation,
                       # kernel_regularizer=WeightsOrthogonalityConstraint(encoder_dims[len(encoder_dims)-1-i], weightage=1., axis=1),
                       # kernel_initializer=init,
                       # use_bias=True,  # default False
