@@ -87,7 +87,7 @@ if __name__ == "__main__":
     # Restrict keras to use only 2 GPUs
     gpus = tf.config.list_physical_devices('GPU')
     print('Physical devices: {}'.format(gpus))
-    tf.config.set_visible_devices(gpus[2:], 'GPU')
+    tf.config.set_visible_devices(gpus[2:4], 'GPU')
     gpus = tf.config.list_logical_devices('GPU')
     print('Logical devices: {}'.format(gpus))
     strategy = tf.distribute.experimental.CentralStorageStrategy(
