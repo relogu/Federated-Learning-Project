@@ -14,7 +14,8 @@ from losses import get_keras_loss_names, get_keras_loss
 import metrics as my_metrics
 import dataset_util as data_util
 from flwr.common.typing import Parameters
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.manifold import TSNE
 from tensorflow.keras.initializers import RandomNormal, GlorotUniform
 from tensorflow.keras.optimizers import SGD
 import tensorflow as tf
@@ -252,10 +253,10 @@ if __name__ == "__main__":
                 500,#2000,#int((3)*(n_features)),#int((2.5)*(n_features)),
                 5],#args.n_clusters],  # DEC paper proportions
         # 'relu' --> DEC paper # 'selu' --> is better for binary
-        'act': 'relu',
-        'ae_metrics': [my_metrics.rounded_accuracy,
-                       'accuracy',
-                       tfa_metrics.HammingLoss(mode='multilabel', threshold=0.50)],
+        'act': 'selu',
+        # 'ae_metrics': [my_metrics.rounded_accuracy,
+        #                'accuracy',
+        #                tfa_metrics.HammingLoss(mode='multilabel', threshold=0.50)],
         'cl_optimizer': SGD(
             learning_rate=args.cl_lr,
             momentum=0.9),
@@ -274,7 +275,8 @@ if __name__ == "__main__":
         my_metrics.get_rounded_accuracy(idx=b_idx),
         my_metrics.get_slice_accuracy(idx=nb_idx),
         my_metrics.get_slice_hamming_loss(mode='multilabel', threshold=0.50, idx=b_idx),
-        my_metrics.get_slice_log_mse_loss(idx=nb_idx)]
+        my_metrics.get_slice_log_mse_loss(idx=nb_idx),
+        'mse']
 
     up_frequencies = np.array([np.array(np.count_nonzero(
         x[:, i])/x.shape[0]) for i in b_idx])
@@ -368,26 +370,35 @@ if __name__ == "__main__":
     
     # get an estimate for clusters centers using k-means
     z = encoder(x).numpy()
-    kmeans = KMeans(
-        init='k-means++',
-        n_clusters=config['n_clusters'],
-        # number of different random initializations
-        n_init=config['kmeans_n_init']
-    ).fit(z)
-    initial_labels = kmeans.labels_
+    # # KMEANS
+    # kmeans = KMeans(
+    #     init='k-means++',
+    #     n_clusters=config['n_clusters'],
+    #     # number of different random initializations
+    #     n_init=config['kmeans_n_init']
+    # ).fit(z)
+    # initial_labels = kmeans.labels_
+    # TSNE+DBSCAN
+    tsne = TSNE(n_components=2, random_state=51550).fit_transform(z)
+    dbcl_tsne = DBSCAN(
+        min_samples=40,
+        eps=3,
+        ).fit(tsne)
+    initial_labels = dbcl_tsne.labels_
     centroids = []
+    n_classes = len(np.unique(initial_labels))
     for i in np.unique(initial_labels):
         idx = (initial_labels == i)
         centroids.append(compute_centroid_np(z[idx,:]))
     # saving the model weights
-    centroids = np.array(kmeans.cluster_centers_)#centroids)
+    centroids = np.array(centroids)
     print('Saving initial centroids')
     np.savez(path_to_out/'initial_centroids', centroids)
     print('Shape of centroids layer {}'.format(np.array([centroids]).shape))
 
     # training the clustering model
     clustering_model = create_clustering_model(
-        config['n_clusters'],
+        n_classes,#config['n_clusters'],
         encoder,
         alpha=int(config['n_clusters']-1))
     # compiling the clustering model
@@ -412,6 +423,7 @@ if __name__ == "__main__":
         idx = np.random.permutation(len(x))
         x = x[idx, :]
         y_old = y_old[idx]
+        ids = ids[idx]
         print('Computing the target distribution')
         train_q = clustering_model(x).numpy()
         # update the auxiliary target distribution p
@@ -419,7 +431,7 @@ if __name__ == "__main__":
         clustering_model.fit(x=x,
                              y=train_p,
                              verbose=2,
-                             steps_per_epoch=config['update_interval'],
+                             #steps_per_epoch=config['update_interval'],
                              batch_size=config['batch_size'])
         # evaluation
         q = clustering_model(x).numpy()
