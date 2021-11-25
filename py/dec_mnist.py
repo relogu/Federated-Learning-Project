@@ -94,7 +94,7 @@ if __name__ == "__main__":
         compute_devices=gpus[1:],
         parameter_device=gpus[0]
     )
-    strategy = tf.distribute.MirroredStrategy(gpus)
+    # strategy = tf.distribute.MirroredStrategy(gpus)
     
     # preparing dataset
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
