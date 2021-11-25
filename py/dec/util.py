@@ -167,7 +167,11 @@ def create_tied_denoising_autoencoder(dims,
     # internal layers in encoder
     for i in range(len(encoder_dims)):
         k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
+        activation = act
+        if i == len(encoder_dims)-1:
+            activation = None
         x = Dense(units=encoder_dims[i],
+                  activation=activation,
                   activation=act,
                   kernel_regularizer=k_reg,
                   kernel_initializer=init,
@@ -185,11 +189,12 @@ def create_tied_denoising_autoencoder(dims,
     # internal layers in decoder
     for i in range(len(decoder_dims)):
         k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
-        if i == len(decoder_dims)-1:
+        activation = act
+        if i == len(encoder_dims)-1:
             act = 'sigmoid'
         x = DenseTied(tied_to=encoder_layers[len(encoder_layers)-1-i],
                       units=decoder_dims[i],
-                      activation=act,
+                      activation=activation,
                       kernel_regularizer=k_reg,
                       kernel_constraint=k_con,
                       use_bias=use_bias,
