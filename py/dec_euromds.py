@@ -249,9 +249,9 @@ if __name__ == "__main__":
         # 'init': VarianceScaling(scale=1. / 2.,#3.,
         #                        mode='fan_in',
         #                        distribution="uniform"), # old
-        # 'init': RandomNormal(mean=0.0,
-        #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
-        'init': GlorotUniform(seed=51550),
+        'init': RandomNormal(mean=0.0,
+                            stddev=0.01),  # stddev=0.2), # DEC paper, is better
+        # 'init': GlorotUniform(seed=51550),
         'dims': [n_features,
                 150,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
                 150,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
