@@ -166,9 +166,10 @@ def create_tied_denoising_autoencoder(dims,
     k_con = UnitNorm(axis=0) if u_norm else None
     # internal layers in encoder
     for i in range(len(encoder_dims)):
-        k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
+        # k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
         activation = act
         if i == len(encoder_dims)-1:
+            k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
             activation = None
         x = Dense(units=encoder_dims[i],
                   activation=activation,
