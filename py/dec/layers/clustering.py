@@ -65,11 +65,10 @@ class ClusteringLayer(Layer):
         # n --> number of samples in the batch
         # d --> dimension of the feature space
         # k --> number of clusters
-        dist_ij = K.sum(K.square(K.expand_dims(inputs, axis=1) - self.clusters), axis=2)
-        q = 1.0 / (1.0 + (dist_ij / self.alpha))
-        q **= (self.alpha + 1.0) / 2.0
+        dist_ij = tf.reduce_sum(tf.square(tf.expand_dims(inputs, axis=1) - self.clusters), axis=2)
+        u = 1.0 / (1.0 + (dist_ij / self.alpha))**((self.alpha + 1.0) / 2.0)
         # Make sure each sample's 10 values add up to 1.
-        q = K.transpose(K.transpose(q) / K.sum(q, axis=1))
+        q = K.transpose(K.transpose(u) / K.sum(u, axis=1))
         return q
 
     def compute_output_shape(self, input_shape):

@@ -403,9 +403,9 @@ if __name__ == "__main__":
 
     # training the clustering model
     clustering_model = create_clustering_model(
-        n_classes,#config['n_clusters'],
-        encoder,
-        alpha=int(config['n_clusters']-1))
+        n_clusters=n_classes,#config['n_clusters'],
+        alpha=int(config['n_clusters']-1),
+        encoder=encoder)
     # compiling the clustering model
     clustering_model.compile(
         optimizer=config['cl_optimizer'],
@@ -434,10 +434,10 @@ if __name__ == "__main__":
         # update the auxiliary target distribution p
         train_p = target_distribution(train_q)
         clustering_model.fit(x=x,
-                            y=train_p,
-                            verbose=2,
-                            #steps_per_epoch=config['update_interval'],
-                            batch_size=config['batch_size'])
+                             y=train_p,
+                             verbose=2,
+                             #steps_per_epoch=config['update_interval'],
+                             batch_size=200)#config['batch_size'])
         # evaluation
         q = clustering_model(x).numpy()
         # update the auxiliary target distribution p
