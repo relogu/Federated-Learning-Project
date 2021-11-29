@@ -163,13 +163,13 @@ def create_tied_denoising_autoencoder(dims,
     # encoder
     encoder_layers = []
     encoder_layers.append(input_img)
-    k_con = UnitNorm(axis=0) if u_norm else None
     # internal layers in encoder
     for i in range(len(encoder_dims)):
         # k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
-        k_reg = None
+        k_reg, k_con = None, None
         activation = act
         if i == len(encoder_dims)-1:
+            k_con = UnitNorm(axis=0) if u_norm else None
             k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
             activation = None
         x = Dense(units=encoder_dims[i],
@@ -189,15 +189,15 @@ def create_tied_denoising_autoencoder(dims,
     decoder_layers.append(input_lbl)
     # internal layers in decoder
     for i in range(len(decoder_dims)):
-        k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
+        #k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
         activation = act
         if i == len(encoder_dims)-1:
             act = 'sigmoid'
         x = DenseTied(tied_to=encoder_layers[len(encoder_layers)-1-i],
                       units=decoder_dims[i],
                       activation=activation,
-                      kernel_regularizer=k_reg,
-                      kernel_constraint=k_con,
+                      #kernel_regularizer=k_reg,
+                      #kernel_constraint=k_con,
                       use_bias=use_bias,
                       name=decoder_layer_name % i)
         if verbose:

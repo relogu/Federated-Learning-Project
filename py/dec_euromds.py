@@ -250,13 +250,13 @@ if __name__ == "__main__":
         #                        mode='fan_in',
         #                        distribution="uniform"), # old
         'init': RandomNormal(mean=0.0,
-                            stddev=0.01),  # stddev=0.2), # DEC paper, is better
+                            stddev=0.05),  # stddev=0.2), # DEC paper, is better
         # 'init': GlorotUniform(seed=51550),
         'dims': [n_features,
-                30,#500,#150,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
-                30,#500,#150,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
-                150,#2000,#500,#2000,#int((3)*(n_features)),#int((2.5)*(n_features)),
-                5],#args.n_clusters],  # DEC paper proportions
+                150,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
+                150,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
+                500,#2000,#int((3)*(n_features)),#int((2.5)*(n_features)),
+                3],#5],#args.n_clusters],  # DEC paper proportions
         # 'relu' --> DEC paper # 'selu' --> is better for binary
         'act': 'selu',
         # 'ae_metrics': [my_metrics.rounded_accuracy,
