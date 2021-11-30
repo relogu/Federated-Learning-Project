@@ -28,7 +28,7 @@ import pickle
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 from tensorflow.keras.initializers import RandomNormal, GlorotUniform
-from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers import SGD, Adam
 import tensorflow as tf
 from tensorflow.keras.callbacks import LearningRateScheduler, EarlyStopping
 import tensorflow_addons.metrics as tfa_metrics
@@ -248,23 +248,24 @@ if __name__ == "__main__":
         # 'ae_optimizer': SGD(learning_rate=config['ae_lr'],
         #                    momentum=config['ae_momentum'],
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
-        'ae_optimizer': SGD(
-            learning_rate=0.1,
-            momentum=0.9,#),
-            decay=(0.1-0.0001)/args.ae_epochs),
+        # 'ae_optimizer': SGD(
+        #     learning_rate=0.1,
+        #     momentum=0.9,#),
+        #     decay=(0.1-0.0001)/args.ae_epochs),
+        'ae_optimizer': Adam(),
         # 'init': VarianceScaling(scale=1. / 2.,#3.,
         #                        mode='fan_in',
         #                        distribution="uniform"), # old
-        'init': RandomNormal(mean=0.0,
-                            stddev=0.05),  # stddev=0.2), # DEC paper, is better
-        # 'init': GlorotUniform(seed=51550),
+        # 'init': RandomNormal(mean=0.0,
+        #                     stddev=0.05),  # stddev=0.2), # DEC paper, is better
+        'init': GlorotUniform(seed=51550),
         'dims': [n_features,
-                150,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
-                150,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
-                500,#2000,#int((3)*(n_features)),#int((2.5)*(n_features)),
+                #150,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
+                15,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
+                10,#2000,#int((3)*(n_features)),#int((2.5)*(n_features)),
                 2],#5],#args.n_clusters],  # DEC paper proportions
         # 'relu' --> DEC paper # 'selu' --> is better for binary
-        'act': 'selu',
+        'act': 'relu',
         # 'ae_metrics': [my_metrics.rounded_accuracy,
         #                'accuracy',
         #                tfa_metrics.HammingLoss(mode='multilabel', threshold=0.50)],

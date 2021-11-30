@@ -74,8 +74,8 @@ mkdir "$PWD/$OUT_FOL"
 # do
 # training_setup
 LETTER="z"
-DROPOUT="0.20"
-RAN_FLIP="0.20"
+DROPOUT="0.0"
+RAN_FLIP="0.50"
 U_NORM="--u_norm"
 AE_EPOCHS=$6
 
