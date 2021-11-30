@@ -1,4 +1,4 @@
-from tensorflow.python.keras.losses import mean_squared_error, binary_crossentropy
+from tensorflow.python.keras.losses import mean_squared_error, binary_crossentropy, categorical_crossentropy
 from .keras import (DiceMSELoss, ComboLoss, CosineSimilarityLoss,
                     DiceBCELoss, DiceLoss, FocalLoss, FocalTverskyLoss,
                     IoUCosineLoss, IoUDiceLoss, IoULoss, TverskyLoss)
@@ -17,6 +17,7 @@ KERAS_LOSSES_DICT = {
     'tversky': TverskyLoss,
     'mse': mean_squared_error,
     'bce': binary_crossentropy,
+    'cce': categorical_crossentropy,
 }
 
 def get_keras_loss_names():
