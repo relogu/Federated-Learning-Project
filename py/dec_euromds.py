@@ -261,8 +261,8 @@ if __name__ == "__main__":
         'init': GlorotUniform(seed=51550),
         'dims': [n_features,
                 #150,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
-                15,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
-                10,#2000,#int((3)*(n_features)),#int((2.5)*(n_features)),
+                30,#500,#int((2)*(n_features)),#int((2/3)*(n_features)),
+                15,#2000,#int((3)*(n_features)),#int((2.5)*(n_features)),
                 2],#5],#args.n_clusters],  # DEC paper proportions
         # 'relu' --> DEC paper # 'selu' --> is better for binary
         'act': 'relu',
