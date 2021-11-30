@@ -16,11 +16,7 @@ import dataset_util as data_util
 from flwr.common.typing import Parameters
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.manifold import TSNE
-from tensorflow.keras.initializers import RandomNormal, GlorotUniform
-from tensorflow.keras.optimizers import SGD
-import tensorflow as tf
-from tensorflow.keras.callbacks import LearningRateScheduler, EarlyStopping
-import tensorflow_addons.metrics as tfa_metrics
+
 import argparse
 import os
 import pathlib
@@ -30,6 +26,12 @@ import pickle
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
+from tensorflow.keras.initializers import RandomNormal, GlorotUniform
+from tensorflow.keras.optimizers import SGD
+import tensorflow as tf
+from tensorflow.keras.callbacks import LearningRateScheduler, EarlyStopping
+import tensorflow_addons.metrics as tfa_metrics
 
 def get_parser():
     parser = argparse.ArgumentParser(description="UDE Training Script")
@@ -119,7 +121,7 @@ def get_parser():
                         dest='cl_lr',
                         required=False,
                         type=float,
-                        default=0.01,
+                        default=0.001,
                         action='store',
                         help='clustering model learning rate')
     parser.add_argument('--update_interval',
@@ -192,7 +194,11 @@ if __name__ == "__main__":
     else:
         fill = 0
     x = data_util.get_euromds_dataset(
-        groups=args.groups, exclude_cols=args.ex_col, accept_nan=fill, fill_fn=data_util.fillcolumn_prob, verbose=args.verbose)
+        groups=args.groups,
+        exclude_cols=args.ex_col,
+        accept_nan=fill,
+        fill_fn=data_util.fillcolumn_prob,
+        verbose=False)#args.verbose)
     # getting the number of features
     n_features = len(x.columns)
     print('Number of features extracted is {}'.format(n_features))
@@ -375,21 +381,21 @@ if __name__ == "__main__":
     
     # get an estimate for clusters centers using k-means
     z = encoder(x).numpy()
-    # # KMEANS
-    # kmeans = KMeans(
-    #     init='k-means++',
-    #     n_clusters=config['n_clusters'],
-    #     # number of different random initializations
-    #     n_init=config['kmeans_n_init']
-    # ).fit(z)
-    # initial_labels = kmeans.labels_
-    # TSNE+DBSCAN
-    tsne = TSNE(n_components=2, random_state=51550).fit_transform(z)
-    dbcl_tsne = DBSCAN(
-        min_samples=40,
-        eps=3,
-        ).fit(tsne)
-    initial_labels = dbcl_tsne.labels_
+    # KMEANS
+    kmeans = KMeans(
+        init='k-means++',
+        n_clusters=config['n_clusters'],
+        # number of different random initializations
+        n_init=config['kmeans_n_init']
+    ).fit(z)
+    initial_labels = kmeans.labels_
+    # # TSNE+DBSCAN
+    # tsne = TSNE(n_components=2, random_state=51550).fit_transform(z)
+    # dbcl_tsne = DBSCAN(
+    #     min_samples=40,
+    #     eps=3,
+    #     ).fit(tsne)
+    # initial_labels = dbcl_tsne.labels_
     centroids = []
     n_classes = len(np.unique(initial_labels))
     for i in np.unique(initial_labels):
@@ -404,7 +410,7 @@ if __name__ == "__main__":
     # training the clustering model
     clustering_model = create_clustering_model(
         n_clusters=n_classes,#config['n_clusters'],
-        alpha=int(config['n_clusters']-1),
+        alpha=1,#int(config['n_clusters']-1),
         encoder=encoder)
     # compiling the clustering model
     clustering_model.compile(
@@ -412,32 +418,40 @@ if __name__ == "__main__":
         loss=config['cl_loss'])
     clustering_model.get_layer(
         name='clustering').set_weights(np.array([centroids]))
-    clustering_model.summary()
-    for w1, w2 in zip(encoder.get_weights(), clustering_model.get_weights()[:8]):
-        print(np.sum(np.array(w1)- np.array(w2)))
+    # for w1, w2 in zip(encoder.get_weights(), clustering_model.get_weights()[:8]):
+    #     print(np.sum(np.array(w1)- np.array(w2)))
         
     y_old = initial_labels
     train_loss, eval_loss = 0.1, 0
     # for i in range(int(config['cl_epochs'])):
     i = 0
+    train_q = clustering_model(x).numpy()
+    # update the auxiliary target distribution p
+    train_p = target_distribution(train_q)
+    clustering_model.get_layer(name='clustering').trainable = False
+    clustering_model.compile(
+        optimizer=config['cl_optimizer'],
+        loss=config['cl_loss'],
+        metrics=['binary_crossentropy'])
+    clustering_model.summary()
     while True:
         i += 1
-        # if i % config['update_interval'] == 1:
+        # print('Shuffling data')
+        # idx = np.random.permutation(len(x))
+        # x = x[idx, :]
+        # y_old = y_old[idx]
+        # ids = ids[idx]
+        # if i % 11 == 1:
         #     # if train_loss < eval_loss:
-        print('Shuffling data')
-        idx = np.random.permutation(len(x))
-        x = x[idx, :]
-        y_old = y_old[idx]
-        ids = ids[idx]
-        print('Computing the target distribution')
-        train_q = clustering_model(x).numpy()
-        # update the auxiliary target distribution p
-        train_p = target_distribution(train_q)
+        #     print('Computing the target distribution')
+        #     train_q = clustering_model(x).numpy()
+        #     # update the auxiliary target distribution p
+        #     train_p = target_distribution(train_q)
         clustering_model.fit(x=x,
                              y=train_p,
                              verbose=2,
                              #steps_per_epoch=config['update_interval'],
-                             batch_size=200)#config['batch_size'])
+                             batch_size=100)#config['batch_size'])
         # evaluation
         q = clustering_model(x).numpy()
         # update the auxiliary target distribution p
@@ -485,7 +499,9 @@ if __name__ == "__main__":
             dump_pred_dict('pred', pred,
                         path_to_out=path_to_out)
         # check for required convergence
-        tol = float(1 - my_metrics.acc(y_old, y_pred))
+        #tol = float(1 - my_metrics.acc(y_old, y_pred))
+        print(y_old==y_pred)
+        tol = float(1 - np.sum(y_old==y_pred)/len(x))
         if i % 100 and args.verbose:
             print("Current label change ratio is {}, i.e. {}/{} samples".
                     format(tol, int(tol*len(x)), len(x)))
@@ -498,9 +514,11 @@ if __name__ == "__main__":
         dump_result_dict('clustering_model', result,
                         path_to_out=path_to_out)
 
-    # saving the model weights
-    parameters = np.array(encoder.get_weights(), dtype=object)
-    np.savez(path_to_out/'encoder_final', parameters)
+        # saving the model weights
+        parameters = np.array(encoder.get_weights(), dtype=object)
+        np.savez(path_to_out/'encoder_final', parameters)
 
-    parameters = np.array(clustering_model.get_layer(name='clustering').get_weights(), dtype=object)
-    np.savez(path_to_out/'final_centroids', parameters)
+        parameters = np.array(clustering_model.get_layer(name='clustering').get_weights(), dtype=object)
+        np.savez(path_to_out/'final_centroids', parameters)
+        
+        break
