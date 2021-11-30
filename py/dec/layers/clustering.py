@@ -40,8 +40,10 @@ class ClusteringLayer(Layer):
         assert len(input_shape) == 2
         input_dim = input_shape[1]
         self.input_spec = InputSpec(dtype=K.floatx(), shape=(None, input_dim))
-        self.clusters = self.add_weight(shape=(
-            self.n_clusters, input_dim), initializer='glorot_uniform', name='clusters')
+        self.clusters = self.add_weight(
+            shape=(self.n_clusters, input_dim),
+            initializer='glorot_uniform',
+            name='clusters')
         if self.initial_weights is not None:
             self.set_weights(self.initial_weights)
             del self.initial_weights
@@ -68,7 +70,7 @@ class ClusteringLayer(Layer):
         dist_ij = tf.reduce_sum(tf.square(tf.expand_dims(inputs, axis=1) - self.clusters), axis=2)
         u = 1.0 / (1.0 + (dist_ij / self.alpha))**((self.alpha + 1.0) / 2.0)
         # Make sure each sample's 10 values add up to 1.
-        q = K.transpose(K.transpose(u) / K.sum(u, axis=1))
+        q = tf.transpose(tf.transpose(u) / tf.reduce_sum(u, axis=1))
         return q
 
     def compute_output_shape(self, input_shape):
