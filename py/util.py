@@ -118,3 +118,9 @@ def return_not_binary_indices(matrix):
             idx.append(i)
     
     return idx
+
+def get_dims_from_weights(weights):
+    dims = [weights[0].shape[0]]
+    for i in range(0, len(weights), 2):
+        dims.append(weights[i].shape[1])
+    return dims
