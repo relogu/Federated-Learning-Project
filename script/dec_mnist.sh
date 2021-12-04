@@ -16,5 +16,6 @@ nohup python3 $SCRIPT \
     --n_clusters $CLUSTERS \
     --folder "$PWD/$OUT_FOL" \
     --hardware_acc \
+    --gpus 0 1 \
     --verbose >> "$PWD/$OUT_FOL/log.txt"
 wait
