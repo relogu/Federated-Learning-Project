@@ -5,7 +5,6 @@ Created on Wen Aug 4 10:37:10 2021
 
 @author: relogu
 """
-import argparse
 import os
 import pathlib
 import numpy as np
@@ -14,70 +13,23 @@ import pickle
 from py.dumping.output import dump_result_dict
 from py.dec.util import (create_dec_sae, create_clustering_model, target_distribution)
 import py.metrics as my_metrics
-from flwr.common.typing import Parameters
-from sklearn.cluster import KMeans
+from py.parsers import dec_mnist_parser
+from . import compute_centroid_np
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 from tensorflow.keras.initializers import RandomNormal
-from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers import SGD, Adam
 import tensorflow as tf
 from tensorflow.keras.callbacks import LearningRateScheduler, EarlyStopping
-
-
-def get_parser():
-    parser = argparse.ArgumentParser(description="Original DEC Training Script")
-    parser.add_argument("--hardware_acc",
-                        dest="cuda_flag",
-                        action='store_true',
-                        help="Flag for hardware acceleration using cuda (if available)")
-    parser.add_argument('--gpus',
-                        dest='gpus',
-                        required=False,
-                        nargs='+',
-                        type=int,
-                        default=0,
-                        #choices=range(8),
-                        #action='append',
-                        help='Id for the gpu(s) to use')
-    parser.add_argument("--lim_cores",
-                        dest="lim_cores",
-                        action='store_true',
-                        help="Flag for limiting cores")
-    parser.add_argument("--folder",
-                        dest="out_folder",
-                        type=type(str('')),
-                        help="Folder to output images")
-    parser.add_argument("--n_clusters",
-                        dest="n_clusters",
-                        default=10,
-                        type=int, help="Define the number of clusters to identify")
-    parser.add_argument('--update_interval',
-                        dest='update_interval',
-                        required=False,
-                        type=int,
-                        default=160,
-                        action='store',
-                        help='set the update interval for the clusters distribution')
-    parser.add_argument('--seed',
-                        dest='seed',
-                        required=False,
-                        type=int,
-                        default=51550,
-                        action='store',
-                        help='set the seed for the random generator of the whole dataset')
-    parser.add_argument('-v', '--verbose',
-                        dest='verbose',
-                        required=False,
-                        action='store_true',
-                        help='Flag for verbosity')
-    return parser
+from flwr.common.typing import Parameters
+from sklearn.cluster import KMeans
 
 
 if __name__ == "__main__":
     # get parameters
-    args = get_parser().parse_args()
+    args = dec_mnist_parser().parse_args()
     np.random.seed(51550)
     # disable possible gpu devices (add hard acc, selection)
     if not args.cuda_flag:
@@ -94,8 +46,8 @@ if __name__ == "__main__":
         path_to_out = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
     os.makedirs(path_to_out, exist_ok=True)
-    
-    # Restrict keras to use only 2 GPUs
+
+    # Restrict keras to use only selected GPUs
     gpus = tf.config.list_physical_devices('GPU')
     print('Physical devices: {}'.format(gpus))
     print('GPU(s) chosen: {}'.format(args.gpus))
@@ -108,15 +60,16 @@ if __name__ == "__main__":
     #     parameter_device=gpus[0]
     # )
     # strategy = tf.distribute.MirroredStrategy(gpus)
-    
+
     # preparing dataset
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
     n_features = int(x_train.shape[1]*x_train.shape[2])
-    x_train, x_test = x_train.reshape(x_train.shape[0], n_features)/255, x_test.reshape(x_test.shape[0], n_features)/255
-    
+    x_train, x_test = x_train.reshape(
+        x_train.shape[0], n_features)/255, x_test.reshape(x_test.shape[0], n_features)/255
+
     # initializing common configuration dict
     initial_learning_rate = 0.1
-    
+
     def lr_step_decay(epoch, lr):
         # lr is divided by 10 every 20000 rounds
         drop_rate = 10
@@ -125,24 +78,29 @@ if __name__ == "__main__":
         if epoch > epoch_drop:
             lr = initial_learning_rate/(drop_rate**int(epoch/epoch_drop))
         return lr
-    
+
     config = {
         'batch_size': 256,
-        'n_clusters': args.n_clusters,
+        'n_clusters': 10,
         'kmeans_n_init': 20,
         'ae_epochs': 50000,
-        'ae_optimizer': SGD(
-            learning_rate=0.1,
-            momentum=0.9,
-            decay=(0.1-0.0001)/50000),
+        # 'ae_optimizer': SGD(
+        #     learning_rate=0.1,
+        #     momentum=0.9,
+        #     decay=(0.1-0.0001)/50000),
+        'ae_optimizer': Adam(),
         'ae_init': RandomNormal(mean=0.0,
                                 stddev=0.01),
-        'ae_dims': [784,
-            500,
-            500,
-            2000,
-            10],
-        'ae_metrics': [my_metrics.rounded_accuracy],
+        'ae_dims': [
+            784,  # input
+            500,  # first layer
+            500,  # second layer
+            2000,  # third layer
+            10,  # output (feature space)
+        ],
+        'ae_metrics': [
+            my_metrics.rounded_accuracy,
+        ],
         'cl_optimizer': SGD(
             learning_rate=0.01,
             momentum=0.9),
@@ -155,35 +113,35 @@ if __name__ == "__main__":
     pretrained_weights = path_to_out/'encoder.npz'
     if not pretrained_weights.exists():
         print('There are no existing weights in the output folder for the autoencoder')
-        
+
         # with strategy.scope():
         autoencoder, encoder, decoder = create_dec_sae(
             dims=config['ae_dims'],
             init=config['ae_init'])
-        
+
         print(autoencoder.summary())
-        
+
         autoencoder.compile(
             metrics=config['ae_metrics'],
             optimizer=config['ae_optimizer'],
             loss=config['ae_loss']
         )
-        
+
         # fitting the autoencoder
         history = autoencoder.fit(x=x_train,
-                                y=x_train,
-                                batch_size=config['batch_size'],
-                                epochs=int(config['ae_epochs']),
-                                validation_data=(x_test, x_test),
-                                callbacks=[#LearningRateScheduler(lr_step_decay, verbose=1),
-                                            EarlyStopping(
-                                                patience=5000,
-                                                verbose=1,
-                                                mode="auto",
-                                                baseline=None,
-                                                restore_best_weights=False,)
-                                            ],
-                                verbose=2)
+                                  y=x_train,
+                                  batch_size=config['batch_size'],
+                                  epochs=int(config['ae_epochs']),
+                                  validation_data=(x_test, x_test),
+                                  callbacks=[  # LearningRateScheduler(lr_step_decay, verbose=1),
+                                      EarlyStopping(
+                                          patience=5000,
+                                          verbose=1,
+                                          mode="auto",
+                                          baseline=None,
+                                          restore_best_weights=False,)
+                                  ],
+                                  verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
         parameters = np.array(encoder.get_weights(), dtype=object)
@@ -194,7 +152,7 @@ if __name__ == "__main__":
         param = np.load(pretrained_weights, allow_pickle=True)
         weights = np.array([param[p] for p in param])[0]
         print('There are no existing weights in the output folder for the autoencoder')
-        
+
         # with strategy.scope():
         autoencoder, encoder, decoder = create_dec_sae(
             dims=config['ae_dims'],
@@ -202,7 +160,7 @@ if __name__ == "__main__":
             dropout_rate=0.0)
 
         encoder.set_weights(weights)
-        
+
         autoencoder.compile(
             metrics=config['ae_metrics'],
             optimizer=config['ae_optimizer'],
@@ -211,24 +169,23 @@ if __name__ == "__main__":
 
         # fitting again the autoencoder
         history = autoencoder.fit(x=x_train,
-                                y=x_train,
-                                batch_size=config['batch_size'],
-                                epochs=int(2*config['ae_epochs']),
-                                validation_data=(x_test, x_test),
-                                callbacks=[#LearningRateScheduler(lr_step_decay, verbose=1),
-                                            EarlyStopping(
-                                                patience=5000,
-                                                verbose=1,
-                                                mode="auto",
-                                                baseline=None,
-                                                restore_best_weights=False,)
-                                            ],
-                                verbose=2)
+                                  y=x_train,
+                                  batch_size=config['batch_size'],
+                                  epochs=int(2*config['ae_epochs']),
+                                  validation_data=(x_test, x_test),
+                                  callbacks=[  # LearningRateScheduler(lr_step_decay, verbose=1),
+                                      EarlyStopping(
+                                          patience=5000,
+                                          verbose=1,
+                                          mode="auto",
+                                          baseline=None,
+                                          restore_best_weights=False,)
+                                  ],
+                                  verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
         parameters = np.array(encoder.get_weights(), dtype=object)
         np.savez(path_to_out/'encoder_ft', parameters)
-
 
     # with strategy.scope():
     # clean from the auxialiary layer for the clustering model
@@ -249,25 +206,32 @@ if __name__ == "__main__":
         # number of different random initializations
         n_init=config['kmeans_n_init'],
     ).fit(z)
+    initial_labels = kmeans.labels_
     # saving the model weights
-    initial_centroids = np.array([kmeans.cluster_centers_])
+    centroids = []
+    n_classes = len(np.unique(initial_labels))
+    for i in np.unique(initial_labels):
+        idx = (initial_labels == i)
+        centroids.append(compute_centroid_np(z[idx, :]))
+    # saving the model weights
+    centroids = np.array(centroids)
     print('Saving initial centroids')
-    np.savez(path_to_out/'initial_centroids', initial_centroids)
-
+    np.savez(path_to_out/'initial_centroids', centroids)
+    print('Shape of centroids layer {}'.format(np.array([centroids]).shape))
 
     # with strategy.scope():
     # training the clustering model
     clustering_model = create_clustering_model(
-        config['n_clusters'],
-        encoder,
-        alpha=9)
+        n_clusters=config['n_clusters'],
+        encoder=encoder,
+        alpha=config['n_clusters']-1)
     # compiling the clustering model
     clustering_model.compile(
         optimizer=config['cl_optimizer'],
         loss=config['cl_loss'])
     clustering_model.get_layer(
-        name='clustering').set_weights(initial_centroids)
-    y_old = None
+        name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
+    y_old = initial_labels
     train_loss, eval_loss = 0.1, 0
     i = 0
     while True:
@@ -277,15 +241,16 @@ if __name__ == "__main__":
         print('Shuffling data')
         idx = np.random.permutation(len(x_train))
         x_train = x_train[idx, :]
+        y_old = y_old[idx]
         print('Updating the target distribution')
         train_q = clustering_model(x_train).numpy()
         # update the auxiliary target distribution p
         train_p = target_distribution(train_q)
         clustering_model.fit(x=x_train,
-                            y=train_p,
-                            verbose=2,
-                            batch_size=config['batch_size'],
-                            steps_per_epoch=config['update_interval'])
+                             y=train_p,
+                             verbose=2,
+                             batch_size=config['batch_size'],
+                             steps_per_epoch=config['update_interval'])
         # evaluation
         q = clustering_model(x_train).numpy()
         # update the auxiliary target distribution p
@@ -312,37 +277,38 @@ if __name__ == "__main__":
             acc = my_metrics.acc(y_test, y_pred)
             nmi = my_metrics.nmi(y_test, y_pred)
             print('DEC Clustering\nEpoch %d\n\tacc %.5f\n\tnmi %.5f' %
-                (i, acc, nmi))
+                  (i, acc, nmi))
             print('Cycle accuracy is {}'.format(cycle_acc))
             # dumping and retrieving the results
             metrics = {'accuracy': acc,
-                    'normalized_mutual_info_score': nmi,}
+                       'normalized_mutual_info_score': nmi, }
             result = metrics.copy()
         result['cycle_accuracy'] = cycle_acc
         result['loss'] = eval_loss
         result['round'] = i
         # check for required convergence
-        if i > 1:
-            tol = float(1 - my_metrics.acc(y_pred, y_old))
-            if i % 100 and args.verbose:
-                print("Current label change ratio is {}, i.e. {}/{} samples".
-                    format(tol, int(tol*len(x_train)), len(x_train)))
-            if tol < 0.001:
-                print("Final label change ratio is {}, i.e. {}/{} samples, reached after {} iteration".
-                    format(tol, int(tol*len(x_train)), len(x_train), i))
-                break
-            else:
-                y_old = y_pred.copy()
+        #tol = float(1 - my_metrics.acc(y_old, y_pred))
+        print(y_old == y_pred)
+        tol = float(1 - np.sum(y_old == y_pred)/len(x_train))
+        if args.verbose:
+            print("Current label change ratio is {}, i.e. {}/{} samples".
+                  format(tol, int(tol*len(x_train)), len(x_train)))
+        if tol < 0.001:  # and eval_cycle_acc > 0.9:# and i > 2000: # from DEC paper
+            print("Final label change ratio is {}, i.e. {}/{} samples, reached after {} iteration".
+                  format(tol, int(tol*len(x_train)), len(x_train), i))
+            break
         else:
-            tol = 1
             y_old = y_pred.copy()
         result['tol'] = tol
         dump_result_dict('clustering_model', result,
-                        path_to_out=path_to_out)
+                         path_to_out=path_to_out)
 
-    # saving the model weights
-    parameters = np.array(encoder.get_weights(), dtype=object)
-    np.savez(path_to_out/'encoder_final', parameters)
+        # saving the model weights
+        parameters = np.array(encoder.get_weights(), dtype=object)
+        np.savez(path_to_out/'encoder_final', parameters)
 
-    parameters = np.array(clustering_model.get_layer(name='clustering').get_weights(), dtype=object)
-    np.savez(path_to_out/'final_centroids', parameters)
+        parameters = np.array(clustering_model.get_layer(
+            name='clustering').get_weights(), dtype=object)
+        np.savez(path_to_out/'final_centroids', parameters)
+
+        #break

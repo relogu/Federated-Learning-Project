@@ -5,132 +5,34 @@ Created on Wen Aug 4 10:37:10 2021
 
 @author: relogu
 """
-from py.dumping.output import dump_result_dict
-from py.dec.util import (create_autoencoder, create_clustering_model, target_distribution)
-from losses import get_keras_loss_names, get_keras_loss
-import py.metrics as my_metrics
-from flwr.common.typing import Parameters
-from sklearn.cluster import KMeans
-from tensorflow.keras.initializers import RandomNormal, VarianceScaling, GlorotUniform
-from tensorflow.keras.optimizers import SGD
-import tensorflow as tf
-from tensorflow.keras.callbacks import LearningRateScheduler
-import tensorflow_addons.metrics as tfa_metrics
-import argparse
 import os
 import pathlib
 import numpy as np
 import pickle
 
+from py.dumping.output import dump_result_dict
+from py.dec.util import (create_autoencoder, create_clustering_model, target_distribution)
+from losses import get_keras_loss
+import py.metrics as my_metrics
+from py.parsers import dec_bmnist_parser
+from . import compute_centroid_np
+
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
-def get_parser():
-    parser = argparse.ArgumentParser(description="UDE Training Script")
-    parser.add_argument("--batch_size", dest="batch_size",
-                        default=256, type=int, help="Batch size")
-    parser.add_argument("--hardware_acc", dest="cuda_flag", action='store_true',
-                        help="Flag for hardware acceleration using cuda (if available)")
-    parser.add_argument("--lim_cores", dest="lim_cores",
-                        action='store_true', help="Flag for limiting cores")
-    parser.add_argument("--folder", dest="out_folder",
-                        type=type(str('')), help="Folder to output images")
-    parser.add_argument("--n_clusters", dest="n_clusters", default=10,
-                        type=int, help="Define the number of clusters to identify")
-    parser.add_argument('--ae_epochs',
-                        dest='ae_epochs',
-                        required=False,
-                        type=int,
-                        default=50000,
-                        action='store',
-                        help='number of epochs for the autoencoder pre-training')
-    parser.add_argument('--ae_loss',
-                        dest='ae_loss',
-                        required=True,
-                        type=type(''),
-                        default='mse',
-                        choices=get_keras_loss_names(),
-                        action='store',
-                        help='Loss function for autoencoder training')
-    parser.add_argument('--cl_epochs',
-                        dest='cl_epochs',
-                        required=False,
-                        type=int,
-                        default=10000,
-                        action='store',
-                        help='number of epochs for the clustering step')
-    parser.add_argument('--binary',
-                        dest='binary',
-                        required=False,
-                        action='store_true',
-                        help='Flag for using probabilistic binary neurons')
-    parser.add_argument('--tied',
-                        dest='tied',
-                        required=False,
-                        action='store_true',
-                        help='Flag for using tied layers in autoencoder')
-    parser.add_argument('--plotting',
-                        dest='plotting',
-                        required=False,
-                        action='store_true',
-                        help='Flag for plotting confusion matrix')
-    parser.add_argument('--dropout',
-                        dest='dropout',
-                        type=float,
-                        default=0.20,
-                        required=False,
-                        action='store',
-                        help='Flag for dropout layer in autoencoder')
-    parser.add_argument('--ran_flip',
-                        dest='ran_flip',
-                        type=float,
-                        default=0.20,
-                        required=False,
-                        action='store',
-                        help='Flag for RandomFlipping layer in autoencoder')
-    parser.add_argument('--ortho',
-                        dest='ortho',
-                        required=False,
-                        action='store_true',
-                        help='Flag for orthogonality regularizer in autoencoder (tied only)')
-    parser.add_argument('--u_norm',
-                        dest='u_norm',
-                        required=False,
-                        action='store_true',
-                        help='Flag for unit norm constraint in autoencoder (tied only)')
-    parser.add_argument('--cl_lr',
-                        dest='cl_lr',
-                        required=False,
-                        type=float,
-                        default=0.01,
-                        action='store',
-                        help='clustering model learning rate')
-    parser.add_argument('--update_interval',
-                        dest='update_interval',
-                        required=False,
-                        type=int,
-                        default=140,
-                        action='store',
-                        help='set the update interval for the clusters distribution')
-    parser.add_argument('--seed',
-                        dest='seed',
-                        required=False,
-                        type=int,
-                        default=51550,
-                        action='store',
-                        help='set the seed for the random generator of the whole dataset')
-    parser.add_argument('-v', '--verbose',
-                        dest='verbose',
-                        required=False,
-                        action='store_true',
-                        help='Flag for verbosity')
-    return parser
+from tensorflow.keras.initializers import RandomNormal, VarianceScaling, GlorotUniform
+from tensorflow.keras.optimizers import SGD, Adam
+import tensorflow as tf
+from tensorflow.keras.callbacks import LearningRateScheduler
+import tensorflow_addons.metrics as tfa_metrics
+from flwr.common.typing import Parameters
+from sklearn.cluster import KMeans
 
 
 if __name__ == "__main__":
     # configuration
     # get parameters
-    args = get_parser().parse_args()
+    args = dec_bmnist_parser().parse_args()
     # disable possible gpu devices (add hard acc, selection)
     if not args.cuda_flag:
         print('No CUDA')
@@ -146,19 +48,25 @@ if __name__ == "__main__":
         path_to_out = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
     os.makedirs(path_to_out, exist_ok=True)
-    
-    # Restrict keras to use only 2 GPUs
+
+    # Restrict keras to use only selected GPUs
     gpus = tf.config.list_physical_devices('GPU')
-    tf.config.set_visible_devices(gpus[2:4], 'GPU')
-    
+    print('Physical devices: {}'.format(gpus))
+    print('GPU(s) chosen: {}'.format(args.gpus))
+    gpus = [gpus[g] for g in args.gpus]
+    tf.config.set_visible_devices(gpus, 'GPU')
+    gpus = tf.config.list_logical_devices('GPU')
+    print('Logical devices: {}'.format(gpus))
+
     # preparing dataset
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
     n_features = int(x_train.shape[1]*x_train.shape[2])
-    x_train, x_test = np.round(x_train.reshape(x_train.shape[0], n_features)/255), np.round(x_test.reshape(x_test.shape[0], n_features)/255)
-    
+    x_train, x_test = np.round(x_train.reshape(
+        x_train.shape[0], n_features)/255), np.round(x_test.reshape(x_test.shape[0], n_features)/255)
+
     # initializing common configuration dict
     initial_learning_rate = 0.1
-    
+
     def lr_step_decay(epoch, lr):
         # lr is divided by 10 every 20000 rounds
         drop_rate = 10
@@ -169,10 +77,10 @@ if __name__ == "__main__":
         if epoch > 2*epoch_drop:
             lr = lr/drop_rate
         return lr
-    
+
     config = {
         'batch_size': args.batch_size,
-        'n_clusters': args.n_clusters,
+        'n_clusters': 10,
         'kmeans_epochs': 300,
         'kmeans_n_init': 25,
         'binary': args.binary,
@@ -181,30 +89,36 @@ if __name__ == "__main__":
         'ortho': args.ortho,
         'u_norm': args.u_norm,
         'ran_flip': args.ran_flip,
+        'use_bias': True,
         'ae_epochs': args.ae_epochs,
         # 'ae_optimizer': SGD(learning_rate=config['ae_lr'],
         #                    momentum=config['ae_momentum'],
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
-        'ae_optimizer': SGD(
-            learning_rate=0.1,
-            momentum=0.9,#),
-            decay=(0.1-0.0001)/args.ae_epochs),
+        # 'ae_optimizer': SGD(
+        #     learning_rate=0.1,
+        #     momentum=0.9,#),
+        #     decay=(0.1-0.0001)/args.ae_epochs),
+        'ae_optimizer': Adam(),
         # 'init': VarianceScaling(scale=1. / 2.,#3.,
         #                        mode='fan_in',
         #                        distribution="uniform"), # old
         # 'init': RandomNormal(mean=0.0,
         #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
         'init': GlorotUniform(seed=51550),
-        'dims': [n_features,
+        'dims': [
+            n_features,
             500,
             500,
             2000,
-            args.n_clusters],  # DEC paper proportions
+            args.n_clusters
+        ],  # DEC paper proportions
         # 'relu' --> DEC paper # 'selu' --> is better for binary
-        'act': 'selu',
-        'ae_metrics': [my_metrics.rounded_accuracy,
-                       'accuracy',
-                       tfa_metrics.HammingLoss(mode='multilabel', threshold=0.50)],
+        'act': 'relu',
+        'ae_metrics': [
+            my_metrics.rounded_accuracy,
+            'mse',
+            tfa_metrics.HammingLoss(mode='multilabel', threshold=0.50)
+        ],
         'cl_optimizer': SGD(
             learning_rate=args.cl_lr,
             momentum=0.9),
@@ -212,8 +126,9 @@ if __name__ == "__main__":
         'update_interval': args.update_interval,
         'ae_loss': get_keras_loss(args.ae_loss),
         'cl_loss': 'kld',
-        'seed': args.seed}
-    
+        'seed': args.seed,
+    }
+
     print('AE loss is {}'.format(config['ae_loss']))
 
     up_frequencies = np.array([np.array(np.count_nonzero(
@@ -223,15 +138,16 @@ if __name__ == "__main__":
     pretrained_weights = path_to_out/'encoder.npz'
     if not pretrained_weights.exists():
         print('There are no existing weights in the output folder for the autoencoder')
-        
-        autoencoder, encoder, decoder = create_autoencoder(config, up_frequencies)
-        
+
+        autoencoder, encoder, decoder = create_autoencoder(
+            config, up_frequencies)
+
         autoencoder.compile(
             metrics=config['ae_metrics'],
             optimizer=config['ae_optimizer'],
             loss=config['ae_loss']
         )
-        
+
         # fitting the autoencoder
         history = autoencoder.fit(x=x_train,
                                   y=x_train,
@@ -255,13 +171,13 @@ if __name__ == "__main__":
         autoencoder, encoder, decoder = create_autoencoder(config, None)
 
         encoder.set_weights(weights)
-        
+
         autoencoder.compile(
             metrics=config['ae_metrics'],
             optimizer=config['ae_optimizer'],
             loss=config['ae_loss']
         )
-        
+
         # fitting again the autoencoder
         history = autoencoder.fit(x=x_train,
                                   y=x_train,
@@ -283,30 +199,45 @@ if __name__ == "__main__":
     encoder.set_weights(weights)
 
     # get an estimate for clusters centers using k-means
-    kmeans = KMeans(init='k-means++',
-                    n_clusters=config['n_clusters'],
-                    # number of different random initializations
-                    n_init=config['kmeans_n_init'],
-                    random_state=config['seed'])
-    # fitting clusters' centers using k-means
-    kmeans.fit(encoder.predict(x_train))
+    z = encoder(x_train).numpy()
+    # KMEANS
+    kmeans = KMeans(
+        init='k-means++',
+        n_clusters=config['n_clusters'],
+        # number of different random initializations
+        n_init=config['kmeans_n_init']
+    ).fit(z)
+    initial_labels = kmeans.labels_
+    # # TSNE+DBSCAN
+    # tsne = TSNE(n_components=2, random_state=51550).fit_transform(z)
+    # dbcl_tsne = DBSCAN(
+    #     min_samples=40,
+    #     eps=3,
+    #     ).fit(tsne)
+    # initial_labels = dbcl_tsne.labels_
+    centroids = []
+    n_classes = len(np.unique(initial_labels))
+    for i in np.unique(initial_labels):
+        idx = (initial_labels == i)
+        centroids.append(compute_centroid_np(z[idx, :]))
     # saving the model weights
-    parameters = np.array([kmeans.cluster_centers_])
+    centroids = np.array(centroids)
     print('Saving initial centroids')
-    np.savez(path_to_out/'initial_centroids', parameters)
+    np.savez(path_to_out/'initial_centroids', centroids)
+    print('Shape of centroids layer {}'.format(np.array([centroids]).shape))
 
     # training the clustering model
     clustering_model = create_clustering_model(
-        config['n_clusters'],
-        encoder,
-        alpha=config['dims'][-1]-1)
+        n_clusters=config['n_clusters'],
+        encoder=encoder,
+        alpha=config['n_clusters']-1)
     # compiling the clustering model
     clustering_model.compile(
         optimizer=config['cl_optimizer'],
         loss=config['cl_loss'])
     clustering_model.get_layer(
         name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
-    y_old = None
+    y_old = initial_labels
     print('Initializing the target distribution')
     q = clustering_model.predict(x_train, verbose=0)
     # update the auxiliary target distribution p
@@ -316,16 +247,21 @@ if __name__ == "__main__":
     i = 0
     while True:
         i += 1
-        if i % config['update_interval'] == 1:
-            # if train_loss < eval_loss:
-            print('Updating the target distribution')
-            train_q = clustering_model.predict(x_train, verbose=0)
-            # update the auxiliary target distribution p
-            train_p = target_distribution(train_q)
+        # if i % config['update_interval'] == 1:
+        #     # if train_loss < eval_loss:
+        print('Shuffling data')
+        idx = np.random.permutation(len(x_train))
+        x_train = x_train[idx, :]
+        y_old = y_old[idx]
+        print('Updating the target distribution')
+        train_q = clustering_model(x_train).numpy()
+        # update the auxiliary target distribution p
+        train_p = target_distribution(train_q)
         clustering_model.fit(x=x_train,
                              y=train_p,
                              verbose=2,
-                             batch_size=config['batch_size'])
+                             batch_size=config['batch_size'],
+                             steps_per_epoch=config['update_interval'])
         # evaluation
         q = clustering_model.predict(x_train, verbose=0)
         # update the auxiliary target distribution p
@@ -350,33 +286,34 @@ if __name__ == "__main__":
             print('Cycle accuracy is {}'.format(cycle_acc))
             # dumping and retrieving the results
             metrics = {'accuracy': acc,
-                       'normalized_mutual_info_score': nmi,}
+                       'normalized_mutual_info_score': nmi, }
             result = metrics.copy()
         result['cycle_accuracy'] = cycle_acc
         result['loss'] = eval_loss
         result['round'] = i
         # check for required convergence
-        if i > 1:
-            tol = float(1 - my_metrics.acc(y_pred, y_old))
-            if i % 100 and args.verbose:
-                print("Current label change ratio is {}, i.e. {}/{} samples".
-                      format(tol, int(tol*len(x_train)), len(x_train)))
-            if tol < 0.001:  # and eval_cycle_acc > 0.9:# and i > 2000: # from DEC paper
-                print("Final label change ratio is {}, i.e. {}/{} samples, reached after {} iteration".
-                      format(tol, int(tol*len(x_train)), len(x_train), i))
-                break
-            else:
-                y_old = y_pred.copy()
+        #tol = float(1 - my_metrics.acc(y_old, y_pred))
+        print(y_old == y_pred)
+        tol = float(1 - np.sum(y_old == y_pred)/len(x_train))
+        if args.verbose:
+            print("Current label change ratio is {}, i.e. {}/{} samples".
+                  format(tol, int(tol*len(x_train)), len(x_train)))
+        if tol < 0.001:  # and eval_cycle_acc > 0.9:# and i > 2000: # from DEC paper
+            print("Final label change ratio is {}, i.e. {}/{} samples, reached after {} iteration".
+                  format(tol, int(tol*len(x_train)), len(x_train), i))
+            break
         else:
-            tol = 1
             y_old = y_pred.copy()
         result['tol'] = tol
         dump_result_dict('clustering_model', result,
                          path_to_out=path_to_out)
 
-    # saving the model weights
-    parameters = np.array(encoder.get_weights(), dtype=object)
-    np.savez(path_to_out/'encoder_final', parameters)
+        # saving the model weights
+        parameters = np.array(encoder.get_weights(), dtype=object)
+        np.savez(path_to_out/'encoder_final', parameters)
 
-    parameters = np.array(clustering_model.get_layer(name='clustering').get_weights(), dtype=object)
-    np.savez(path_to_out/'final_centroids', parameters)
+        parameters = np.array(clustering_model.get_layer(
+            name='clustering').get_weights(), dtype=object)
+        np.savez(path_to_out/'final_centroids', parameters)
+
+        #break
