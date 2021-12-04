@@ -97,7 +97,8 @@ if __name__ == "__main__":
     gpus = tf.config.list_physical_devices('GPU')
     print('Physical devices: {}'.format(gpus))
     print('GPU(s) chosen: {}'.format(args.gpus))
-    [tf.config.set_visible_devices(gpus[g], 'GPU') for g in args.gpus]
+    gpus = [gpus[g] for g in args.gpus]
+    tf.config.set_visible_devices(gpus, 'GPU')
     gpus = tf.config.list_logical_devices('GPU')
     print('Logical devices: {}'.format(gpus))
     # strategy = tf.distribute.experimental.CentralStorageStrategy(
