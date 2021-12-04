@@ -5,17 +5,20 @@ Created on Wen Aug 4 10:37:10 2021
 
 @author: relogu
 """
-from typing import List
+from typing import List, Dict
 import numpy as np
 
 import tensorflow as tf
-from tensorflow.keras.layers import InputLayer, Dense, Dropout
+from tensorflow.keras.layers import InputLayer, Dense, Dropout, GaussianNoise
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.constraints import UnitNorm
+from tensorflow.python.keras.initializers.initializers_v2 import RandomNormal
 from tensorflow_probability import distributions as tfd
 from tensorflow_probability import layers as tfpl
 
-from .layers import DenseTied, ClusteringLayer, FlippingNoise
+from py.dec.constraints.uncoll_feat import UncorrelatedFeaturesConstraint
+
+from .layers import DenseTied, ClusteringLayer, FlippingNoise, TruncatedGaussianNoise
 from .constraints import WeightsOrthogonalityConstraint
 
 # some string for verbose outputs
@@ -97,8 +100,9 @@ def create_denoising_autoencoder(dims,
 
     # adding flipping noise
     if noise_rate > 0.0:
-        encoder_layers.insert(1, FlippingNoise(up_frequencies=up_freq, rate=noise_rate))
-    
+        encoder_layers.insert(1, FlippingNoise(
+            up_frequencies=up_freq, rate=noise_rate))
+
     # adding dropout
     if dropout_rate > 0.0:
         if verbose:
@@ -106,7 +110,7 @@ def create_denoising_autoencoder(dims,
         idx = np.arange(start=3, stop=int((2*len(dims))-2), step=2)
         for i in idx:
             encoder_layers.insert(i, Dropout(rate=dropout_rate))
-    
+
     # autoencoder
     autoencoder_layers = []
     autoencoder_layers = autoencoder_layers + encoder_layers
@@ -170,7 +174,8 @@ def create_tied_denoising_autoencoder(dims,
         k_con = UnitNorm(axis=0) if u_norm else None
         activation = act
         if i == len(encoder_dims)-1:
-            k_reg = WeightsOrthogonalityConstraint(encoder_dims[i], weightage=1., axis=0) if ortho else None
+            k_reg = WeightsOrthogonalityConstraint(
+                encoder_dims[i], weightage=1., axis=0) if ortho else None
             activation = None
         x = Dense(units=encoder_dims[i],
                   activation=activation,
@@ -211,7 +216,11 @@ def create_tied_denoising_autoencoder(dims,
             up_frequencies=up_freq,
             b_idx=b_idx,
             rate=noise_rate))
-    
+        # encoder_layers.insert(1, TruncatedGaussianNoise(
+        #     stddev=0.1,
+        #     rate=noise_rate,
+        # ))
+
     # adding dropout
     if dropout_rate > 0.0:
         if verbose:
@@ -313,7 +322,7 @@ def create_tied_prob_autoencoder(dims,
         decoder_layers.append(x)
     decoder_layers.append(
         prob_layer(dims[0], distr))
-    
+
     # adding dropout
     if dropout:
         encoder_layers.insert(1, Dropout(rate=0.2))
@@ -405,7 +414,7 @@ def create_prob_autoencoder(dims,
         decoder_layers.append(x)
     decoder_layers.append(
         prob_layer(dims[0], distr))
-    
+
     # adding dropout
     if dropout:
         encoder_layers.insert(1, Dropout(rate=0.2))
@@ -432,6 +441,12 @@ def create_prob_autoencoder(dims,
 
 
 def create_dec_sae(dims,
+                   unit_norm: bool = False,
+                   w_ortho: bool = False,
+                   uncorr_feat: bool = False,
+                   activation='relu',
+                   use_bias: bool = False,
+                   noise_std: float = 0.1,
                    init='glorot_uniform',
                    dropout_rate: float = 0.2):
     """
@@ -483,13 +498,17 @@ def create_dec_sae(dims,
                       use_bias=True,
                       name=decoder_layer_name % i)
         decoder_layers.append(x)
-    
+
     # adding dropout
     if dropout_rate > 0.0:
         idx = np.arange(start=1, stop=int((2*len(dims))-2), step=2)
         for i in idx:
             encoder_layers.insert(i, Dropout(rate=dropout_rate))
-    
+
+    # adding gaussian noise
+    if noise_std > 0.0:
+        encoder_layers.insert(1, GaussianNoise(stddev=noise_std))
+
     # autoencoder
     autoencoder_layers = []
     autoencoder_layers = autoencoder_layers + encoder_layers
@@ -501,6 +520,7 @@ def create_dec_sae(dims,
     decoder = Sequential(decoder_layers, name='decoder')
 
     return (autoencoder, encoder, decoder)
+
 
 def create_autoencoder(net_arch, up_frequencies):
     if net_arch['binary']:
@@ -537,6 +557,198 @@ def create_autoencoder(net_arch, up_frequencies):
                 dropout_rate=net_arch['dropout'],
                 act=net_arch['act'],
                 noise_rate=net_arch['ran_flip'])
+
+
+def create_denoising_autoencoder(
+    flavor: str = 'real',
+    dims: List[int] = None,
+    activation='relu',
+    w_init='glorot_uniform',
+    is_tied: bool = True,
+    u_norm_reg: bool = False,
+    ortho_w_con: bool = False,
+    uncoll_feat_reg: bool = False,
+    use_bias: bool = True,
+    dropout_rate: float = 0.0,
+    noise_rate: float = 0.0,
+    ran_flip_conf: Dict = None,
+):
+    # getting encoder and decoder layers output dim
+    encoder_dims = dims[1:]
+    decoder_dims = list(reversed(dims))[1:]
+    # input data
+    input_data = InputLayer(input_shape=(dims[0],), name='input_data')
+    # input features
+    input_feat = InputLayer(input_shape=(dims[-1],), name='input_feat')
+
+    # build encoder layers
+    # encoder_layers = []
+    # encoder_layers.append(input_data)
+    encoder_layers = [input_data] + get_encoder_layers(
+        dims=encoder_dims,
+        activation=activation,
+        w_init=w_init,
+        u_norm_reg=u_norm_reg,
+        ortho_w_con=ortho_w_con,
+        uncoll_feat_reg=uncoll_feat_reg,
+        use_bias=use_bias
+    )
+    # build decoder layers
+    # decoder_layers = []
+    # decoder_layers.append(input_feat)
+    decoder_layers = [input_feat] + get_decoder_layers(
+        dims=decoder_dims,
+        activation=activation,
+        is_tied=is_tied,
+        w_init=w_init,
+        u_norm_reg=u_norm_reg,
+        ortho_w_con=ortho_w_con,
+        use_bias=use_bias,
+        output_activation=get_output_act(flavor),
+        encoder_layers=encoder_layers
+    )
+    # noising layers
+    encoder_layers = noise_layers_fn(
+        layers=encoder_layers,
+        flavor=flavor,
+        dropout_rate=dropout_rate,
+        noise_rate=noise_rate,
+        ran_flip_conf=ran_flip_conf
+    )
+
+    # get autoencoder layers
+    autoencoder_layers = []
+    autoencoder_layers = autoencoder_layers + encoder_layers
+    autoencoder_layers = autoencoder_layers + decoder_layers[1:]
+
+    # defining models
+    autoencoder = Sequential(autoencoder_layers, name='AE')
+    encoder = Sequential(encoder_layers, name='encoder')
+    decoder = Sequential(decoder_layers, name='decoder')
+
+    return (autoencoder, encoder, decoder)
+
+
+def get_encoder_layers(
+    dims: List[int] = None,
+    activation='relu',
+    w_init='glorot_uniform',
+    u_norm_reg: bool = False,
+    ortho_w_con: bool = False,
+    uncoll_feat_reg: bool = False,
+    use_bias: bool = True,
+):
+    encoder_layers = []
+    for i in range(len(dims)):
+        act = activation
+        k_reg = WeightsOrthogonalityConstraint(
+            dims[i], weightage=1., axis=0) if ortho_w_con else None
+        k_con = UnitNorm(axis=0) if u_norm_reg else None
+        act_reg = None
+        if i == len(dims)-1:
+            act = None
+            act_reg = UncorrelatedFeaturesConstraint(
+                dims[i], weightage=1.) if uncoll_feat_reg else None
+        x = Dense(
+            units=dims[i],
+            activation=act,
+            kernel_regularizer=k_reg,
+            kernel_initializer=w_init,
+            kernel_constraint=k_con,
+            activity_regularizer=act_reg,
+            use_bias=use_bias,
+            name=encoder_layer_name % i)
+        encoder_layers.append(x)
+    return encoder_layers
+
+
+def get_decoder_layers(
+    dims: List[int] = None,
+    activation='relu',
+    is_tied: bool = True,
+    w_init='glorot_uniform',
+    u_norm_reg: bool = False,
+    ortho_w_con: bool = False,
+    use_bias: bool = True,
+    output_activation='sigmoid',
+    encoder_layers=None,
+):
+    decoder_layers = []
+    if is_tied:
+        for i in range(len(dims)):
+            act = activation
+            if i == len(dims)-1:
+                act = output_activation
+            x = DenseTied(
+                tied_to=encoder_layers[len(encoder_layers)-1-i],
+                units=dims[i],
+                activation=act,
+                kernel_initializer=w_init,
+                use_bias=use_bias,
+                name=decoder_layer_name % i)
+            decoder_layers.append(x)
+    else:
+        for i in range(len(dims)):
+            act = activation
+            k_reg = WeightsOrthogonalityConstraint(
+                dims[i], weightage=1., axis=1) if ortho_w_con else None
+            k_con = UnitNorm(axis=1) if u_norm_reg else None
+            if i == len(dims)-1:
+                act = output_activation
+            x = Dense(
+                units=dims[i],
+                activation=act,
+                kernel_regularizer=k_reg,
+                kernel_initializer=w_init,
+                kernel_constraint=k_con,
+                use_bias=use_bias,
+                name=decoder_layer_name % i)
+            decoder_layers.append(x)
+    return decoder_layers
+
+
+def get_output_act(flavor):
+    act_dict = {
+        'real': 'relu',
+        'binary': 'sigmoid',
+        'probability': 'sigmoid',
+    }
+    return act_dict[flavor]
+
+
+def noise_layers_fn(
+    layers,
+    flavor: str = 'real',
+    dropout_rate: float = 0.0,
+    noise_rate: float = 0.0,
+    ran_flip_conf: Dict = None,
+):
+    if dropout_rate > 0.0 and len(layers) > 2:
+        idx = np.arange(start=2, stop=int((2*len(layers))-2), step=2)
+        for i in idx:
+            layers.insert(i, Dropout(rate=dropout_rate))
+    if noise_rate > 0.0:
+        layers.insert(1, get_noise_layer(flavor, noise_rate, ran_flip_conf))
+    return layers
+
+
+def get_noise_layer(
+    flavor: str = 'real',
+    noise_rate: float = 0.0,
+    ran_flip_config=None
+):
+    noise_layer_dict = {
+        'real': GaussianNoise(stddev=noise_rate),
+        'binary': FlippingNoise(
+            up_frequencies=ran_flip_config['up_frequencies'],
+            b_idx=ran_flip_config['b_idx'],
+            rate=noise_rate
+        ) if ran_flip_config is not None else None,
+        'probability': TruncatedGaussianNoise(
+            stddev=noise_rate
+        ),
+    }
+    return noise_layer_dict[flavor]
 
 
 def create_clustering_model(n_clusters, encoder, alpha: float = 1.0):

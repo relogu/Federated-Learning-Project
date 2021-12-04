@@ -11,10 +11,10 @@ import numpy as np
 import pickle
 
 from py.dumping.output import dump_result_dict
-from py.dec.util import (create_dec_sae, create_clustering_model, target_distribution)
+from py.dec.util import (create_dec_sae, create_clustering_model, create_denoising_autoencoder, target_distribution)
 import py.metrics as my_metrics
 from py.parsers import dec_mnist_parser
-from . import compute_centroid_np
+from py import compute_centroid_np
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -89,8 +89,6 @@ if __name__ == "__main__":
         #     momentum=0.9,
         #     decay=(0.1-0.0001)/50000),
         'ae_optimizer': Adam(),
-        'ae_init': RandomNormal(mean=0.0,
-                                stddev=0.01),
         'ae_dims': [
             784,  # input
             500,  # first layer
@@ -98,6 +96,16 @@ if __name__ == "__main__":
             2000,  # third layer
             10,  # output (feature space)
         ],
+        'ae_act': 'relu',
+        'ae_init': RandomNormal(mean=0.0,
+                                stddev=0.01),
+        'is_tied': args.tied,
+        'u_norm_reg': args.u_norm,
+        'ortho_w_con': args.ortho,
+        'uncoll_feat_reg': args.uncoll,
+        'use_bias': args.use_bias,
+        'dropout_rate': args.dropout,
+        'noise_rate': args.noise,
         'ae_metrics': [
             my_metrics.rounded_accuracy,
         ],
@@ -115,9 +123,23 @@ if __name__ == "__main__":
         print('There are no existing weights in the output folder for the autoencoder')
 
         # with strategy.scope():
-        autoencoder, encoder, decoder = create_dec_sae(
+        # autoencoder, encoder, decoder = create_dec_sae(
+        #     dims=config['ae_dims'],
+        #     init=config['ae_init'])
+        autoencoder, encoder, decoder = create_denoising_autoencoder(
+            flavor='real',
             dims=config['ae_dims'],
-            init=config['ae_init'])
+            activation=config['ae_act'],
+            w_init=config['ae_init'],
+            is_tied=config['is_tied'],
+            u_norm_reg=config['u_norm_reg'],
+            ortho_w_con=config['ortho_w_con'],
+            uncoll_feat_reg=config['uncoll_feat_reg'],
+            use_bias=config['use_bias'],
+            dropout_rate=config['dropout_rate'],
+            noise_rate=config['noise_rate'],
+            ran_flip_conf=None,
+            )
 
         print(autoencoder.summary())
 
@@ -154,10 +176,24 @@ if __name__ == "__main__":
         print('There are no existing weights in the output folder for the autoencoder')
 
         # with strategy.scope():
-        autoencoder, encoder, decoder = create_dec_sae(
+        # autoencoder, encoder, decoder = create_dec_sae(
+        #     noise_std=0.0,
+        #     dims=config['ae_dims'],
+        #     init=config['ae_init'],
+        #     dropout_rate=0.0)
+        autoencoder, encoder, decoder = create_denoising_autoencoder(
+            flavor='real',
             dims=config['ae_dims'],
-            init=config['ae_init'],
-            dropout_rate=0.0)
+            activation=config['ae_act'],
+            is_tied=config['is_tied'],
+            u_norm_reg=config['u_norm_reg'],
+            ortho_w_con=config['ortho_w_con'],
+            uncoll_feat_reg=config['uncoll_feat_reg'],
+            use_bias=config['use_bias'],
+            dropout_rate=0.0,
+            noise_rate=0.0,
+            ran_flip_conf=None,
+            )
 
         encoder.set_weights(weights)
 
@@ -189,10 +225,24 @@ if __name__ == "__main__":
 
     # with strategy.scope():
     # clean from the auxialiary layer for the clustering model
-    autoencoder, encoder, decoder = create_dec_sae(
+    # autoencoder, encoder, decoder = create_dec_sae(
+    #     noise_std=0.0,
+    #     dims=config['ae_dims'],
+    #     init=config['ae_init'],
+    #     dropout_rate=0.0)
+    autoencoder, encoder, decoder = create_denoising_autoencoder(
+        flavor='real',
         dims=config['ae_dims'],
-        init=config['ae_init'],
-        dropout_rate=0.0)
+        activation=config['ae_act'],
+        is_tied=config['is_tied'],
+        u_norm_reg=config['u_norm_reg'],
+        ortho_w_con=config['ortho_w_con'],
+        uncoll_feat_reg=config['uncoll_feat_reg'],
+        use_bias=config['use_bias'],
+        dropout_rate=0.0,
+        noise_rate=0.0,
+        ran_flip_conf=None,
+        )
 
     param = np.load(trained_weights, allow_pickle=True)
     weights = np.array([param[p] for p in param])[0]
