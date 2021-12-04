@@ -5,23 +5,25 @@ Created on Wen Aug 4 10:37:10 2021
 
 @author: relogu
 """
-from py.dumping.output import dump_result_dict
-from py.dec.util import (create_dec_sae, create_clustering_model, target_distribution)
-import py.metrics as my_metrics
-from flwr.common.typing import Parameters
-from sklearn.cluster import KMeans
-from tensorflow.keras.initializers import RandomNormal
-from tensorflow.keras.optimizers import SGD
-import tensorflow as tf
-from tensorflow.keras.callbacks import LearningRateScheduler, EarlyStopping
 import argparse
 import os
 import pathlib
 import numpy as np
 import pickle
 
+from py.dumping.output import dump_result_dict
+from py.dec.util import (create_dec_sae, create_clustering_model, target_distribution)
+import py.metrics as my_metrics
+from flwr.common.typing import Parameters
+from sklearn.cluster import KMeans
+
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
+from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.optimizers import SGD
+import tensorflow as tf
+from tensorflow.keras.callbacks import LearningRateScheduler, EarlyStopping
 
 
 def get_parser():
