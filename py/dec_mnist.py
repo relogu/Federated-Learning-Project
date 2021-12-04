@@ -106,6 +106,7 @@ if __name__ == "__main__":
         'use_bias': args.use_bias,
         'dropout_rate': args.dropout,
         'noise_rate': args.noise,
+        'ran_flip_conf': None,
         'ae_metrics': [
             my_metrics.rounded_accuracy,
         ],
