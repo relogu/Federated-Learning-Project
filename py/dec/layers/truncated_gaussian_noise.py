@@ -1,0 +1,45 @@
+import tensorflow as tf
+from tensorflow.keras.layers import Layer
+from tensorflow.keras import backend
+from tensorflow.keras.utils import tf_utils
+
+
+class TruncatedGaussianNoise(Layer):
+    """"""
+    
+    def __init__(self, stddev, rate: float = 0.5, seed=None, **kwargs):
+        super(TruncatedGaussianNoise, self).__init__(**kwargs)
+        self.stddev = stddev
+        self.rate = rate
+        self.seed = seed
+        self._random_generator = backend.RandomGenerator(seed)
+    
+    def call(self, inputs, training=None):
+        
+        def noised():
+            noise = self._random_generator.random_normal(
+                shape=tf.shape(inputs),
+                mean=0.,
+                stddev=self.stddev,
+                dtype=inputs.dtype
+            )
+            zeros = tf.zeros(shape=tf.shape(inputs))
+            ones = tf.ones(shape=tf.shape(inputs))
+            condition = tf.random.uniform(shape=tf.shape(inputs)) >= self.rate
+            noised = tf.where(condition, inputs, noise)
+            neg_condition = noised < 0.0
+            greater_than_one_condition = noised > 1.0
+            noised = tf.where(neg_condition, noised, zeros)
+            noised = tf.where(greater_than_one_condition, noised, ones)
+            return noised
+        
+        return backend.in_train_phase(noised, inputs, training=training)
+    
+    def get_config(self):
+        config = {'stddev': self.stddev, 'seed': self.seed}
+        base_config = super(TruncatedGaussianNoise, self).get_config()
+        return dict(list(base_config.items())) + list(config.items())
+
+    @tf_utils.shape_type_conversion
+    def compute_output_shape(self, input_shape):
+        return input_shape
