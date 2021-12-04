@@ -30,6 +30,15 @@ def get_parser():
                         dest="cuda_flag",
                         action='store_true',
                         help="Flag for hardware acceleration using cuda (if available)")
+    parser.add_argument('--gpus',
+                        dest='gpus',
+                        required=False,
+                        nargs='+',
+                        type=int,
+                        default=0,
+                        #choices=range(8),
+                        #action='append',
+                        help='Id for the gpu(s) to use')
     parser.add_argument("--lim_cores",
                         dest="lim_cores",
                         action='store_true',
@@ -87,13 +96,14 @@ if __name__ == "__main__":
     # Restrict keras to use only 2 GPUs
     gpus = tf.config.list_physical_devices('GPU')
     print('Physical devices: {}'.format(gpus))
-    tf.config.set_visible_devices(gpus[2:], 'GPU')
+    print('GPU(s) chosen: {}'.format(args.gpus))
+    [tf.config.set_visible_devices(gpus[g], 'GPU') for g in args.gpus]
     gpus = tf.config.list_logical_devices('GPU')
     print('Logical devices: {}'.format(gpus))
-    strategy = tf.distribute.experimental.CentralStorageStrategy(
-        compute_devices=gpus[1:],
-        parameter_device=gpus[0]
-    )
+    # strategy = tf.distribute.experimental.CentralStorageStrategy(
+    #     compute_devices=gpus[1:],
+    #     parameter_device=gpus[0]
+    # )
     # strategy = tf.distribute.MirroredStrategy(gpus)
     
     # preparing dataset
@@ -143,18 +153,18 @@ if __name__ == "__main__":
     if not pretrained_weights.exists():
         print('There are no existing weights in the output folder for the autoencoder')
         
-        with strategy.scope():
-            autoencoder, encoder, decoder = create_dec_sae(
-                dims=config['ae_dims'],
-                init=config['ae_init'])
-            
-            print(autoencoder.summary())
-            
-            autoencoder.compile(
-                metrics=config['ae_metrics'],
-                optimizer=config['ae_optimizer'],
-                loss=config['ae_loss']
-            )
+        # with strategy.scope():
+        autoencoder, encoder, decoder = create_dec_sae(
+            dims=config['ae_dims'],
+            init=config['ae_init'])
+        
+        print(autoencoder.summary())
+        
+        autoencoder.compile(
+            metrics=config['ae_metrics'],
+            optimizer=config['ae_optimizer'],
+            loss=config['ae_loss']
+        )
         
         # fitting the autoencoder
         history = autoencoder.fit(x=x_train,
@@ -182,19 +192,19 @@ if __name__ == "__main__":
         weights = np.array([param[p] for p in param])[0]
         print('There are no existing weights in the output folder for the autoencoder')
         
-        with strategy.scope():
-            autoencoder, encoder, decoder = create_dec_sae(
-                dims=config['ae_dims'],
-                init=config['ae_init'],
-                dropout_rate=0.0)
+        # with strategy.scope():
+        autoencoder, encoder, decoder = create_dec_sae(
+            dims=config['ae_dims'],
+            init=config['ae_init'],
+            dropout_rate=0.0)
 
-            encoder.set_weights(weights)
-            
-            autoencoder.compile(
-                metrics=config['ae_metrics'],
-                optimizer=config['ae_optimizer'],
-                loss=config['ae_loss']
-            )
+        encoder.set_weights(weights)
+        
+        autoencoder.compile(
+            metrics=config['ae_metrics'],
+            optimizer=config['ae_optimizer'],
+            loss=config['ae_loss']
+        )
 
         # fitting again the autoencoder
         history = autoencoder.fit(x=x_train,
@@ -217,12 +227,12 @@ if __name__ == "__main__":
         np.savez(path_to_out/'encoder_ft', parameters)
 
 
-    with strategy.scope():
-        # clean from the auxialiary layer for the clustering model
-        autoencoder, encoder, decoder = create_dec_sae(
-            dims=config['ae_dims'],
-            init=config['ae_init'],
-            dropout_rate=0.0)
+    # with strategy.scope():
+    # clean from the auxialiary layer for the clustering model
+    autoencoder, encoder, decoder = create_dec_sae(
+        dims=config['ae_dims'],
+        init=config['ae_init'],
+        dropout_rate=0.0)
 
     param = np.load(trained_weights, allow_pickle=True)
     weights = np.array([param[p] for p in param])[0]
@@ -242,18 +252,18 @@ if __name__ == "__main__":
     np.savez(path_to_out/'initial_centroids', initial_centroids)
 
 
-    with strategy.scope():
-        # training the clustering model
-        clustering_model = create_clustering_model(
-            config['n_clusters'],
-            encoder,
-            alpha=9)
-        # compiling the clustering model
-        clustering_model.compile(
-            optimizer=config['cl_optimizer'],
-            loss=config['cl_loss'])
-        clustering_model.get_layer(
-            name='clustering').set_weights(initial_centroids)
+    # with strategy.scope():
+    # training the clustering model
+    clustering_model = create_clustering_model(
+        config['n_clusters'],
+        encoder,
+        alpha=9)
+    # compiling the clustering model
+    clustering_model.compile(
+        optimizer=config['cl_optimizer'],
+        loss=config['cl_loss'])
+    clustering_model.get_layer(
+        name='clustering').set_weights(initial_centroids)
     y_old = None
     train_loss, eval_loss = 0.1, 0
     i = 0
