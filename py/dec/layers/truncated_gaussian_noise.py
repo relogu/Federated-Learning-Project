@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Layer
 from tensorflow.keras import backend
-from tensorflow.keras.utils import tf_utils
+from tensorflow.keras.backend import random_normal
 
 
 class TruncatedGaussianNoise(Layer):
@@ -12,12 +12,11 @@ class TruncatedGaussianNoise(Layer):
         self.stddev = stddev
         self.rate = rate
         self.seed = seed
-        self._random_generator = backend.RandomGenerator(seed)
     
     def call(self, inputs, training=None):
         
         def noised():
-            noise = self._random_generator.random_normal(
+            noise = random_normal(
                 shape=tf.shape(inputs),
                 mean=0.,
                 stddev=self.stddev,
@@ -39,7 +38,6 @@ class TruncatedGaussianNoise(Layer):
         config = {'stddev': self.stddev, 'seed': self.seed}
         base_config = super(TruncatedGaussianNoise, self).get_config()
         return dict(list(base_config.items())) + list(config.items())
-
-    @tf_utils.shape_type_conversion
+    
     def compute_output_shape(self, input_shape):
         return input_shape
