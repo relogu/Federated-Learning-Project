@@ -11,7 +11,7 @@ import numpy as np
 import pickle
 
 from py.dumping.output import dump_result_dict
-from py.dec.util import (create_autoencoder, create_clustering_model, target_distribution)
+from py.dec.util import (create_denoising_autoencoder, create_autoencoder, create_clustering_model, target_distribution)
 from losses import get_keras_loss
 import py.metrics as my_metrics
 from parsers import dec_bmnist_parser
@@ -23,7 +23,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 from tensorflow.keras.initializers import RandomNormal, VarianceScaling, GlorotUniform
 from tensorflow.keras.optimizers import SGD, Adam
 import tensorflow as tf
-from tensorflow.keras.callbacks import LearningRateScheduler
+from tensorflow.keras.callbacks import LearningRateScheduler, EarlyStopping
 import tensorflow_addons.metrics as tfa_metrics
 from flwr.common.typing import Parameters
 from sklearn.cluster import KMeans
@@ -79,19 +79,11 @@ if __name__ == "__main__":
         return lr
 
     config = {
-        'batch_size': args.batch_size,
+        'batch_size':256,
         'n_clusters': 10,
         'kmeans_epochs': 300,
-        'kmeans_n_init': 25,
-        'binary': args.binary,
-        'tied': args.tied,
-        'dropout': args.dropout,
-        'ortho': args.ortho,
-        'u_norm': args.u_norm,
-        'ran_flip': args.ran_flip,
-        'use_bias': True,
-        'b_idx': [],
-        'ae_epochs': args.ae_epochs,
+        'kmeans_n_init': 20,
+        'ae_epochs': 50000,
         # 'ae_optimizer': SGD(learning_rate=config['ae_lr'],
         #                    momentum=config['ae_momentum'],
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
@@ -100,30 +92,39 @@ if __name__ == "__main__":
         #     momentum=0.9,#),
         #     decay=(0.1-0.0001)/args.ae_epochs),
         'ae_optimizer': Adam(),
-        # 'init': VarianceScaling(scale=1. / 2.,#3.,
+        'ae_dims': [
+            784,  # input
+            500,  # first layer
+            500,  # second layer
+            2000,  # third layer
+            10,  # output (feature space)
+        ],
+        # 'relu' --> DEC paper # 'selu' --> is better for binary
+        'ae_act': 'relu',
+        # 'ae_init': VarianceScaling(scale=1. / 2.,#3.,
         #                        mode='fan_in',
         #                        distribution="uniform"), # old
-        # 'init': RandomNormal(mean=0.0,
+        # 'ae_init': RandomNormal(mean=0.0,
         #                     stddev=0.2)  # stddev=0.01), # DEC paper, is better
-        'init': GlorotUniform(seed=51550),
-        'dims': [
-            n_features,
-            500,
-            500,
-            2000,
-            10
-        ],  # DEC paper proportions
-        # 'relu' --> DEC paper # 'selu' --> is better for binary
-        'act': 'relu',
+        'ae_init': GlorotUniform(seed=51550),
+        'is_tied': args.tied,
+        'u_norm_reg': args.u_norm,
+        'ortho_w_con': args.ortho,
+        'uncoll_feat_reg': args.uncoll,
+        'use_bias': args.use_bias,
+        'dropout_rate': args.dropout,
+        'noise_rate': args.noise,
+        'ran_flip_conf': None,
+        # 'ran_flip': args.ran_flip,
+        # 'b_idx': [],
         'ae_metrics': [
             my_metrics.rounded_accuracy,
             'mse',
             tfa_metrics.HammingLoss(mode='multilabel', threshold=0.50)
         ],
         'cl_optimizer': SGD(
-            learning_rate=args.cl_lr,
+            learning_rate=0.01,
             momentum=0.9),
-        'cl_epochs': args.cl_epochs,
         'update_interval': args.update_interval,
         'ae_loss': get_keras_loss(args.ae_loss),
         'cl_loss': 'kld',
@@ -140,8 +141,22 @@ if __name__ == "__main__":
     if not pretrained_weights.exists():
         print('There are no existing weights in the output folder for the autoencoder')
 
-        autoencoder, encoder, decoder = create_autoencoder(
-            config, up_frequencies)
+        # autoencoder, encoder, decoder = create_autoencoder(
+        #     config, up_frequencies)
+        autoencoder, encoder, decoder = create_denoising_autoencoder(
+            flavor='probability',
+            dims=config['ae_dims'],
+            activation=config['ae_act'],
+            w_init=config['ae_init'],
+            is_tied=config['is_tied'],
+            u_norm_reg=config['u_norm_reg'],
+            ortho_w_con=config['ortho_w_con'],
+            uncoll_feat_reg=config['uncoll_feat_reg'],
+            use_bias=config['use_bias'],
+            dropout_rate=config['dropout_rate'],
+            noise_rate=config['noise_rate'],
+            ran_flip_conf=config['ran_flip_conf'],
+            )
 
         autoencoder.compile(
             metrics=config['ae_metrics'],
@@ -155,7 +170,14 @@ if __name__ == "__main__":
                                   batch_size=config['batch_size'],
                                   epochs=int(config['ae_epochs']),
                                   validation_data=(x_test, x_test),
-                                  #callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
+                                  callbacks=[  # LearningRateScheduler(lr_step_decay, verbose=1),
+                                      EarlyStopping(
+                                          patience=5000,
+                                          verbose=1,
+                                          mode="auto",
+                                          baseline=None,
+                                          restore_best_weights=False,)
+                                  ],
                                   verbose=2)
         with open(path_to_out/'pretrain_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
@@ -167,9 +189,22 @@ if __name__ == "__main__":
         param: Parameters = np.load(pretrained_weights, allow_pickle=True)
         weights = param['arr_0']
         # no dropout, keep denoising
-        config['dropout'] = 0.0
-        config['ran_flip'] = 0.0
-        autoencoder, encoder, decoder = create_autoencoder(config, None)
+        # config['dropout'] = 0.0
+        # config['ran_flip'] = 0.0
+        # autoencoder, encoder, decoder = create_autoencoder(config, None)
+        autoencoder, encoder, decoder = create_denoising_autoencoder(
+            flavor='probability',
+            dims=config['ae_dims'],
+            activation=config['ae_act'],
+            is_tied=config['is_tied'],
+            u_norm_reg=config['u_norm_reg'],
+            ortho_w_con=config['ortho_w_con'],
+            uncoll_feat_reg=config['uncoll_feat_reg'],
+            use_bias=config['use_bias'],
+            dropout_rate=0.0,
+            noise_rate=0.0,
+            ran_flip_conf=None,
+            )
 
         encoder.set_weights(weights)
 
@@ -185,7 +220,14 @@ if __name__ == "__main__":
                                   batch_size=config['batch_size'],
                                   epochs=int(2*config['ae_epochs']),
                                   validation_data=(x_test, x_test),
-                                  #callbacks=[LearningRateScheduler(lr_step_decay, verbose=1)],
+                                  callbacks=[  # LearningRateScheduler(lr_step_decay, verbose=1),
+                                      EarlyStopping(
+                                          patience=5000,
+                                          verbose=1,
+                                          mode="auto",
+                                          baseline=None,
+                                          restore_best_weights=False,)
+                                  ],
                                   verbose=2)
         with open(path_to_out/'finetune_ae_history', 'wb') as file_pi:
             pickle.dump(history.history, file_pi)
@@ -193,7 +235,20 @@ if __name__ == "__main__":
         np.savez(path_to_out/'encoder_ft', parameters)
 
     # clean from the auxialiary layer for the clustering model
-    autoencoder, encoder, decoder = create_autoencoder(config, None)
+    # autoencoder, encoder, decoder = create_autoencoder(config, None)
+    autoencoder, encoder, decoder = create_denoising_autoencoder(
+        flavor='probability',
+        dims=config['ae_dims'],
+        activation=config['ae_act'],
+        is_tied=config['is_tied'],
+        u_norm_reg=config['u_norm_reg'],
+        ortho_w_con=config['ortho_w_con'],
+        uncoll_feat_reg=config['uncoll_feat_reg'],
+        use_bias=config['use_bias'],
+        dropout_rate=0.0,
+        noise_rate=0.0,
+        ran_flip_conf=None,
+        )
 
     param: Parameters = np.load(trained_weights, allow_pickle=True)
     weights = param['arr_0']

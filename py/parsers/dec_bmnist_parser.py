@@ -3,12 +3,8 @@ from losses import get_keras_loss_names
 
 
 def dec_bmnist_parser():
-    parser = argparse.ArgumentParser(description="UDE Training Script")
-    parser.add_argument("--batch_size",
-                        dest="batch_size",
-                        default=256,
-                        type=int,
-                        help="Batch size")
+    parser = argparse.ArgumentParser(
+        description='BMNIST Training Script')
     parser.add_argument("--hardware_acc",
                         dest="cuda_flag",
                         action='store_true',
@@ -28,81 +24,6 @@ def dec_bmnist_parser():
                         dest="out_folder",
                         type=type(str('')),
                         help="Folder to output images")
-    parser.add_argument('--ae_epochs',
-                        dest='ae_epochs',
-                        required=False,
-                        type=int,
-                        default=50000,
-                        action='store',
-                        help='number of epochs for the autoencoder pre-training')
-    parser.add_argument('--ae_loss',
-                        dest='ae_loss',
-                        required=True,
-                        type=type(''),
-                        default='mse',
-                        choices=get_keras_loss_names(),
-                        action='store',
-                        help='Loss function for autoencoder training')
-    parser.add_argument('--cl_epochs',
-                        dest='cl_epochs',
-                        required=False,
-                        type=int,
-                        default=10000,
-                        action='store',
-                        help='number of epochs for the clustering step')
-    parser.add_argument('--binary',
-                        dest='binary',
-                        required=False,
-                        action='store_true',
-                        help='Flag for using probabilistic binary neurons')
-    parser.add_argument('--tied',
-                        dest='tied',
-                        required=False,
-                        action='store_true',
-                        help='Flag for using tied layers in autoencoder')
-    parser.add_argument('--plotting',
-                        dest='plotting',
-                        required=False,
-                        action='store_true',
-                        help='Flag for plotting confusion matrix')
-    parser.add_argument('--dropout',
-                        dest='dropout',
-                        type=float,
-                        default=0.20,
-                        required=False,
-                        action='store',
-                        help='Flag for dropout layer in autoencoder')
-    parser.add_argument('--ran_flip',
-                        dest='ran_flip',
-                        type=float,
-                        default=0.20,
-                        required=False,
-                        action='store',
-                        help='Flag for RandomFlipping layer in autoencoder')
-    parser.add_argument('--ortho',
-                        dest='ortho',
-                        required=False,
-                        action='store_true',
-                        help='Flag for orthogonality regularizer in autoencoder (tied only)')
-    parser.add_argument('--u_norm',
-                        dest='u_norm',
-                        required=False,
-                        action='store_true',
-                        help='Flag for unit norm constraint in autoencoder (tied only)')
-    parser.add_argument('--cl_lr',
-                        dest='cl_lr',
-                        required=False,
-                        type=float,
-                        default=0.01,
-                        action='store',
-                        help='clustering model learning rate')
-    parser.add_argument('--update_interval',
-                        dest='update_interval',
-                        required=False,
-                        type=int,
-                        default=140,
-                        action='store',
-                        help='set the update interval for the clusters distribution')
     parser.add_argument('--seed',
                         dest='seed',
                         required=False,
@@ -115,4 +36,53 @@ def dec_bmnist_parser():
                         required=False,
                         action='store_true',
                         help='Flag for verbosity')
+    # AE arguments
+    # TODO: descriptions
+    parser.add_argument('--ae_loss',
+                        dest='ae_loss',
+                        required=True,
+                        type=type(''),
+                        default='mse',
+                        choices=get_keras_loss_names(),
+                        action='store',
+                        help='Loss function for autoencoder training')
+    parser.add_argument('--tied',
+                        dest='tied',
+                        action='store_true',
+                        help='')
+    parser.add_argument('--u_norm',
+                        dest='u_norm',
+                        action='store_true',
+                        help='')
+    parser.add_argument('--ortho',
+                        dest='ortho',
+                        action='store_true',
+                        help='')
+    parser.add_argument('--uncoll',
+                        dest='uncoll',
+                        action='store_true',
+                        help='')
+    parser.add_argument('--use_bias',
+                        dest='use_bias',
+                        action='store_true',
+                        help='')
+    parser.add_argument('--dropout',
+                        dest='dropout',
+                        type=float,
+                        default=0.2,
+                        action='store',
+                        help='')
+    parser.add_argument('--noise',
+                        dest='noise',
+                        type=float,
+                        default=0.1,
+                        action='store',
+                        help='')
+    # Clustering arguments
+    parser.add_argument('--update_interval',
+                        dest='update_interval',
+                        type=int,
+                        default=160,
+                        action='store',
+                        help='set the update interval for the clusters distribution')
     return parser

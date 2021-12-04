@@ -3,50 +3,65 @@
 echo $PWD
 export PYTHONPATH="$PWD:$PYTHONPATH"
 
-echo "Number of clusters $1"
-CLUSTERS="$1"
-echo "Output folder $2"
-OUT_FOL="$2"
-echo "Fill NaNs $3"
-FILL=""
-DS="final"
-if [ $3 == "fill" ]
-then
-FILL="--fill"
-DS="$3"
+echo "Arguments passed: $#"
+echo "Arguments: $@"
+if [ $1 == "-h" ]; then
+echo "Arguments pattern: <out folder> <tied> <unit norm> <ortho weights> <uncoll feat> <use bias> <ae loss> <gpus ids>"
+exit
+else
+echo "Output folder $1"
+OUT_FOL="$1"
+shift
+echo "Tied? $1"
+TIED=""
+if [ $1 == "y" ]; then
+TIED="--tied"
 fi
-echo "Dataset type chosen $DS"
-echo "Use orthogonality constraint $4"
+shift
+echo "Unit norm? $1"
+UNORM=""
+if [ $1 == "y" ]; then
+UNORM="--u_norm"
+fi
+shift
+echo "Ortho weights? $1"
 ORTHO=""
-if [ $4 == "y" ]
-then
+if [ $1 == "y" ]; then
 ORTHO="--ortho"
 fi
-echo "Use loss $5"
-echo "Ae epochs $6"
+shift
+echo "Uncollerated features? $1"
+UNCOLL=""
+if [ $1 == "y" ]; then
+UNCOLL="--uncoll"
+fi
+shift
+echo "Use bias? $1"
+BIAS=""
+if [ $1 == "y" ]; then
+BIAS="--use_bias"
+fi
+shift
+echo "Loss function $1"
+LOSS=$1
+shift
+GPUS=""
+for var in "$@"
+do
+    echo "Selected GPU $var"
+    GPUS="$GPUS $var"
+done
+echo "GPU selected $GPUS"
 
-LETTER=""
 SCRIPT="py/dec_bmnist.py"
 
-
 mkdir "$PWD/$OUT_FOL"
-LETTER="z"
-DROPOUT="0.20"
-RAN_FLIP="0.20"
-U_NORM="--u_norm"
-AE_EPOCHS=$6
-# entire dataset
 
-nohup python3 $SCRIPT $FILL $ORTHO \
-    --ae_epochs $AE_EPOCHS \
-    --ae_loss $5 \
-    --cl_epochs 20000 \
-    --update_interval 140 \
-    --n_clusters $CLUSTERS \
-    --dropout $DROPOUT \
-    --ran_flip $RAN_FLIP \
-    --tied $DATASET \
+nohup python3 $SCRIPT $TIED $U_NORM $ORTHO $UNCOLL $BIAS \
+    --ae_loss $LOSS \
     --folder "$PWD/$OUT_FOL" \
     --hardware_acc \
+    --gpus$GPUS \
     --verbose >> "$PWD/$OUT_FOL/log.txt"
 wait
+fi
