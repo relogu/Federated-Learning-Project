@@ -14,8 +14,8 @@ from py.dumping.output import dump_result_dict
 from py.dec.util import (create_autoencoder, create_clustering_model, target_distribution)
 from losses import get_keras_loss
 import py.metrics as my_metrics
-from py.parsers import dec_bmnist_parser
-from . import compute_centroid_np
+from parsers import dec_bmnist_parser
+from py import compute_centroid_np
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -90,6 +90,7 @@ if __name__ == "__main__":
         'u_norm': args.u_norm,
         'ran_flip': args.ran_flip,
         'use_bias': True,
+        'b_idx': [],
         'ae_epochs': args.ae_epochs,
         # 'ae_optimizer': SGD(learning_rate=config['ae_lr'],
         #                    momentum=config['ae_momentum'],
@@ -110,7 +111,7 @@ if __name__ == "__main__":
             500,
             500,
             2000,
-            args.n_clusters
+            10
         ],  # DEC paper proportions
         # 'relu' --> DEC paper # 'selu' --> is better for binary
         'act': 'relu',
