@@ -140,9 +140,7 @@ if __name__ == "__main__":
     pretrained_weights = path_to_out/'encoder.npz'
     if not pretrained_weights.exists():
         print('There are no existing weights in the output folder for the autoencoder')
-
-        # autoencoder, encoder, decoder = create_autoencoder(
-        #     config, up_frequencies)
+        
         autoencoder, encoder, decoder = create_denoising_autoencoder(
             flavor='probability',
             dims=config['ae_dims'],
@@ -189,9 +187,6 @@ if __name__ == "__main__":
         param: Parameters = np.load(pretrained_weights, allow_pickle=True)
         weights = param['arr_0']
         # no dropout, keep denoising
-        # config['dropout'] = 0.0
-        # config['ran_flip'] = 0.0
-        # autoencoder, encoder, decoder = create_autoencoder(config, None)
         autoencoder, encoder, decoder = create_denoising_autoencoder(
             flavor='probability',
             dims=config['ae_dims'],
@@ -235,7 +230,6 @@ if __name__ == "__main__":
         np.savez(path_to_out/'encoder_ft', parameters)
 
     # clean from the auxialiary layer for the clustering model
-    # autoencoder, encoder, decoder = create_autoencoder(config, None)
     autoencoder, encoder, decoder = create_denoising_autoencoder(
         flavor='probability',
         dims=config['ae_dims'],
@@ -372,4 +366,4 @@ if __name__ == "__main__":
             name='clustering').get_weights(), dtype=object)
         np.savez(path_to_out/'final_centroids', parameters)
 
-        #break
+        break
