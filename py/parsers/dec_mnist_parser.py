@@ -63,7 +63,7 @@ def dec_mnist_parser():
     parser.add_argument('--noise',
                         dest='noise',
                         type=float,
-                        default=0.1,
+                        default=0.5,
                         action='store',
                         help='')
     # Clustering arguments
