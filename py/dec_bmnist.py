@@ -33,6 +33,7 @@ if __name__ == "__main__":
     # configuration
     # get parameters
     args = dec_bmnist_parser().parse_args()
+    print('Arguments passed: {}'.format(args))
     # disable possible gpu devices (add hard acc, selection)
     if not args.cuda_flag:
         print('No CUDA')
@@ -303,6 +304,7 @@ if __name__ == "__main__":
         idx = np.random.permutation(len(x_train))
         x_train = x_train[idx, :]
         y_old = y_old[idx]
+        y_train = y_train[idx]
         print('Updating the target distribution')
         train_q = clustering_model(x_train).numpy()
         # update the auxiliary target distribution p
@@ -367,3 +369,5 @@ if __name__ == "__main__":
         np.savez(path_to_out/'final_centroids', parameters)
 
         break
+    
+    print('Configuration dict: {}'.format(config))
