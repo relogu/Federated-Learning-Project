@@ -91,7 +91,7 @@ if __name__ == "__main__":
         'ae_optimizer': SGD(
             learning_rate=0.1,
             momentum=0.9,#),
-            decay=(0.1-0.0001)/args.ae_epochs),
+            decay=(0.1-0.0001)/50000),
         # 'ae_optimizer': Adam(),
         'ae_dims': [
             784,  # input
