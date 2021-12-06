@@ -6,7 +6,7 @@ Created on Wen Aug 4 10:37:10 2021
 @author: relogu
 """
 
-import tensorflow.keras.backend as K
+import tensorflow as tf
 from tensorflow.keras import activations, initializers, regularizers, constraints
 from tensorflow.keras.layers import InputSpec, Layer
 
@@ -77,9 +77,9 @@ class DenseTied(Layer):
         return tuple(output_shape)
 
     def call(self, inputs):
-        output = K.dot(inputs, K.transpose(self.kernel))
+        output = tf.matmul(inputs, self.kernel, transpose_b=True)
         if self.use_bias:
-            output = K.bias_add(output, self.bias, data_format='channels_last')
+            output = output + self.bias
         if self.activation is not None:
             output = self.activation(output)
         return output
