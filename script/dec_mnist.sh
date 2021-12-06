@@ -54,7 +54,7 @@ SCRIPT="py/dec_mnist.py"
 
 mkdir "$PWD/$OUT_FOL"
 
-nohup python3 $SCRIPT $TIED $U_NORM $ORTHO $UNCOLL $BIAS\
+nohup python3 $SCRIPT $TIED $UNORM $ORTHO $UNCOLL $BIAS\
     --folder "$PWD/$OUT_FOL" \
     --hardware_acc \
     --gpus$GPUS \

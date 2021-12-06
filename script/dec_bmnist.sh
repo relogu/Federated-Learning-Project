@@ -57,7 +57,7 @@ SCRIPT="py/dec_bmnist.py"
 
 mkdir "$PWD/$OUT_FOL"
 
-nohup python3 $SCRIPT $TIED $U_NORM $ORTHO $UNCOLL $BIAS \
+nohup python3 $SCRIPT $TIED $UNORM $ORTHO $UNCOLL $BIAS \
     --ae_loss $LOSS \
     --folder "$PWD/$OUT_FOL" \
     --hardware_acc \
