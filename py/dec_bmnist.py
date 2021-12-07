@@ -11,7 +11,7 @@ import numpy as np
 import pickle
 
 from py.dumping.output import dump_result_dict
-from py.dec.util import (create_denoising_autoencoder, create_autoencoder, create_clustering_model, target_distribution)
+from py.dec.util import (create_denoising_autoencoder, create_clustering_model, target_distribution)
 from losses import get_keras_loss
 import py.metrics as my_metrics
 from parsers import dec_bmnist_parser
