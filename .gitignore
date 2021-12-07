@@ -1,5 +1,6 @@
 *.txt
 !spec-file.txt
+CUDA Toolkit Helper*
 
 *.pyc
 
@@ -30,6 +31,9 @@
 *_images*
 
 *.ipynb*
+!bmnist_single_model_topo_results.ipynb
+!mnist_single_model_topo_results.ipynb
+!single_model_topo_results.ipynb
 
 *.dat
 
