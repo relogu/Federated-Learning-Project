@@ -85,18 +85,18 @@ if __name__ == "__main__":
         'n_clusters': 10,
         'kmeans_n_init': 20,
         'ae_epochs': 50000,
-        'ae_optimizer': SGD(
-            learning_rate=0.1,
-            momentum=0.9,
-            decay=(0.1-0.0001)/50000),
+        # 'ae_optimizer': SGD(
+        #     learning_rate=0.1,
+        #     momentum=0.9,
+        #     decay=(0.1-0.0001)/50000),
         'ae_optimizer': Adam(),
-        # 'ae_dims': [
-        #     784,  # input
-        #     500,  # first layer
-        #     500,  # second layer
-        #     2000,  # third layer
-        #     10,  # output (feature space)
-        # ],
+        'ae_dims': [
+            784,  # input
+            500,  # first layer
+            500,  # second layer
+            2000,  # third layer
+            10,  # output (feature space)
+        ],
         'ae_act': 'relu',
         'ae_init': RandomNormal(mean=0.0,
                                 stddev=0.01),
