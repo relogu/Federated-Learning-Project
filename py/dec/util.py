@@ -30,6 +30,41 @@ dec_layers = 'Decoder Layers: {}'
 ae_layers = 'Autoencoder Layers: {}'
 
 
+def create_autoencoder(net_arch, up_frequencies):
+    if net_arch['binary']:
+        return create_denoising_autoencoder(
+            flavor='probability',
+            dims=net_arch['dims'],
+            activation=net_arch['act'],
+            w_init='glorot_uniform',
+            is_tied=net_arch['tied'],
+            u_norm_reg=net_arch['u_norm'],
+            ortho_w_con=net_arch['ortho'],
+            uncoll_feat_reg=False,
+            use_bias=True,
+            dropout_rate=net_arch['dropout'],
+            noise_rate=net_arch['ran_flip'],
+            ran_flip_conf={'b_idx': net_arch['b_idx'],
+                           'up_freq': up_frequencies}
+        )
+    else:
+        return create_denoising_autoencoder(
+            flavor='real',
+            dims=net_arch['dims'],
+            activation=net_arch['act'],
+            w_init='glorot_uniform',
+            is_tied=net_arch['tied'],
+            u_norm_reg=net_arch['u_norm'],
+            ortho_w_con=net_arch['ortho'],
+            uncoll_feat_reg=False,
+            use_bias=True,
+            dropout_rate=net_arch['dropout'],
+            noise_rate=net_arch['ran_flip'],
+            ran_flip_conf={'b_idx': net_arch['b_idx'],
+                           'up_freq': up_frequencies}
+        )
+
+
 def create_denoising_autoencoder(
     flavor: str = 'real',
     dims: List[int] = None,
