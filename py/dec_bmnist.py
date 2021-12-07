@@ -25,7 +25,6 @@ from tensorflow.keras.optimizers import SGD, Adam
 import tensorflow as tf
 from tensorflow.keras.callbacks import LearningRateScheduler, EarlyStopping
 import tensorflow_addons.metrics as tfa_metrics
-from flwr.common.typing import Parameters
 from sklearn.cluster import KMeans
 
 
@@ -185,7 +184,7 @@ if __name__ == "__main__":
 
     trained_weights = path_to_out/'encoder_ft.npz'
     if not trained_weights.exists():
-        param: Parameters = np.load(pretrained_weights, allow_pickle=True)
+        param = np.load(pretrained_weights, allow_pickle=True)
         weights = param['arr_0']
         # no dropout, keep denoising
         autoencoder, encoder, decoder = create_denoising_autoencoder(
@@ -245,7 +244,7 @@ if __name__ == "__main__":
         ran_flip_conf=None,
         )
 
-    param: Parameters = np.load(trained_weights, allow_pickle=True)
+    param = np.load(trained_weights, allow_pickle=True)
     weights = param['arr_0']
     encoder.set_weights(weights)
 

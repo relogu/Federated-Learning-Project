@@ -23,7 +23,6 @@ from tensorflow.keras.initializers import RandomNormal, GlorotUniform
 from tensorflow.keras.optimizers import SGD, Adam
 import tensorflow as tf
 from tensorflow.keras.callbacks import LearningRateScheduler, EarlyStopping
-from flwr.common.typing import Parameters
 from sklearn.cluster import KMeans
 
 
