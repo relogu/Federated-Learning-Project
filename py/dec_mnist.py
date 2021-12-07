@@ -258,7 +258,6 @@ if __name__ == "__main__":
     np.savez(path_to_out/'initial_centroids', centroids)
     print('Shape of centroids layer {}'.format(np.array([centroids]).shape))
 
-    # with strategy.scope():
     # training the clustering model
     clustering_model = create_clustering_model(
         n_clusters=config['n_clusters'],
@@ -270,8 +269,7 @@ if __name__ == "__main__":
         loss=config['cl_loss'])
     clustering_model.get_layer(
         name='clustering').set_weights(np.array([kmeans.cluster_centers_]))
-    y_old = initial_labels
-    train_loss, eval_loss = 0.1, 0
+    train_y_old = initial_labels
     i = 0
     while True:
         i += 1
@@ -280,7 +278,7 @@ if __name__ == "__main__":
         print('Shuffling data')
         idx = np.random.permutation(len(x_train))
         x_train = x_train[idx, :]
-        y_old = y_old[idx]
+        train_y_old = train_y_old[idx]
         y_train = y_train[idx]
         print('Updating the target distribution')
         train_q = clustering_model(x_train).numpy()
@@ -291,44 +289,51 @@ if __name__ == "__main__":
                              verbose=2,
                              batch_size=config['batch_size'],
                              steps_per_epoch=config['update_interval'])
-        # evaluation
-        q = clustering_model(x_train).numpy()
-        y_pred = q.argmax(1)
-        # update the auxiliary target distribution p
-        p = target_distribution(q)
-        # retrieving loss
-        loss = clustering_model.evaluate(x_train, p, verbose=2)
-        # test
-        q = clustering_model(x_test).numpy()
-        # update the auxiliary target distribution p
-        p = target_distribution(q)
-        # retrieving loss
-        loss = clustering_model.evaluate(x_test, p, verbose=2)
-        # getting the cycle accuracy of evaluation set
-        x_ae_test = autoencoder(x_test)
-        y_ae_pred = clustering_model(
-            np.round(x_ae_test)).numpy().argmax(1)
-        cycle_acc = my_metrics.acc(y_pred, y_ae_pred)
-        del y_ae_pred, x_ae_test
-        # evaluating metrics
+        # total train loss
+        train_q = clustering_model(x_train).numpy()
+        train_p = target_distribution(train_q)
+        train_loss = clustering_model.evaluate(x_train, train_p, verbose=2)
+        train_y_pred = train_q.argmax(1)
+        # eval loss
+        eval_q = clustering_model(x_test).numpy()
+        eval_p = target_distribution(eval_q)
+        eval_loss = clustering_model.evaluate(x_test, eval_p, verbose=2)
+        eval_y_pred = eval_q.argmax(1)
+        # train cycle acc
+        train_x_ae = autoencoder(x_train).numpy()
+        train_y_ae_pred = clustering_model(np.round(train_x_ae)).numpy().argmax(1)
+        train_cycle_acc = my_metrics.acc(train_y_pred, train_y_ae_pred)
+        # eval cycle acc
+        eval_x_ae = autoencoder(x_test).numpy()
+        eval_y_ae_pred = clustering_model(np.round(eval_x_ae)).numpy().argmax(1)
+        eval_cycle_acc = my_metrics.acc(eval_y_pred, eval_y_ae_pred)
+        # clustering metrics
         result = {}
-        if y_test is not None and args.verbose:
-            acc = my_metrics.acc(y_test, y_pred)
-            nmi = my_metrics.nmi(y_test, y_pred)
-            print('DEC Clustering\nEpoch %d\n\tacc %.5f\n\tnmi %.5f' %
-                  (i, acc, nmi))
-            print('Cycle accuracy is {}'.format(cycle_acc))
-            # dumping and retrieving the results
-            metrics = {'accuracy': acc,
-                       'normalized_mutual_info_score': nmi, }
-            result = metrics.copy()
-        result['cycle_accuracy'] = cycle_acc
-        result['loss'] = eval_loss
+        train_acc = my_metrics.acc(y_train, train_y_pred)
+        train_nmi = my_metrics.nmi(y_train, train_y_pred)
+        eval_acc = my_metrics.acc(y_test, eval_y_pred)
+        eval_nmi = my_metrics.nmi(y_test, eval_y_pred)
+        print('DEC Clustering\nEpoch %d'
+              '\n\ttrain acc %.5f\n\ttrain nmi %.5f'
+              '\n\teval acc %.5f\n\teval nmi %.5f' %
+                (i, train_acc, train_nmi, eval_acc, eval_nmi))
+        print('Train cycle accuracy is %.5f\n'
+              'Eval cycle accuracy is %.5f' %
+                  (train_cycle_acc, eval_cycle_acc))
+        # dumping and retrieving the results
+        metrics = {'train_accuracy': train_acc,
+                   'train_normalized_mutual_info_score': train_nmi,
+                   'train_cycle_accuracy': train_cycle_acc,
+                   'train_loss': train_loss,
+                   'eval_accuracy': eval_acc,
+                   'eval_normalized_mutual_info_score': eval_nmi,
+                   'eval_cycle_accuracy': eval_cycle_acc,
+                   'eval_loss': eval_loss,}
+        result = metrics.copy()
         result['round'] = i
-        # check for required convergence
-        #tol = float(1 - my_metrics.acc(y_old, y_pred))
-        print(y_old == y_pred)
-        tol = float(1 - np.sum(y_old == y_pred)/len(x_train))
+        
+        # check for required convergence (computed on train set since unsupervised)
+        tol = float(1 - np.sum(train_y_old == train_y_pred)/len(x_train))
         if args.verbose:
             print("Current label change ratio is {}, i.e. {}/{} samples".
                   format(tol, int(tol*len(x_train)), len(x_train)))
@@ -337,7 +342,8 @@ if __name__ == "__main__":
                   format(tol, int(tol*len(x_train)), len(x_train), i))
             break
         else:
-            y_old = y_pred.copy()
+            train_y_old = train_y_pred.copy()
+        # dumping results
         result['tol'] = tol
         dump_result_dict('clustering_model', result,
                          path_to_out=path_to_out)
