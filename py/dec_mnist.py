@@ -89,18 +89,18 @@ if __name__ == "__main__":
             learning_rate=0.1,
             momentum=0.9,
             decay=(0.1-0.0001)/50000),
-        # 'ae_optimizer': Adam(),
-        'ae_dims': [
-            784,  # input
-            500,  # first layer
-            500,  # second layer
-            2000,  # third layer
-            10,  # output (feature space)
-        ],
+        'ae_optimizer': Adam(),
+        # 'ae_dims': [
+        #     784,  # input
+        #     500,  # first layer
+        #     500,  # second layer
+        #     2000,  # third layer
+        #     10,  # output (feature space)
+        # ],
         'ae_act': 'relu',
-        # 'ae_init': RandomNormal(mean=0.0,
-        #                         stddev=0.01),
-        'ae_init': GlorotUniform(seed=51550),
+        'ae_init': RandomNormal(mean=0.0,
+                                stddev=0.01),
+        # 'ae_init': GlorotUniform(seed=51550),
         'is_tied': args.tied,
         'u_norm_reg': args.u_norm,
         'ortho_w_con': args.ortho,
