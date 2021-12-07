@@ -88,11 +88,11 @@ if __name__ == "__main__":
         # 'ae_optimizer': SGD(learning_rate=config['ae_lr'],
         #                    momentum=config['ae_momentum'],
         #                    decay=(config['ae_lr']-0.0001)/config['ae_epochs']) , # old
-        'ae_optimizer': SGD(
-            learning_rate=0.1,
-            momentum=0.9,#),
-            decay=(0.1-0.0001)/50000),
-        # 'ae_optimizer': Adam(),
+        # 'ae_optimizer': SGD(
+        #     learning_rate=0.1,
+        #     momentum=0.9,#),
+        #     decay=(0.1-0.0001)/50000),
+        'ae_optimizer': Adam(),
         'ae_dims': [
             784,  # input
             500,  # first layer
