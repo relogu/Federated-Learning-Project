@@ -118,6 +118,8 @@ if __name__ == "__main__":
         'ae_loss': 'mse',
         'cl_loss': 'kld',
         'seed': args.seed}
+    
+    print('Configuration dict: {}'.format(config))
 
     # TODO: Gready Layer-Wise pretrain of the autoencoder necessary
     pretrained_weights = path_to_out/'encoder.npz'
@@ -356,5 +358,3 @@ if __name__ == "__main__":
         np.savez(path_to_out/'final_centroids', parameters)
 
         break
-    
-    print('Configuration dict: {}'.format(config))

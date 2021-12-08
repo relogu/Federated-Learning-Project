@@ -132,6 +132,8 @@ if __name__ == "__main__":
     }
 
     print('AE loss is {}'.format(config['ae_loss']))
+    
+    print('Configuration dict: {}'.format(config))
 
     up_frequencies = np.array([np.array(np.count_nonzero(
         x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
@@ -375,5 +377,3 @@ if __name__ == "__main__":
         np.savez(path_to_out/'final_centroids', parameters)
 
         break
-    
-    print('Configuration dict: {}'.format(config))
