@@ -10,7 +10,7 @@ import math
 import pathlib
 import warnings
 from pathlib import Path
-from typing import Callable, Union
+from typing import Callable, Union, List
 
 import numpy as np
 from pandas.core.frame import DataFrame
@@ -129,8 +129,8 @@ def get_euromds_cols(path_to_data: Union[Path, str] = None):
 
 # pylint: 
 def get_euromds_dataset(accept_nan: int = 0,
-                        groups: list[str] = None,
-                        exclude_cols: list[str] = None,
+                        groups: List[str] = None,
+                        exclude_cols: List[str] = None,
                         path_to_data: Union[Path, str] = None,
                         verbose: bool = False,
                         fill_fn: Callable[[Series, bool], Series] = None
@@ -202,8 +202,8 @@ def get_euromds_ids(path_to_data: Union[Path, str] = None):
 
 
 def get_outcome_euromds_dataset(accept_nan: int = 0,
-                                groups: list[str] = None,
-                                exclude_cols: list[str] = None,
+                                groups: List[str] = None,
+                                exclude_cols: List[str] = None,
                                 path_to_data: Union[Path, str] = None):
     # set the path
     if path_to_data is None:
