@@ -40,7 +40,7 @@ class FlippingNoise(Layer):
         setA = set(list(range(input_shape[1])))
         setB = set(self.b_idx)
         onlyInA = setA.difference(setB)
-        self.nb_idx = list(onlyInA)
+        self.nb_idx = [int(i) for i in list(onlyInA)]
         
     def call(self,
              inputs, 
