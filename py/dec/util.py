@@ -239,7 +239,7 @@ def get_noise_layer(
     noise_conf_dict=None
 ):
     noise_layer_dict = {
-        'real': GaussianNoise(stddev=noise_rate),
+        'real': GaussianNoise(stddev=noise_conf_dict['stddev']),
         'binary': FlippingNoise(
             up_frequencies=noise_conf_dict['up_frequencies'],
             b_idx=noise_conf_dict['b_idx'],
