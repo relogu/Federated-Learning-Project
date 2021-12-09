@@ -137,7 +137,7 @@ if __name__ == "__main__":
     config['noise_conf_dict'] = {
         'up_frequencies': up_frequencies,
         'b_idx': None,
-        'stddev': 0.1,
+        'stddev': 0.2,
     }
     
     print('Configuration dict: {}'.format(config))
