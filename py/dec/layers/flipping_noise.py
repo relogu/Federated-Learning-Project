@@ -28,20 +28,21 @@ class FlippingNoise(Layer):
         if self.b_idx is not None:
             shape_of_change = len(self.b_idx)
             assert shape_of_change <= input_shape[1]
+            setA = set(list(range(input_shape[1])))
+            setB = set(self.b_idx)
+            onlyInA = setA.difference(setB)
+            self.nb_idx = [int(i) for i in list(onlyInA)]
+            print('Non-binary indices: {}'.format(self.nb_idx))
         else:
             shape_of_change = input_shape[1]
             self.b_idx = list(range(shape_of_change))
+            self.nb_idx = None
         if self.up_frequencies is None:
             self.up_frequencies = np.array([0.5]*shape_of_change)
         else:
             assert shape_of_change == len(self.up_frequencies)
         self.down_frequencies = 1-self.up_frequencies
         self.probs = tf.transpose(tf.stack((self.down_frequencies, self.up_frequencies)))
-        setA = set(list(range(input_shape[1])))
-        setB = set(self.b_idx)
-        onlyInA = setA.difference(setB)
-        self.nb_idx = [int(i) for i in list(onlyInA)]
-        print('Non-binary indices: {}'.format(self.nb_idx))
         
     def call(self,
              inputs, 
@@ -54,9 +55,13 @@ class FlippingNoise(Layer):
             b_changed = tf.where(condition, to_change, samples)
             indices = tf.expand_dims(self.b_idx, axis=1)
             binary = tf.transpose(tf.scatter_nd(indices, tf.transpose(b_changed), tf.shape(tf.transpose(inputs))))
-            not_to_change = tf.gather(inputs, indices=self.nb_idx, axis=1)
-            indices = tf.expand_dims(self.nb_idx, axis=1)
-            n_binary = tf.transpose(tf.scatter_nd(indices, tf.transpose(not_to_change), tf.shape(tf.transpose(inputs))))
-            return tf.add(binary, n_binary)
+            if self.nb_idx is None:
+                output = binary
+            else:
+                not_to_change = tf.gather(inputs, indices=self.nb_idx, axis=1)
+                indices = tf.expand_dims(self.nb_idx, axis=1)
+                n_binary = tf.transpose(tf.scatter_nd(indices, tf.transpose(not_to_change), tf.shape(tf.transpose(inputs))))
+                output = tf.add(binary, n_binary)
+            return output
         else:
             return inputs # return inputs during inference
