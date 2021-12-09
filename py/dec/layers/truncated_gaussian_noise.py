@@ -24,12 +24,12 @@ class TruncatedGaussianNoise(Layer):
             )
             zeros = tf.zeros(shape=tf.shape(inputs))
             ones = tf.ones(shape=tf.shape(inputs))
-            condition = tf.random.uniform(shape=tf.shape(inputs)) >= self.rate
+            condition = tf.random.uniform(shape=tf.shape(inputs)) <= self.rate
             noised = tf.where(condition, inputs, noised)
             neg_condition = noised < 0.0
             greater_than_one_condition = noised > 1.0
-            noised = tf.where(neg_condition, noised, zeros)
-            noised = tf.where(greater_than_one_condition, noised, ones)
+            noised = tf.where(neg_condition, zeros, noised)
+            noised = tf.where(greater_than_one_condition, ones, noised)
             return noised
         
         return backend.in_train_phase(noised, inputs, training=training)
