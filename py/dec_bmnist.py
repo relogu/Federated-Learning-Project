@@ -202,7 +202,7 @@ if __name__ == "__main__":
             ortho_w_con=config['ortho_w_con'],
             uncoll_feat_reg=config['uncoll_feat_reg'],
             use_bias=config['use_bias'],
-            dropout_rate=0.0,
+            dropout_rate=config['dropout_rate'],
             noise_rate=0.0,
             noise_conf_dict=None,
             )
