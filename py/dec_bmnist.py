@@ -134,7 +134,7 @@ if __name__ == "__main__":
         x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
     nb_idx = return_not_binary_indices(x_train)
     b_idx = list(range(len(x_train[0,:])))[len(nb_idx):]
-    config['noise_config_dict'] = {
+    config['noise_conf_dict'] = {
         'up_frequencies': up_frequencies,
         'b_idx': None,
         'stddev': 0.1,

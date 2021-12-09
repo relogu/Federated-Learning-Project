@@ -107,7 +107,7 @@ if __name__ == "__main__":
         'use_bias': args.use_bias,
         'dropout_rate': args.dropout,
         'noise_rate': args.noise,
-        'noise_config_dict' : {
+        'noise_conf_dict' : {
             'up_frequencies': None,
             'b_idx': None,
             'stddev': 0.1,
