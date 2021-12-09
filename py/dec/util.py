@@ -246,7 +246,8 @@ def get_noise_layer(
             rate=noise_rate
         ) if noise_conf_dict is not None else None,
         'probability': TruncatedGaussianNoise(
-            stddev=noise_conf_dict['stddev']
+            stddev=noise_conf_dict['stddev'],
+            rate=noise_rate
         ),
     }
     return noise_layer_dict[flavor]
