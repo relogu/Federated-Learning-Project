@@ -16,7 +16,7 @@ class TruncatedGaussianNoise(Layer):
     def call(self, inputs, training=None):
         
         def noised():
-            noise = random_normal(
+            noised = inputs + random_normal(
                 shape=tf.shape(inputs),
                 mean=0.,
                 stddev=self.stddev,
@@ -25,7 +25,7 @@ class TruncatedGaussianNoise(Layer):
             zeros = tf.zeros(shape=tf.shape(inputs))
             ones = tf.ones(shape=tf.shape(inputs))
             condition = tf.random.uniform(shape=tf.shape(inputs)) >= self.rate
-            noised = tf.where(condition, inputs, noise)
+            noised = tf.where(condition, inputs, noised)
             neg_condition = noised < 0.0
             greater_than_one_condition = noised > 1.0
             noised = tf.where(neg_condition, noised, zeros)
