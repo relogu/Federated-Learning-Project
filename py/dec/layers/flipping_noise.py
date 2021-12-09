@@ -41,6 +41,7 @@ class FlippingNoise(Layer):
         setB = set(self.b_idx)
         onlyInA = setA.difference(setB)
         self.nb_idx = [int(i) for i in list(onlyInA)]
+        print('Non-binary indices: {}'.format(self.nb_idx))
         
     def call(self,
              inputs, 
