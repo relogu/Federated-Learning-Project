@@ -229,14 +229,14 @@ def noise_layers_fn(
         for i in idx:
             layers.insert(i, Dropout(rate=dropout_rate))
     if noise_rate > 0.0:
-        layers.insert(1, get_noise_layer(flavor, noise_rate, noise_conf_dict))
+        layers.insert(1, get_noise_layer(flavor=flavor, noise_rate=noise_rate, noise_conf_dict=noise_conf_dict))
     return layers
 
 
 def get_noise_layer(
     flavor: str = 'real',
     noise_rate: float = 0.0,
-    noise_conf_dict=None
+    noise_conf_dict: Dict = None,
 ):
     noise_layer_dict = {
         'real': GaussianNoise(stddev=noise_conf_dict['stddev']),
