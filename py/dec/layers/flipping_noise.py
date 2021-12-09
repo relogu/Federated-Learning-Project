@@ -51,8 +51,8 @@ class FlippingNoise(Layer):
         if training:
             to_change = tf.gather(inputs, indices=self.b_idx, axis=1)
             samples = tf.cast(tf.transpose(tf.random.categorical(tf.math.log(self.probs), tf.shape(to_change)[0])), tf.float32)
-            condition = tf.random.uniform(shape=tf.shape(to_change)) >= self.rate
-            b_changed = tf.where(condition, to_change, samples)
+            condition = tf.random.uniform(shape=tf.shape(to_change)) <= self.rate
+            b_changed = tf.where(condition, samples, to_change)
             indices = tf.expand_dims(self.b_idx, axis=1)
             binary = tf.transpose(tf.scatter_nd(indices, tf.transpose(b_changed), tf.shape(tf.transpose(inputs))))
             if self.nb_idx is None:
