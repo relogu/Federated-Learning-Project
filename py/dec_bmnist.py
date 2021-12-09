@@ -15,7 +15,7 @@ from py.dec.util import (create_denoising_autoencoder, create_clustering_model, 
 from losses import get_keras_loss
 import py.metrics as my_metrics
 from parsers import dec_bmnist_parser
-from py import compute_centroid_np
+from py import compute_centroid_np, return_not_binary_indices
 
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -114,9 +114,6 @@ if __name__ == "__main__":
         'use_bias': args.use_bias,
         'dropout_rate': args.dropout,
         'noise_rate': args.noise,
-        'ran_flip_conf': None,
-        # 'ran_flip': args.ran_flip,
-        # 'b_idx': [],
         'ae_metrics': [
             my_metrics.rounded_accuracy,
             'mse',
@@ -132,11 +129,18 @@ if __name__ == "__main__":
     }
 
     print('AE loss is {}'.format(config['ae_loss']))
-    
-    print('Configuration dict: {}'.format(config))
 
     up_frequencies = np.array([np.array(np.count_nonzero(
         x_train[:, i])/x_train.shape[0]) for i in range(n_features)])
+    nb_idx = return_not_binary_indices(x_train)
+    b_idx = list(range(len(x_train[0,:])))[len(nb_idx):]
+    config['noise_config_dict'] = {
+        'up_frequencies': up_frequencies,
+        'b_idx': None,
+        'stddev': 0.1,
+    }
+    
+    print('Configuration dict: {}'.format(config))
 
     # pre-train the autoencoder
     pretrained_weights = path_to_out/'encoder.npz'
@@ -155,7 +159,7 @@ if __name__ == "__main__":
             use_bias=config['use_bias'],
             dropout_rate=config['dropout_rate'],
             noise_rate=config['noise_rate'],
-            ran_flip_conf=config['ran_flip_conf'],
+            noise_conf_dict=config['noise_conf_dict'],
             )
 
         autoencoder.compile(
@@ -200,7 +204,7 @@ if __name__ == "__main__":
             use_bias=config['use_bias'],
             dropout_rate=0.0,
             noise_rate=0.0,
-            ran_flip_conf=None,
+            noise_conf_dict=None,
             )
 
         encoder.set_weights(weights)
@@ -243,7 +247,7 @@ if __name__ == "__main__":
         use_bias=config['use_bias'],
         dropout_rate=0.0,
         noise_rate=0.0,
-        ran_flip_conf=None,
+        noise_conf_dict=None,
         )
 
     param = np.load(trained_weights, allow_pickle=True)

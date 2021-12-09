@@ -107,7 +107,7 @@ if __name__ == "__main__":
         'use_bias': args.use_bias,
         'dropout_rate': args.dropout,
         'noise_rate': args.noise,
-        'ran_flip_conf': None,
+        'noise_conf_dict': None,
         'ae_metrics': [
             my_metrics.rounded_accuracy,
         ],
@@ -139,7 +139,7 @@ if __name__ == "__main__":
             use_bias=config['use_bias'],
             dropout_rate=config['dropout_rate'],
             noise_rate=config['noise_rate'],
-            ran_flip_conf=None,
+            noise_conf_dict=config['noise_conf_dict'],
             )
 
         print(autoencoder.summary())
@@ -188,7 +188,7 @@ if __name__ == "__main__":
             use_bias=config['use_bias'],
             dropout_rate=0.0,
             noise_rate=0.0,
-            ran_flip_conf=None,
+            noise_conf_dict=config['noise_conf_dict'],
             )
 
         encoder.set_weights(weights)
@@ -231,7 +231,7 @@ if __name__ == "__main__":
         use_bias=config['use_bias'],
         dropout_rate=0.0,
         noise_rate=0.0,
-        ran_flip_conf=None,
+        noise_conf_dict=config['noise_conf_dict'],
         )
 
     param = np.load(trained_weights, allow_pickle=True)

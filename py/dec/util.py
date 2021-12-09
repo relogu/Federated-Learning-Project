@@ -44,8 +44,8 @@ def create_autoencoder(net_arch, up_frequencies):
             use_bias=True,
             dropout_rate=net_arch['dropout'],
             noise_rate=net_arch['ran_flip'],
-            ran_flip_conf={'b_idx': net_arch['b_idx'],
-                           'up_freq': up_frequencies}
+            noise_conf_dict={'b_idx': net_arch['b_idx'],
+                             'up_freq': up_frequencies}
         )
     else:
         return create_denoising_autoencoder(
@@ -60,8 +60,7 @@ def create_autoencoder(net_arch, up_frequencies):
             use_bias=True,
             dropout_rate=net_arch['dropout'],
             noise_rate=net_arch['ran_flip'],
-            ran_flip_conf={'b_idx': net_arch['b_idx'],
-                           'up_freq': up_frequencies}
+            noise_conf_dict={'stddev': net_arch['noise_stddev']}
         )
 
 
@@ -77,7 +76,7 @@ def create_denoising_autoencoder(
     use_bias: bool = True,
     dropout_rate: float = 0.0,
     noise_rate: float = 0.0,
-    ran_flip_conf: Dict = None,
+    noise_conf_dict: Dict = None,
 ):
     # getting encoder and decoder layers output dim
     encoder_dims = dims[1:]
@@ -115,7 +114,7 @@ def create_denoising_autoencoder(
         flavor=flavor,
         dropout_rate=dropout_rate,
         noise_rate=noise_rate,
-        ran_flip_conf=ran_flip_conf
+        noise_conf_dict=noise_conf_dict
     )
 
     # get autoencoder layers
@@ -223,31 +222,31 @@ def noise_layers_fn(
     flavor: str = 'real',
     dropout_rate: float = 0.0,
     noise_rate: float = 0.0,
-    ran_flip_conf: Dict = None,
+    noise_conf_dict: Dict = None,
 ):
     if dropout_rate > 0.0 and len(layers) > 2:
         idx = np.arange(start=2, stop=int((2*len(layers))-2), step=2)
         for i in idx:
             layers.insert(i, Dropout(rate=dropout_rate))
     if noise_rate > 0.0:
-        layers.insert(1, get_noise_layer(flavor, noise_rate, ran_flip_conf))
+        layers.insert(1, get_noise_layer(flavor, noise_rate, noise_conf_dict))
     return layers
 
 
 def get_noise_layer(
     flavor: str = 'real',
     noise_rate: float = 0.0,
-    ran_flip_config=None
+    noise_conf_dict=None
 ):
     noise_layer_dict = {
         'real': GaussianNoise(stddev=noise_rate),
         'binary': FlippingNoise(
-            up_frequencies=ran_flip_config['up_frequencies'],
-            b_idx=ran_flip_config['b_idx'],
+            up_frequencies=noise_conf_dict['up_frequencies'],
+            b_idx=noise_conf_dict['b_idx'],
             rate=noise_rate
-        ) if ran_flip_config is not None else None,
+        ) if noise_conf_dict is not None else None,
         'probability': TruncatedGaussianNoise(
-            stddev=noise_rate
+            stddev=noise_conf_dict['stddev']
         ),
     }
     return noise_layer_dict[flavor]
