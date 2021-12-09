@@ -107,7 +107,11 @@ if __name__ == "__main__":
         'use_bias': args.use_bias,
         'dropout_rate': args.dropout,
         'noise_rate': args.noise,
-        'noise_conf_dict': None,
+        'noise_config_dict' : {
+            'up_frequencies': None,
+            'b_idx': None,
+            'stddev': 0.1,
+        },
         'ae_metrics': [
             my_metrics.rounded_accuracy,
         ],
