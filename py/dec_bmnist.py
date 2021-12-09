@@ -96,7 +96,7 @@ if __name__ == "__main__":
             784,  # input
             500,  # first layer
             500,  # second layer
-            2000,  # third layer
+            200,#2000,  # third layer
             10,  # output (feature space)
         ],
         # 'relu' --> DEC paper # 'selu' --> is better for binary
