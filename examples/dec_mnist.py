@@ -1,7 +1,11 @@
+import os
+import pathlib
 import click
 import numpy as np
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
+import torch
+from torch.utils.data import DataLoader
 from torch.optim import SGD
 from torch.optim.lr_scheduler import StepLR
 from tensorboardX import SummaryWriter
@@ -40,10 +44,22 @@ from py.datasets.mnist import CachedMNIST
     type=bool,
     default=False,
 )
-def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode):
+@click.option(
+    "--out-folder",
+    help="folder for dumping results",
+    type=str,
+    default=False,
+)
+def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder):
     writer = SummaryWriter()  # create the TensorBoard object
+    # defining output folder
+    if out_folder is None:
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
+    else:
+        path_to_out = pathlib.Path(out_folder)
+    os.makedirs(path_to_out, exist_ok=True)
+    print('Output folder {}'.format(path_to_out))
     # callback function to call during training, uses writer from the scope
-
     def training_callback(epoch, lr, loss, validation_loss):
         writer.add_scalars(
             "data/autoencoder",
@@ -74,6 +90,7 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode):
         scheduler=lambda x: StepLR(x, 100, gamma=0.1),
         corruption=0.2,
     )
+    torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
     print("Training stage.")
     ae_optimizer = SGD(params=autoencoder.parameters(), lr=0.1, momentum=0.9)
     ae.train(
@@ -88,6 +105,19 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode):
         corruption=0.2,
         update_callback=training_callback,
     )
+    autoencoder.eval()
+    if not testing_mode:
+        features = []
+        dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
+        for batch in dataloader:
+            if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                batch, value = batch  # if we have a prediction label, separate it to actual
+            if cuda:
+                batch = batch.cuda(non_blocking=True)
+            features.append(autoencoder.encoder(batch).detach().cpu().numpy())
+        print(features)
+        np.savez(path_to_out/'ae_features', np.array(features))
+    torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
     print("DEC stage.")
     model = DEC(cluster_number=10, hidden_dimension=10, encoder=autoencoder.encoder)
     if cuda:
@@ -105,23 +135,38 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode):
     predicted, actual = predict(
         ds_train, model, 1024, silent=True, return_actual=True, cuda=cuda
     )
-    actual = actual.cpu().numpy()
     predicted = predicted.cpu().numpy()
     reassignment, accuracy = cluster_accuracy(actual, predicted)
+    autoencoder.eval()
+    features = []
+    actual = []
+    dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
+    for batch in dataloader:
+        if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+            batch, value = batch  # if we have a prediction label, separate it to actual
+            actual.append(value)
+        if cuda:
+            batch = batch.cuda(non_blocking=True)
+        features.append(autoencoder.encoder(batch).detach().cpu())
     print("Final DEC accuracy: %s" % accuracy)
+    torch.save(autoencoder.state_dict(), path_to_out/'final_ae')
+    torch.save(model.state_dict(), path_to_out/'clustering_model')
     if not testing_mode:
         predicted_reassigned = [
             reassignment[item] for item in predicted
         ]  # TODO numpify
-        confusion = confusion_matrix(actual, predicted_reassigned)
-        normalised_confusion = (
-            confusion.astype("float") / confusion.sum(axis=1)[:, np.newaxis]
-        )
-        confusion_id = uuid.uuid4().hex
-        sns.heatmap(normalised_confusion).get_figure().savefig(
-            "confusion_%s.png" % confusion_id
-        )
-        print("Writing out confusion diagram with UUID: %s" % confusion_id)
+        np.savez(path_to_out/'final_features', np.array(features))
+        np.savez(path_to_out/'final_assignments', np.array(predicted_reassigned))
+        np.savez(path_to_out/'actual_labels', np.array(actual))
+        # confusion = confusion_matrix(actual, predicted_reassigned)
+        # normalised_confusion = (
+        #     confusion.astype("float") / confusion.sum(axis=1)[:, np.newaxis]
+        # )
+        # confusion_id = uuid.uuid4().hex
+        # sns.heatmap(normalised_confusion).get_figure().savefig(
+        #     "confusion_%s.png" % confusion_id
+        # )
+        # print("Writing out confusion diagram with UUID: %s" % confusion_id)
         writer.close()
 
 
