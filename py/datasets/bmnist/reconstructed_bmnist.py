@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 
 class ReconstructedBMNIST(Dataset):
     def __init__(self, reconstructed_imgs, actual, cuda):
-        self.r_imgs = torch.round(reconstructed_imgs)
+        self.r_imgs = torch.round(torch.Tensor(reconstructed_imgs))
         self.actual = actual
         self.cuda = cuda
 
