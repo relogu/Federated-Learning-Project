@@ -100,7 +100,6 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
             if cuda:
                 batch = batch.cuda(non_blocking=True)
             features.append(autoencoder.encoder(batch).detach().cpu())
-        print(features)
         np.savez(path_to_out/'pretrain_ae_features', torch.cat(features).numpy())
     torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
     print("Training stage.")
@@ -126,7 +125,7 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
                 batch, value = batch  # if we have a prediction label, separate it to actual
             if cuda:
                 batch = batch.cuda(non_blocking=True)
-            features.append(autoencoder.encoder(batch).detach().cpu().numpy())
+            features.append(autoencoder.encoder(batch).detach().cpu())
         np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
     torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
     print("DEC stage.")
