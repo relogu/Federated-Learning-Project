@@ -4,6 +4,7 @@ import click
 import numpy as np
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
+import tensorflow as tf
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import SGD
@@ -22,6 +23,12 @@ from py.datasets.mnist import CachedBMNIST
 @click.command()
 @click.option(
     "--cuda", help="whether to use CUDA (default False).", type=bool, default=False
+)
+@click.option(
+    "--gpu-id",
+    help="id of the GPU to use",
+    type=int,
+    default=0,
 )
 @click.option(
     "--batch-size", help="training batch size (default 256).", type=int, default=256
@@ -50,7 +57,7 @@ from py.datasets.mnist import CachedBMNIST
     type=str,
     default=False,
 )
-def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder):
+def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder):
     writer = SummaryWriter()  # create the TensorBoard object
     # defining output folder
     if out_folder is None:
@@ -59,6 +66,9 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
         path_to_out = pathlib.Path(out_folder)
     os.makedirs(path_to_out, exist_ok=True)
     print('Output folder {}'.format(path_to_out))
+    
+    gpus = tf.config.list_physical_devices('GPU')
+    tf.config.set_visible_devices(gpus[gpu_id], 'GPU')
     # callback function to call during training, uses writer from the scope
     def training_callback(epoch, lr, loss, validation_loss):
         writer.add_scalars(
