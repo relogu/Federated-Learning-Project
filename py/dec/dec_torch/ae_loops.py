@@ -96,9 +96,6 @@ def train(
                 output = autoencoder(F.dropout(batch, corruption))
             else:
                 output = autoencoder(batch)
-            print(output.detach().numpy())
-            print(np.max(output.detach().numpy()))
-            print(np.min(output.detach().numpy()))
             loss = loss_function(output, batch)
             # accuracy = pretrain_accuracy(output, batch)
             loss_value = float(loss.item())
@@ -223,7 +220,6 @@ def pretrain(
             sub_autoencoder = sub_autoencoder.cuda()
         ae_optimizer = optimizer(sub_autoencoder)
         ae_scheduler = scheduler(ae_optimizer) if scheduler is not None else scheduler
-        print(sub_autoencoder)
         train(
             current_dataset,
             sub_autoencoder,
