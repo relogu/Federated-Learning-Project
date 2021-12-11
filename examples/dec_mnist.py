@@ -94,18 +94,19 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
             scheduler=lambda x: StepLR(x, 100, gamma=0.1),
             corruption=0.2,
         )
-        autoencoder.eval()
-        if not testing_mode:
-            features = []
-            dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
-            for batch in dataloader:
-                if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-                    batch, value = batch  # if we have a prediction label, separate it to actual
-                if cuda:
-                    batch = batch.cuda(non_blocking=True)
-                features.append(autoencoder.encoder(batch).detach().cpu())
-            np.savez(path_to_out/'pretrain_ae_features', torch.cat(features).numpy())
         torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
+    print('Saving features after pretraining.')
+    autoencoder.eval()
+    if not testing_mode:
+        features = []
+        dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
+        for batch in dataloader:
+            if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                batch, value = batch  # if we have a prediction label, separate it to actual
+            if cuda:
+                batch = batch.cuda(non_blocking=True)
+            features.append(autoencoder.encoder(batch).detach().cpu())
+        np.savez(path_to_out/'pretrain_ae_features', torch.cat(features).numpy())
     if (path_to_out/'finetune_ae').exists():
         print('Skipping finetuning since weights already exist.')
         autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
@@ -124,18 +125,19 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
             corruption=0.2,
             update_callback=training_callback,
         )
-        autoencoder.eval()
-        if not testing_mode:
-            features = []
-            dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
-            for batch in dataloader:
-                if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-                    batch, value = batch  # if we have a prediction label, separate it to actual
-                if cuda:
-                    batch = batch.cuda(non_blocking=True)
-                features.append(autoencoder.encoder(batch).detach().cpu())
-            np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
         torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
+    print('Saving features after finetuning.')
+    autoencoder.eval()
+    if not testing_mode:
+        features = []
+        dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
+        for batch in dataloader:
+            if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                batch, value = batch  # if we have a prediction label, separate it to actual
+            if cuda:
+                batch = batch.cuda(non_blocking=True)
+            features.append(autoencoder.encoder(batch).detach().cpu())
+        np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
     print("DEC stage.")
     model = DEC(cluster_number=10, hidden_dimension=10, encoder=autoencoder.encoder)
     if cuda:
@@ -155,6 +157,7 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
     )
     predicted = predicted.cpu().numpy()
     reassignment, accuracy = cluster_accuracy(actual, predicted)
+    print('Saving features, predictions and true labels after clustering.')
     autoencoder.eval()
     features = []
     actual = []
