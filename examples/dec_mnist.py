@@ -177,7 +177,7 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
         predicted_reassigned = [
             reassignment[item] for item in predicted
         ]  # TODO numpify
-        np.savez(path_to_out/'final_assignments', torch.cat(predicted_reassigned).numpy())
+        np.savez(path_to_out/'final_assignments', predicted_reassigned)
         np.savez(path_to_out/'actual_labels', torch.cat(actual).numpy())
         # confusion = confusion_matrix(actual, predicted_reassigned)
         # normalised_confusion = (
