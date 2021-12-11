@@ -78,56 +78,64 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
     )
     if cuda:
         autoencoder.cuda()
-    print("Pretraining stage.")
-    ae.pretrain(
-        ds_train,
-        autoencoder,
-        cuda=cuda,
-        validation=ds_val,
-        epochs=pretrain_epochs,
-        batch_size=batch_size,
-        optimizer=lambda model: SGD(model.parameters(), lr=0.1, momentum=0.9),
-        scheduler=lambda x: StepLR(x, 100, gamma=0.1),
-        corruption=0.2,
-    )
-    autoencoder.eval()
-    if not testing_mode:
-        features = []
-        dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
-        for batch in dataloader:
-            if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-                batch, value = batch  # if we have a prediction label, separate it to actual
-            if cuda:
-                batch = batch.cuda(non_blocking=True)
-            features.append(autoencoder.encoder(batch).detach().cpu())
-        np.savez(path_to_out/'pretrain_ae_features', torch.cat(features).numpy())
-    torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
-    print("Training stage.")
-    ae_optimizer = SGD(params=autoencoder.parameters(), lr=0.1, momentum=0.9)
-    ae.train(
-        ds_train,
-        autoencoder,
-        cuda=cuda,
-        validation=ds_val,
-        epochs=finetune_epochs,
-        batch_size=batch_size,
-        optimizer=ae_optimizer,
-        scheduler=StepLR(ae_optimizer, 100, gamma=0.1),
-        corruption=0.2,
-        update_callback=training_callback,
-    )
-    autoencoder.eval()
-    if not testing_mode:
-        features = []
-        dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
-        for batch in dataloader:
-            if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-                batch, value = batch  # if we have a prediction label, separate it to actual
-            if cuda:
-                batch = batch.cuda(non_blocking=True)
-            features.append(autoencoder.encoder(batch).detach().cpu())
-        np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
-    torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
+    if (path_to_out/'pretrain_ae').exists():
+        print('Skipping pretraining since weights already exist.')
+        autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
+    else:
+        print("Pretraining stage.")
+        ae.pretrain(
+            ds_train,
+            autoencoder,
+            cuda=cuda,
+            validation=ds_val,
+            epochs=pretrain_epochs,
+            batch_size=batch_size,
+            optimizer=lambda model: SGD(model.parameters(), lr=0.1, momentum=0.9),
+            scheduler=lambda x: StepLR(x, 100, gamma=0.1),
+            corruption=0.2,
+        )
+        autoencoder.eval()
+        if not testing_mode:
+            features = []
+            dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
+            for batch in dataloader:
+                if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                    batch, value = batch  # if we have a prediction label, separate it to actual
+                if cuda:
+                    batch = batch.cuda(non_blocking=True)
+                features.append(autoencoder.encoder(batch).detach().cpu())
+            np.savez(path_to_out/'pretrain_ae_features', torch.cat(features).numpy())
+        torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
+    if (path_to_out/'finetune_ae').exists():
+        print('Skipping finetuning since weights already exist.')
+        autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
+    else:
+        print("Training stage.")
+        ae_optimizer = SGD(params=autoencoder.parameters(), lr=0.1, momentum=0.9)
+        ae.train(
+            ds_train,
+            autoencoder,
+            cuda=cuda,
+            validation=ds_val,
+            epochs=finetune_epochs,
+            batch_size=batch_size,
+            optimizer=ae_optimizer,
+            scheduler=StepLR(ae_optimizer, 100, gamma=0.1),
+            corruption=0.2,
+            update_callback=training_callback,
+        )
+        autoencoder.eval()
+        if not testing_mode:
+            features = []
+            dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
+            for batch in dataloader:
+                if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                    batch, value = batch  # if we have a prediction label, separate it to actual
+                if cuda:
+                    batch = batch.cuda(non_blocking=True)
+                features.append(autoencoder.encoder(batch).detach().cpu())
+            np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
+        torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
     print("DEC stage.")
     model = DEC(cluster_number=10, hidden_dimension=10, encoder=autoencoder.encoder)
     if cuda:
