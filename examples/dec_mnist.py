@@ -90,6 +90,18 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
         scheduler=lambda x: StepLR(x, 100, gamma=0.1),
         corruption=0.2,
     )
+    autoencoder.eval()
+    if not testing_mode:
+        features = []
+        dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
+        for batch in dataloader:
+            if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                batch, value = batch  # if we have a prediction label, separate it to actual
+            if cuda:
+                batch = batch.cuda(non_blocking=True)
+            features.append(autoencoder.encoder(batch).detach().cpu())
+        print(features)
+        np.savez(path_to_out/'pretrain_ae_features', torch.cat(features).numpy())
     torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
     print("Training stage.")
     ae_optimizer = SGD(params=autoencoder.parameters(), lr=0.1, momentum=0.9)
@@ -115,8 +127,7 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
             if cuda:
                 batch = batch.cuda(non_blocking=True)
             features.append(autoencoder.encoder(batch).detach().cpu().numpy())
-        print(features)
-        np.savez(path_to_out/'ae_features', np.array(features))
+        np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
     torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
     print("DEC stage.")
     model = DEC(cluster_number=10, hidden_dimension=10, encoder=autoencoder.encoder)
@@ -148,6 +159,7 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
         if cuda:
             batch = batch.cuda(non_blocking=True)
         features.append(autoencoder.encoder(batch).detach().cpu())
+    np.savez(path_to_out/'final_ae_features', torch.cat(features).numpy())
     print("Final DEC accuracy: %s" % accuracy)
     torch.save(autoencoder.state_dict(), path_to_out/'final_ae')
     torch.save(model.state_dict(), path_to_out/'clustering_model')
@@ -155,9 +167,8 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_f
         predicted_reassigned = [
             reassignment[item] for item in predicted
         ]  # TODO numpify
-        np.savez(path_to_out/'final_features', np.array(features))
-        np.savez(path_to_out/'final_assignments', np.array(predicted_reassigned))
-        np.savez(path_to_out/'actual_labels', np.array(actual))
+        np.savez(path_to_out/'final_assignments', torch.cat(predicted_reassigned).numpy())
+        np.savez(path_to_out/'actual_labels', torch.cat(actual).numpy())
         # confusion = confusion_matrix(actual, predicted_reassigned)
         # normalised_confusion = (
         #     confusion.astype("float") / confusion.sum(axis=1)[:, np.newaxis]
