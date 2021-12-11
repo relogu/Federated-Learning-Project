@@ -17,7 +17,7 @@ from py.dec.dec_torch.cluster_loops import train, predict
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
 import py.dec.dec_torch.ae_loops as ae
 from py.dec.dec_torch.utils import cluster_accuracy
-from py.datasets.mnist import CachedBMNIST
+from py.datasets.bmnist import CachedBMNIST
 
 
 @click.command()
