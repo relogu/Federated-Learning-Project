@@ -129,7 +129,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             ds_train,
             autoencoder,
             loss_fn=torch.nn.BCEWithLogitsLoss,
-            final_activation=None,
+            #final_activation=None,
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,
