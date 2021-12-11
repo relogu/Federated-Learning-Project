@@ -1,7 +1,9 @@
 from typing import Any, Callable, Optional
+import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from torch.nn.modules.loss import MSELoss
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
@@ -15,6 +17,7 @@ def train(
     epochs: int,
     batch_size: int,
     optimizer: torch.optim.Optimizer,
+    loss_fn: Optional[torch.nn.Module] = nn.MSELoss,
     scheduler: Any = None,
     validation: Optional[torch.utils.data.Dataset] = None,
     corruption: Optional[float] = None,
@@ -65,7 +68,7 @@ def train(
         )
     else:
         validation_loader = None
-    loss_function = nn.MSELoss()
+    loss_function = loss_fn()
     autoencoder.train()
     validation_loss_value = -1
     loss_value = 0
@@ -93,6 +96,9 @@ def train(
                 output = autoencoder(F.dropout(batch, corruption))
             else:
                 output = autoencoder(batch)
+            print(output.detach().numpy())
+            print(np.max(output.detach().numpy()))
+            print(np.min(output.detach().numpy()))
             loss = loss_function(output, batch)
             # accuracy = pretrain_accuracy(output, batch)
             loss_value = float(loss.item())
@@ -158,6 +164,8 @@ def pretrain(
     epochs: int,
     batch_size: int,
     optimizer: Callable[[torch.nn.Module], torch.optim.Optimizer],
+    loss_fn: Optional[torch.nn.Module] = nn.MSELoss,
+    final_activation: Optional[torch.nn.Module] = None,
     scheduler: Optional[Callable[[torch.optim.Optimizer], Any]] = None,
     validation: Optional[torch.utils.data.Dataset] = None,
     corruption: Optional[float] = None,
@@ -208,18 +216,21 @@ def pretrain(
             activation=torch.nn.ReLU()
             if index != (number_of_subautoencoders - 1)
             else None,
+            final_activation=final_activation,
             corruption=nn.Dropout(corruption) if corruption is not None else None,
         )
         if cuda:
             sub_autoencoder = sub_autoencoder.cuda()
         ae_optimizer = optimizer(sub_autoencoder)
         ae_scheduler = scheduler(ae_optimizer) if scheduler is not None else scheduler
+        print(sub_autoencoder)
         train(
             current_dataset,
             sub_autoencoder,
             epochs,
             batch_size,
             ae_optimizer,
+            loss_fn=loss_fn,
             validation=current_validation,
             corruption=None,  # already have dropout in the DAE
             scheduler=ae_scheduler,

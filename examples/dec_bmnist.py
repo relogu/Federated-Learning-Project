@@ -84,7 +84,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         train=False, cuda=cuda, testing_mode=testing_mode
     )  # evaluation dataset
     autoencoder = StackedDenoisingAutoEncoder(
-        [28 * 28, 500, 500, 2000, 10], final_activation=torch.nn.Sigmoid()
+        [28 * 28, 500, 500, 2000, 10], final_activation=None,#torch.nn.Sigmoid()
     )
     if cuda:
         autoencoder.cuda()
@@ -96,6 +96,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.pretrain(
             ds_train,
             autoencoder,
+            loss_fn=torch.nn.BCEWithLogitsLoss,
+            final_activation=None,
             cuda=cuda,
             validation=ds_val,
             epochs=pretrain_epochs,
@@ -126,6 +128,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.train(
             ds_train,
             autoencoder,
+            loss_fn=torch.nn.BCEWithLogitsLoss,
+            final_activation=None,
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,

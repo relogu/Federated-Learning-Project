@@ -11,6 +11,7 @@ class DenoisingAutoencoder(nn.Module):
         embedding_dimension: int,
         hidden_dimension: int,
         activation: Optional[torch.nn.Module] = nn.ReLU(),
+        final_activation: Optional[torch.nn.Module] = None,
         gain: float = nn.init.calculate_gain("relu"),
         corruption: Optional[torch.nn.Module] = None,
         tied: bool = False,
@@ -29,6 +30,7 @@ class DenoisingAutoencoder(nn.Module):
         self.embedding_dimension = embedding_dimension
         self.hidden_dimension = hidden_dimension
         self.activation = activation
+        self.final_activation = final_activation
         self.gain = gain
         self.corruption = corruption
         # encoder parameters
@@ -91,7 +93,10 @@ class DenoisingAutoencoder(nn.Module):
         return transformed
 
     def decode(self, batch: torch.Tensor) -> torch.Tensor:
-        return F.linear(batch, self.decoder_weight, self.decoder_bias)
+        transformed = F.linear(batch, self.decoder_weight, self.decoder_bias)
+        if self.final_activation is not None:
+            transformed = self.activation(transformed)
+        return transformed
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:
         return self.decode(self.encode(batch))
