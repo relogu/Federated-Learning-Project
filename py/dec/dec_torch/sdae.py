@@ -3,25 +3,26 @@ from cytoolz.itertoolz import concat, sliding_window
 from typing import Callable, Iterable, Optional, Tuple, List
 import torch
 import torch.nn as nn
+from torch.nn import Module, Linear, Sequential, ReLU
 
 
 def build_units(
-    dimensions: Iterable[int], activation: Optional[torch.nn.Module]
-) -> List[torch.nn.Module]:
+    dimensions: Iterable[int], activation: Optional[Module]
+) -> List[Module]:
     """
     Given a list of dimensions and optional activation, return a list of units where each unit is a linear
     layer followed by an activation layer.
 
     :param dimensions: iterable of dimensions for the chain
-    :param activation: activation layer to use e.g. nn.ReLU, set to None to disable
+    :param activation: activation layer to use e.g. ReLU, set to None to disable
     :return: list of instances of Sequential
     """
 
-    def single_unit(in_dimension: int, out_dimension: int) -> torch.nn.Module:
-        unit = [("linear", nn.Linear(in_dimension, out_dimension))]
+    def single_unit(in_dimension: int, out_dimension: int) -> Module:
+        unit = [("linear", Linear(in_dimension, out_dimension))]
         if activation is not None:
             unit.append(("activation", activation))
-        return nn.Sequential(OrderedDict(unit))
+        return Sequential(OrderedDict(unit))
 
     return [
         single_unit(embedding_dimension, hidden_dimension)
@@ -44,12 +45,12 @@ def default_initialise_weight_bias_(
     nn.init.constant_(bias, 0)
 
 
-class StackedDenoisingAutoEncoder(nn.Module):
+class StackedDenoisingAutoEncoder(Module):
     def __init__(
         self,
         dimensions: List[int],
-        activation: torch.nn.Module = nn.ReLU(),
-        final_activation: Optional[torch.nn.Module] = nn.ReLU(),
+        activation: Module = ReLU(),
+        final_activation: Optional[Module] = ReLU(),
         weight_init: Callable[
             [torch.Tensor, torch.Tensor, float], None
         ] = default_initialise_weight_bias_,
@@ -62,8 +63,8 @@ class StackedDenoisingAutoEncoder(nn.Module):
         autoencoder shape [100, 10, 10, 5, 10, 10, 100].
 
         :param dimensions: list of dimensions occurring in a single stack
-        :param activation: activation layer to use for all but final activation, default torch.nn.ReLU
-        :param final_activation: final activation layer to use, set to None to disable, default torch.nn.ReLU
+        :param activation: activation layer to use for all but final activation, default ReLU
+        :param final_activation: final activation layer to use, set to None to disable, default ReLU
         :param weight_init: function for initialising weight and bias via mutation, defaults to default_initialise_weight_bias_
         :param gain: gain parameter to pass to weight_init
         """
@@ -76,18 +77,18 @@ class StackedDenoisingAutoEncoder(nn.Module):
         encoder_units.extend(
             build_units([self.dimensions[-2], self.dimensions[-1]], None)
         )
-        self.encoder = nn.Sequential(*encoder_units)
+        self.encoder = Sequential(*encoder_units)
         # construct the decoder
         decoder_units = build_units(reversed(self.dimensions[1:]), activation)
         decoder_units.extend(
             build_units([self.dimensions[1], self.dimensions[0]], final_activation)
         )
-        self.decoder = nn.Sequential(*decoder_units)
+        self.decoder = Sequential(*decoder_units)
         # initialise the weights and biases in the layers
         for layer in concat([self.encoder, self.decoder]):
             weight_init(layer[0].weight, layer[0].bias, gain)
 
-    def get_stack(self, index: int) -> Tuple[torch.nn.Module, torch.nn.Module]:
+    def get_stack(self, index: int) -> Tuple[Module, Module]:
         """
         Given an index which is in [0, len(self.dimensions) - 2] return the corresponding subautoencoder
         for layer-wise pretraining.

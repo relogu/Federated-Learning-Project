@@ -1,8 +1,10 @@
 import numpy as np
 from sklearn.cluster import KMeans
 import torch
-import torch.nn as nn
+from torch.nn import Module, KLDivLoss
+from torch.optim import Optimizer
 from torch.utils.data.dataloader import DataLoader, default_collate
+from torch.utils.data.sampler import Sampler
 from typing import Tuple, Callable, Optional, Union
 from tqdm import tqdm
 
@@ -11,19 +13,19 @@ from .utils import target_distribution, cluster_accuracy
 
 def train(
     dataset: torch.utils.data.Dataset,
-    model: torch.nn.Module,
+    model: Module,
     epochs: int,
     batch_size: int,
-    optimizer: torch.optim.Optimizer,
+    optimizer: Optimizer,
     stopping_delta: Optional[float] = None,
     collate_fn=default_collate,
     cuda: bool = True,
-    sampler: Optional[torch.utils.data.sampler.Sampler] = None,
+    sampler: Optional[Sampler] = None,
     silent: bool = False,
     update_freq: int = 10,
     evaluate_batch_size: int = 1024,
     update_callback: Optional[Callable[[float, float], None]] = None,
-    epoch_callback: Optional[Callable[[int, torch.nn.Module], None]] = None,
+    epoch_callback: Optional[Callable[[int, Module], None]] = None,
 ) -> None:
     """
     Train the DEC model given a dataset, a model instance and various configuration parameters.
@@ -95,7 +97,7 @@ def train(
     with torch.no_grad():
         # initialise the cluster centers
         model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
-    loss_function = nn.KLDivLoss(size_average=False)
+    loss_function = KLDivLoss(size_average=False)
     delta_label = None
     for epoch in range(epochs):
         features = []
@@ -175,7 +177,7 @@ def train(
 
 def predict(
     dataset: torch.utils.data.Dataset,
-    model: torch.nn.Module,
+    model: Module,
     batch_size: int = 1024,
     collate_fn=default_collate,
     cuda: bool = True,

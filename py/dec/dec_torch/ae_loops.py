@@ -1,10 +1,11 @@
 from typing import Any, Callable, Optional
-import numpy as np
 import torch
 import torch.nn.functional as F
-import torch.nn as nn
+from torch.nn import Module, ReLU, Dropout
 from torch.nn.modules.loss import MSELoss
-from torch.utils.data import DataLoader, TensorDataset
+from torch.optim import Optimizer
+from torch.utils.data import Dataset, DataLoader, TensorDataset
+from torch.utils.data.sampler import Sampler
 from tqdm import tqdm
 
 from .dae import DenoisingAutoencoder
@@ -12,22 +13,22 @@ from .sdae import StackedDenoisingAutoEncoder
 
 
 def train(
-    dataset: torch.utils.data.Dataset,
-    autoencoder: torch.nn.Module,
+    dataset: Dataset,
+    autoencoder: Module,
     epochs: int,
     batch_size: int,
-    optimizer: torch.optim.Optimizer,
-    loss_fn: Optional[torch.nn.Module] = nn.MSELoss,
+    optimizer: Optimizer,
+    loss_fn: Optional[Module] = MSELoss,
     scheduler: Any = None,
-    validation: Optional[torch.utils.data.Dataset] = None,
+    validation: Optional[Dataset] = None,
     corruption: Optional[float] = None,
     cuda: bool = True,
-    sampler: Optional[torch.utils.data.sampler.Sampler] = None,
+    sampler: Optional[Sampler] = None,
     silent: bool = False,
     update_freq: Optional[int] = 1,
     update_callback: Optional[Callable[[float, float], None]] = None,
     num_workers: Optional[int] = None,
-    epoch_callback: Optional[Callable[[int, torch.nn.Module], None]] = None,
+    epoch_callback: Optional[Callable[[int, Module], None]] = None,
 ) -> None:
     """
     Function to train an autoencoder using the provided dataset. If the dataset consists of 2-tuples or lists of
@@ -160,19 +161,19 @@ def pretrain(
     autoencoder: StackedDenoisingAutoEncoder,
     epochs: int,
     batch_size: int,
-    optimizer: Callable[[torch.nn.Module], torch.optim.Optimizer],
-    loss_fn: Optional[torch.nn.Module] = nn.MSELoss,
-    final_activation: Optional[torch.nn.Module] = None,
-    scheduler: Optional[Callable[[torch.optim.Optimizer], Any]] = None,
-    validation: Optional[torch.utils.data.Dataset] = None,
+    optimizer: Callable[[Module], Optimizer],
+    loss_fn: Optional[Module] = MSELoss,
+    final_activation: Optional[Module] = None,
+    scheduler: Optional[Callable[[Optimizer], Any]] = None,
+    validation: Optional[Dataset] = None,
     corruption: Optional[float] = None,
     cuda: bool = True,
-    sampler: Optional[torch.utils.data.sampler.Sampler] = None,
+    sampler: Optional[Sampler] = None,
     silent: bool = False,
     update_freq: Optional[int] = 1,
     update_callback: Optional[Callable[[float, float], None]] = None,
     num_workers: Optional[int] = None,
-    epoch_callback: Optional[Callable[[int, torch.nn.Module], None]] = None,
+    epoch_callback: Optional[Callable[[int, Module], None]] = None,
 ) -> None:
     """
     Given an autoencoder, train it using the data provided in the dataset; for simplicity the accuracy is reported only
@@ -210,11 +211,11 @@ def pretrain(
         sub_autoencoder = DenoisingAutoencoder(
             embedding_dimension=embedding_dimension,
             hidden_dimension=hidden_dimension,
-            activation=torch.nn.ReLU()
+            activation=ReLU()
             if index != (number_of_subautoencoders - 1)
             else None,
             final_activation=final_activation,
-            corruption=nn.Dropout(corruption) if corruption is not None else None,
+            corruption=Dropout(corruption) if corruption is not None else None,
         )
         if cuda:
             sub_autoencoder = sub_autoencoder.cuda()
@@ -267,8 +268,8 @@ def pretrain(
 
 
 def predict(
-    dataset: torch.utils.data.Dataset,
-    model: torch.nn.Module,
+    dataset: Dataset,
+    model: Module,
     batch_size: int,
     cuda: bool = True,
     silent: bool = False,
@@ -291,7 +292,7 @@ def predict(
     )
     data_iterator = tqdm(dataloader, leave=False, unit="batch", disable=silent,)
     features = []
-    if isinstance(model, torch.nn.Module):
+    if isinstance(model, Module):
         model.eval()
     for batch in data_iterator:
         if isinstance(batch, tuple) or isinstance(batch, list) and len(batch) in [1, 2]:

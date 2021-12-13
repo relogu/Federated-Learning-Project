@@ -1,19 +1,19 @@
 import torch
 import torch.nn as nn
-from torch.nn import Parameter
+from torch.nn import Parameter, Module, ReLU, Linear
 import torch.nn.functional as F
 from typing import Optional
 
 
-class DenoisingAutoencoder(nn.Module):
+class DenoisingAutoencoder(Module):
     def __init__(
         self,
         embedding_dimension: int,
         hidden_dimension: int,
-        activation: Optional[torch.nn.Module] = nn.ReLU(),
-        final_activation: Optional[torch.nn.Module] = None,
+        activation: Optional[Module] = ReLU(),
+        final_activation: Optional[Module] = None,
         gain: float = nn.init.calculate_gain("relu"),
-        corruption: Optional[torch.nn.Module] = None,
+        corruption: Optional[Module] = None,
         tied: bool = False,
     ) -> None:
         """
@@ -21,7 +21,7 @@ class DenoisingAutoencoder(nn.Module):
 
         :param embedding_dimension: embedding dimension, input to the encoder
         :param hidden_dimension: hidden dimension, output of the encoder
-        :param activation: optional activation unit, defaults to nn.ReLU()
+        :param activation: optional activation unit, defaults to ReLU()
         :param gain: gain for use in weight initialisation
         :param corruption: optional unit to apply to corrupt input during training, defaults to None
         :param tied: whether the autoencoder weights are tied, defaults to False
@@ -70,10 +70,10 @@ class DenoisingAutoencoder(nn.Module):
             nn.init.xavier_uniform_(weight, gain)
         nn.init.constant_(bias, 0)
 
-    def copy_weights(self, encoder: torch.nn.Linear, decoder: torch.nn.Linear) -> None:
+    def copy_weights(self, encoder: Linear, decoder: Linear) -> None:
         """
         Utility method to copy the weights of self into the given encoder and decoder, where
-        encoder and decoder should be instances of torch.nn.Linear.
+        encoder and decoder should be instances of Linear.
 
         :param encoder: encoder Linear unit
         :param decoder: decoder Linear unit
