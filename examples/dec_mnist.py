@@ -112,7 +112,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=partial(SobelLoss, torch.nn.MSELoss, True, cuda),
+            loss_fn=partial(SobelLoss, torch.nn.L1Loss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,
@@ -144,7 +144,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=partial(SobelLoss, torch.nn.MSELoss, True, cuda),
+            loss_fn=partial(SobelLoss, torch.nn.L1Loss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,
