@@ -70,6 +70,7 @@ def train(
     else:
         validation_loader = None
     loss_function = loss_fn()
+    mse_loss = MSELoss()
     autoencoder.train()
     validation_loss_value = -1
     loss_value = 0
@@ -97,7 +98,7 @@ def train(
                 output = autoencoder(F.dropout(batch, corruption))
             else:
                 output = autoencoder(batch)
-            loss = loss_function(output, batch)
+            loss = mse_loss(output, batch) + loss_function(output, batch)
             # accuracy = pretrain_accuracy(output, batch)
             loss_value = float(loss.item())
             optimizer.zero_grad()
