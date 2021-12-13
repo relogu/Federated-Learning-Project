@@ -22,7 +22,7 @@ class SobelLayer(nn.Module):
             kernel_h.cuda(non_blocking=True)
             kernel_v.cuda(non_blocking=True)
             self.weight_h.cuda(non_blocking=True)
-            self.weight_h.cuda(non_blocking=True)
+            self.weight_v.cuda(non_blocking=True)
 
     def get_gray(self,x):
         ''' 
