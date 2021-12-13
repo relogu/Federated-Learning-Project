@@ -16,11 +16,12 @@ class SobelLayer(nn.Module):
                     [0, 0, 0]]
         kernel_h = torch.FloatTensor(kernel_h).unsqueeze(0).unsqueeze(0)
         kernel_v = torch.FloatTensor(kernel_v).unsqueeze(0).unsqueeze(0)
-        self.weight_h = nn.Parameter(data=kernel_h, requires_grad=False)
-        self.weight_v = nn.Parameter(data=kernel_v, requires_grad=False)
         if cuda:
             kernel_h.cuda(non_blocking=True)
             kernel_v.cuda(non_blocking=True)
+        self.weight_h = nn.Parameter(data=kernel_h, requires_grad=False)
+        self.weight_v = nn.Parameter(data=kernel_v, requires_grad=False)
+        if cuda:
             self.weight_h.cuda(non_blocking=True)
             self.weight_v.cuda(non_blocking=True)
 
