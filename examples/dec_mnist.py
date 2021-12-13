@@ -1,6 +1,7 @@
 import os
 import pathlib
 import click
+from functools import partial
 import numpy as np
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
@@ -98,7 +99,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.pretrain(
             ds_train,
             autoencoder,
-            loss_fn=SobelLoss,
+            #loss_fn=partial(SobelLoss, torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=pretrain_epochs,
@@ -129,7 +130,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=SobelLoss,
+            loss_fn=partial(SobelLoss, torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,

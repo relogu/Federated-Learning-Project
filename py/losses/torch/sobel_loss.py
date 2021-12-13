@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 class SobelLayer(nn.Module):
 
-    def __init__(self, unflatten: bool = True):
+    def __init__(self, unflatten: bool = True, cuda: bool = False):
         super(SobelLayer, self).__init__()
         self.unflatten = unflatten 
         kernel_v = [[0, -1, 0],
@@ -16,6 +16,9 @@ class SobelLayer(nn.Module):
                     [0, 0, 0]]
         kernel_h = torch.FloatTensor(kernel_h).unsqueeze(0).unsqueeze(0)
         kernel_v = torch.FloatTensor(kernel_v).unsqueeze(0).unsqueeze(0)
+        if cuda:
+            kernel_h.cuda()
+            kernel_v.cuda()
         self.weight_h = nn.Parameter(data=kernel_h, requires_grad=False)
         self.weight_v = nn.Parameter(data=kernel_v, requires_grad=False)
 
@@ -46,10 +49,12 @@ class SobelLayer(nn.Module):
 class SobelLoss(nn.Module):
 
     def __init__(self,
-                 loss_fn: Optional[torch.nn.Module] = nn.MSELoss):
+                 loss_fn: Optional[torch.nn.Module] = nn.MSELoss,
+                 unflatten: bool = True,
+                 cuda: bool = True):
         super(SobelLoss, self).__init__()
         self.loss = loss_fn()
-        self.grad_layer = SobelLayer()
+        self.grad_layer = SobelLayer(unflatten=unflatten, cuda=cuda)
 
     def forward(self, output, gt_img):
         output_grad = self.grad_layer(output)
