@@ -19,10 +19,10 @@ class SobelLayer(nn.Module):
         self.weight_h = nn.Parameter(data=kernel_h, requires_grad=False)
         self.weight_v = nn.Parameter(data=kernel_v, requires_grad=False)
         if cuda:
-            kernel_h.cuda()
-            kernel_v.cuda()
-            self.weight_h.cuda()
-            self.weight_h.cuda()
+            kernel_h.cuda(non_blocking=True)
+            kernel_v.cuda(non_blocking=True)
+            self.weight_h.cuda(non_blocking=True)
+            self.weight_h.cuda(non_blocking=True)
 
     def get_gray(self,x):
         ''' 
