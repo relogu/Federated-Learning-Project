@@ -12,6 +12,8 @@ from torch.optim.lr_scheduler import StepLR
 from tensorboardX import SummaryWriter
 import uuid
 
+from py.losses.torch import SobelLoss
+
 from py.dec.dec_torch.dec import DEC
 from py.dec.dec_torch.cluster_loops import train, predict
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
@@ -96,6 +98,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.pretrain(
             ds_train,
             autoencoder,
+            loss_fn=SobelLoss,
             cuda=cuda,
             validation=ds_val,
             epochs=pretrain_epochs,
@@ -126,6 +129,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.train(
             ds_train,
             autoencoder,
+            loss_fn=SobelLoss,
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,
