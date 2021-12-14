@@ -4,7 +4,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-def _gaussian_kernel(size, sigma=2., dim=2, channels=3):
+def _gaussian_kernel(size: int = 1,
+                     sigma: float = 2.,
+                     dim: int = 2,
+                     channels: int = 1):
     # The gaussian kernel is the product of the gaussian function of each dimension.
     # kernel_size should be an odd number.
     
