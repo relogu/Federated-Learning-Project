@@ -56,7 +56,7 @@ class GaussianBlurLayer(nn.Module):
 
         padding = int((self.kernel_size - 1) / 2)
         x = F.pad(x, (padding, padding, padding, padding), mode='reflect')
-        x = torch.squeeze(F.conv2d(x, self.kernel, groups=3))
+        x = torch.squeeze(F.conv2d(x, self.kernel))#, groups=3))
         if self.unflatten:
             x = nn.Flatten()(x)
 
