@@ -53,7 +53,7 @@ class SobelLayer(nn.Module):
 class SobelLoss(nn.Module):
 
     def __init__(self,
-                 loss_fn: Optional[torch.nn.Module] = nn.MSELoss,
+                 loss_fn: Optional[torch.nn.Module] = nn.L1Loss,
                  unflatten: bool = True,
                  cuda: bool = True):
         super(SobelLoss, self).__init__()
