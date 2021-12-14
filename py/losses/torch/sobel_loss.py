@@ -37,10 +37,10 @@ class SobelLayer(nn.Module):
 
     def forward(self, x):
         
-        if x.shape[1] == 3:
-            x = self.get_gray(x)
         if self.unflatten:
             x = nn.Unflatten(1, (1, 28, 28))(x)
+        if x.shape[1] == 3:
+            x = self.get_gray(x)
 
         x_v = F.conv2d(x, self.weight_v, padding=1)
         x_h = F.conv2d(x, self.weight_h, padding=1)
