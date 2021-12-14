@@ -1,6 +1,9 @@
-from .sobel_loss import SobelLoss, SobelLayer
+from .gaussian_blurred_loss import GaussianBlurLayer, GaussianBlurredLoss
+from .sobel_loss import SobelLayer, SobelLoss
 
 __all__ = [
-    "SobelLoss",
+    "GaussianBlurLayer",
+    "GaussianBlurredLoss",
     "SobelLayer",
+    "SobelLoss",
 ]
