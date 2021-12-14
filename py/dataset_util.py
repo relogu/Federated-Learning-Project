@@ -135,6 +135,14 @@ def get_euromds_dataset(accept_nan: int = 0,
                         verbose: bool = False,
                         fill_fn: Callable[[Series, bool], Series] = None
                         ):
+    for g in groups:
+        if g not in EUROMDS_GROUPS:
+            raise ValueError('One of the given groups is not allowed.\nAllowed groups: {}'.
+                format(EUROMDS_GROUPS))
+    for c in exclude_cols:
+        if c not in get_euromds_cols():
+            raise ValueError('One of the given columns is not allowed.\nAllowed columns: {}'.
+                format(get_euromds_cols()))
     # set the path
     if path_to_data is None:
         parent = pathlib.Path(__file__).parent.parent.absolute()
