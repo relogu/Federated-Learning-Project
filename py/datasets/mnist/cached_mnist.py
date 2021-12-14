@@ -14,8 +14,7 @@ class CachedMNIST(Dataset):
     @staticmethod
     def _transformation(img):
         return (
-            torch.ByteTensor(torch.ByteStorage.from_buffer(img.tobytes())).float()
-            * 0.02
+            torch.ByteTensor(torch.ByteStorage.from_buffer(img.tobytes())).float().div(255)
         )
 
     def __getitem__(self, index: int) -> torch.Tensor:
