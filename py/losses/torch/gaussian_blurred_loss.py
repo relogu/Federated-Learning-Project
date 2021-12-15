@@ -36,10 +36,9 @@ class GaussianBlurLayer(nn.Module):
     def __init__(self, kernel_size: int, unflatten: bool = True, cuda: bool = False):
         super(GaussianBlurLayer, self).__init__()
         self.kernel_size = kernel_size
+        self.kernel = _gaussian_kernel(size=kernel_size)
         if cuda:
-            self.kernel = torch.cuda.FloatTensor(_gaussian_kernel(size=kernel_size))
-        else:
-            self.kernel = _gaussian_kernel(size=kernel_size)
+            self.kernel = torch.cuda.FloatTensor(self.kernel)
         self.unflatten = unflatten
 
     def get_gray(self,x):
