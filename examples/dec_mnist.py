@@ -70,8 +70,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     os.makedirs(path_to_out, exist_ok=True)
     print('Output folder {}'.format(path_to_out))
     
-    gpus = tf.config.list_physical_devices('GPU')
-    tf.config.set_visible_devices(gpus[gpu_id], 'GPU')
+    #gpus = tf.config.list_physical_devices('GPU')
+    #tf.config.set_visible_devices(gpus[gpu_id], 'GPU')
+    torch.cuda.set_device(gpu_id)
     # callback function to call during training, uses writer from the scope
     def training_callback(epoch, lr, loss, validation_loss):
         writer.add_scalars(
@@ -116,7 +117,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             ds_train,
             autoencoder,
             #loss_fn=partial(SobelLoss, 0.7, torch.nn.MSELoss, True, cuda),
-            loss_fn=partial(GaussianBlurredLoss, 1, 0.7, torch.nn.MSELoss, True, cuda),
+            loss_fn=partial(GaussianBlurredLoss, 3, 0.7, torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=pretrain_epochs,
@@ -157,7 +158,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             ds_train,
             autoencoder,
             #loss_fn=partial(SobelLoss, 0.7, torch.nn.MSELoss, True, cuda),
-            loss_fn=partial(GaussianBlurredLoss, 1, 0.7, torch.nn.MSELoss, True, cuda),
+            loss_fn=partial(GaussianBlurredLoss, 3, 0.7, torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,
