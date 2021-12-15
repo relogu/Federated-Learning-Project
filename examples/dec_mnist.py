@@ -99,34 +99,34 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
     else:
         print("Pretraining stage.")
-        # ae.pretrain(
-        #     ds_train,
-        #     autoencoder,
-        #     #loss_fn=partial(SobelLoss, torch.nn.MSELoss, True, cuda),
-        #     cuda=cuda,
-        #     validation=ds_val,
-        #     epochs=pretrain_epochs,
-        #     batch_size=batch_size,
-        #     optimizer=lambda model: SGD(model.parameters(), lr=0.1, momentum=0.9),
-        #     scheduler=lambda x: StepLR(x, 100, gamma=0.1),
-        #     corruption=0.2,
-        # )
         #ae_optimizer = SGD(params=autoencoder.parameters(), lr=0.1, momentum=0.9)
         ae_optimizer = Adam(params=autoencoder.parameters(), lr=1e-4)
-        ae.train(
+        ae.pretrain(
             ds_train,
             autoencoder,
-            #loss_fn=partial(SobelLoss, 0.7, torch.nn.MSELoss, True, cuda),
-            loss_fn=partial(GaussianBlurredLoss, 1, 0.7, torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=pretrain_epochs,
             batch_size=batch_size,
-            optimizer=ae_optimizer,
-            scheduler=None,#StepLR(ae_optimizer, 100, gamma=0.1),
+            #optimizer=lambda model: SGD(model.parameters(), lr=0.1, momentum=0.9),
+            optimizer=lambda model: Adam(model.parameters(), lr=1e-4),
+            #scheduler=lambda x: StepLR(x, 100, gamma=0.1),
             corruption=0.4,
-            update_callback=training_callback,
         )
+        # ae.train(
+        #     ds_train,
+        #     autoencoder,
+        #     #loss_fn=partial(SobelLoss, 0.7, torch.nn.MSELoss, True, cuda),
+        #     loss_fn=partial(GaussianBlurredLoss, 1, 0.7, torch.nn.MSELoss, True, cuda),
+        #     cuda=cuda,
+        #     validation=ds_val,
+        #     epochs=pretrain_epochs,
+        #     batch_size=batch_size,
+        #     optimizer=ae_optimizer,
+        #     scheduler=None,#StepLR(ae_optimizer, 100, gamma=0.1),
+        #     corruption=0.4,
+        #     update_callback=training_callback,
+        # )
         torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
     print('Saving features after pretraining.')
     autoencoder.eval()
@@ -158,8 +158,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.train(
             ds_train,
             autoencoder,
-            #loss_fn=partial(SobelLoss, 0.7, torch.nn.MSELoss, True, cuda),
-            loss_fn=partial(GaussianBlurredLoss, 1, 0.7, torch.nn.MSELoss, True, cuda),
+            loss_fn=partial(SobelLoss, 0.5, torch.nn.MSELoss, True, cuda),
+            #loss_fn=partial(GaussianBlurredLoss, 1, 0.7, torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,
