@@ -124,7 +124,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             batch_size=batch_size,
             optimizer=ae_optimizer,
             scheduler=None,#StepLR(ae_optimizer, 100, gamma=0.1),
-            corruption=0.2,
+            corruption=0.4,
             update_callback=training_callback,
         )
         torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
@@ -148,6 +148,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         autoencoder = StackedDenoisingAutoEncoder(
             [28 * 28, 500, 500, 2000, 10],
             final_activation=None,
+            dropout=0.2,
         )
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
         if cuda:
@@ -165,7 +166,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             batch_size=batch_size,
             optimizer=ae_optimizer,
             #scheduler=StepLR(ae_optimizer, 100, gamma=0.1),
-            corruption=0.2,
+            #corruption=0.2,
             update_callback=training_callback,
         )
         torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
@@ -185,7 +186,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     model = DEC(cluster_number=10, hidden_dimension=10, encoder=autoencoder.encoder)
     if cuda:
         model.cuda()
-    dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
+    #dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
+    dec_optimizer = Adam(params=model.parameters(), lr=1e-4)
     train(
         dataset=ds_train,
         model=model,
