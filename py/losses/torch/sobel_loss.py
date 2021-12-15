@@ -53,14 +53,16 @@ class SobelLayer(nn.Module):
 class SobelLoss(nn.Module):
 
     def __init__(self,
+                 alpha: float = 1.0,
                  loss_fn: Optional[torch.nn.Module] = nn.L1Loss,
                  unflatten: bool = True,
                  cuda: bool = True):
         super(SobelLoss, self).__init__()
+        self.alpha = alpha
         self.loss = loss_fn()
         self.grad_layer = SobelLayer(unflatten=unflatten, cuda=cuda)
 
     def forward(self, output, gt_img):
         output_grad = self.grad_layer(output)
         gt_grad = self.grad_layer(gt_img)
-        return self.loss(output_grad, gt_grad)
+        return  self.alpha * self.loss(output_grad, gt_grad) + (1 -  self.alpha) * self.loss(output, gt_img)
