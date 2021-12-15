@@ -8,8 +8,8 @@ from sklearn.metrics import confusion_matrix
 import tensorflow as tf
 import torch
 from torch.utils.data import DataLoader
-from torch.optim import SGD
-from torch.optim.lr_scheduler import StepLR
+from torch.optim import SGD, Adam
+from torch.optim.lr_scheduler import StepLR, ExponentialLR
 from tensorboardX import SummaryWriter
 import uuid
 
@@ -87,7 +87,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         train=False, cuda=cuda, testing_mode=testing_mode
     )  # evaluation dataset
     autoencoder = StackedDenoisingAutoEncoder(
-        [28 * 28, 500, 500, 2000, 10], final_activation=None
+        [28 * 28, 500, 500, 2000, 10],
+        final_activation=None,
+        dropout=0.2,
     )
     if cuda:
         autoencoder.cuda()
@@ -108,18 +110,19 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         #     scheduler=lambda x: StepLR(x, 100, gamma=0.1),
         #     corruption=0.2,
         # )
-        ae_optimizer = SGD(params=autoencoder.parameters(), lr=0.1, momentum=0.9)
+        #ae_optimizer = SGD(params=autoencoder.parameters(), lr=0.1, momentum=0.9)
+        ae_optimizer = Adam(params=autoencoder.parameters(), lr=1e-4)
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=partial(SobelLoss, torch.nn.L1Loss, True, cuda),
+            loss_fn=partial(SobelLoss, 0.7, torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
-            epochs=finetune_epochs,
+            epochs=pretrain_epochs,
             batch_size=batch_size,
             optimizer=ae_optimizer,
-            scheduler=StepLR(ae_optimizer, 100, gamma=0.1),
-            corruption=0.5,
+            scheduler=None,#StepLR(ae_optimizer, 100, gamma=0.1),
+            corruption=0.2,
             update_callback=training_callback,
         )
         torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
@@ -140,17 +143,25 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
     else:
         print("Training stage.")
-        ae_optimizer = SGD(params=autoencoder.parameters(), lr=0.1, momentum=0.9)
+        autoencoder = StackedDenoisingAutoEncoder(
+            [28 * 28, 500, 500, 2000, 10],
+            final_activation=None,
+        )
+        autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
+        if cuda:
+            autoencoder.cuda()
+        #ae_optimizer = SGD(params=autoencoder.parameters(), lr=0.1, momentum=0.9)
+        ae_optimizer = Adam(params=autoencoder.parameters(), lr=1e-4)
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=partial(SobelLoss, torch.nn.L1Loss, True, cuda),
+            loss_fn=partial(SobelLoss, 0.7, torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,
             batch_size=batch_size,
             optimizer=ae_optimizer,
-            scheduler=StepLR(ae_optimizer, 100, gamma=0.1),
+            #scheduler=StepLR(ae_optimizer, 100, gamma=0.1),
             corruption=0.2,
             update_callback=training_callback,
         )
