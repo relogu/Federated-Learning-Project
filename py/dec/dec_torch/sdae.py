@@ -3,11 +3,13 @@ from cytoolz.itertoolz import concat, sliding_window
 from typing import Callable, Iterable, Optional, Tuple, List
 import torch
 import torch.nn as nn
-from torch.nn import Module, Linear, Sequential, ReLU
+from torch.nn import Module, Linear, Sequential, ReLU, Dropout
 
 
 def build_units(
-    dimensions: Iterable[int], activation: Optional[Module]
+    dimensions: Iterable[int],
+    activation: Optional[Module],
+    dropout: float = .0,
 ) -> List[Module]:
     """
     Given a list of dimensions and optional activation, return a list of units where each unit is a linear
@@ -22,6 +24,8 @@ def build_units(
         unit = [("linear", Linear(in_dimension, out_dimension))]
         if activation is not None:
             unit.append(("activation", activation))
+        if dropout > 0:
+            unit.append(("dropout", Dropout(p=dropout)))
         return Sequential(OrderedDict(unit))
 
     return [
@@ -55,6 +59,7 @@ class StackedDenoisingAutoEncoder(Module):
             [torch.Tensor, torch.Tensor, float], None
         ] = default_initialise_weight_bias_,
         gain: float = nn.init.calculate_gain("relu"),
+        dropout: float = .0,
     ):
         """
         Autoencoder composed of a symmetric decoder and encoder components accessible via the encoder and decoder
@@ -73,13 +78,13 @@ class StackedDenoisingAutoEncoder(Module):
         self.embedding_dimension = dimensions[0]
         self.hidden_dimension = dimensions[-1]
         # construct the encoder
-        encoder_units = build_units(self.dimensions[:-1], activation)
+        encoder_units = build_units(self.dimensions[:-1], activation, dropout)
         encoder_units.extend(
             build_units([self.dimensions[-2], self.dimensions[-1]], None)
         )
         self.encoder = Sequential(*encoder_units)
         # construct the decoder
-        decoder_units = build_units(reversed(self.dimensions[1:]), activation)
+        decoder_units = build_units(reversed(self.dimensions[1:]), activation, dropout)
         decoder_units.extend(
             build_units([self.dimensions[1], self.dimensions[0]], final_activation)
         )
