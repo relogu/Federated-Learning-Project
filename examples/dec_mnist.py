@@ -13,7 +13,7 @@ from torch.optim.lr_scheduler import StepLR, ExponentialLR
 from tensorboardX import SummaryWriter
 import uuid
 
-from py.losses.torch import SobelLoss
+from py.losses.torch import SobelLoss, GaussianBlurredLoss
 
 from py.dec.dec_torch.dec import DEC
 from py.dec.dec_torch.cluster_loops import train, predict
@@ -115,7 +115,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=partial(SobelLoss, 0.7, torch.nn.MSELoss, True, cuda),
+            #loss_fn=partial(SobelLoss, 0.7, torch.nn.MSELoss, True, cuda),
+            loss_fn=partial(GaussianBlurredLoss, 1, 0.7, torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=pretrain_epochs,
@@ -155,7 +156,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=partial(SobelLoss, 0.7, torch.nn.MSELoss, True, cuda),
+            #loss_fn=partial(SobelLoss, 0.7, torch.nn.MSELoss, True, cuda),
+            loss_fn=partial(GaussianBlurredLoss, 1, 0.7, torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,
