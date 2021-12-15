@@ -69,10 +69,12 @@ class GaussianBlurredLoss(nn.Module):
 
     def __init__(self,
                  kernel_size: int,
+                 alpha: float = 1.0,
                  loss_fn: Optional[torch.nn.Module] = nn.MSELoss,
                  unflatten: bool = True,
                  cuda: bool = False):
         super(GaussianBlurredLoss, self).__init__()
+        self.alpha = alpha
         self.loss = loss_fn()
         self.grad_layer = GaussianBlurLayer(
             kernel_size=kernel_size,
@@ -83,4 +85,4 @@ class GaussianBlurredLoss(nn.Module):
     def forward(self, output, gt_img):
         output_grad = self.grad_layer(output)
         gt_grad = self.grad_layer(gt_img)
-        return self.loss(output_grad, gt_grad)
+        return  self.alpha * self.loss(output_grad, gt_grad) + (1 -  self.alpha) * self.loss(output, gt_img)
