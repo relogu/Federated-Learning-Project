@@ -51,8 +51,6 @@ def build_tied_units(
     """
 
     def single_unit(out_dimension: int, linear_layer) -> Module:
-        print(out_dimension)
-        print(linear_layer)
         unit = [("linear_tied", LinearTied(out_dimension, linear_layer))]
         if activation is not None:
             unit.append(("activation", activation))
