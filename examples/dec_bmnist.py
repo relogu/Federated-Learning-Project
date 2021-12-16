@@ -148,7 +148,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         print("Training stage.")
         autoencoder = StackedDenoisingAutoEncoder(
             [28 * 28, 500, 500, 2000, 10],
-            final_activation=torch.nn.Sigmoid,
+            final_activation=torch.nn.Sigmoid(),
             dropout=0.2,
         )
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
