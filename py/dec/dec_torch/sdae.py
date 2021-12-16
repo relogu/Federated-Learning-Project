@@ -5,6 +5,8 @@ import torch
 import torch.nn as nn
 from torch.nn import Module, Linear, Sequential, ReLU, Dropout
 
+from py.dec.layers.torch import LinearTied
+
 
 def build_units(
     dimensions: Iterable[int],
@@ -34,6 +36,34 @@ def build_units(
     ]
 
 
+def build_tied_units(
+    dimensions: Iterable[int],
+    linear_modules: Iterable[int],
+    activation: Optional[Module],
+) -> List[Module]:
+    """
+    Given a list of dimensions and optional activation, return a list of units where each unit is a linear
+    layer followed by an activation layer.
+
+    :param dimensions: iterable of dimensions for the chain
+    :param activation: activation layer to use e.g. ReLU, set to None to disable
+    :return: list of instances of Sequential
+    """
+
+    def single_unit(out_dimension: int, linear_layer) -> Module:
+        print(out_dimension)
+        print(linear_layer)
+        unit = [("linear_tied", LinearTied(out_dimension, linear_layer))]
+        if activation is not None:
+            unit.append(("activation", activation))
+        return Sequential(OrderedDict(unit))
+
+    return [
+        single_unit(dimension, linear_module.linear)
+        for dimension, linear_module in zip(dimensions, linear_modules)
+    ]
+
+
 def default_initialise_weight_bias_(
     weight: torch.Tensor, bias: torch.Tensor, gain: float
 ) -> None:
@@ -60,6 +90,7 @@ class StackedDenoisingAutoEncoder(Module):
         ] = default_initialise_weight_bias_,
         gain: float = nn.init.calculate_gain("relu"),
         dropout: float = .0,
+        is_tied: bool = False,
     ):
         """
         Autoencoder composed of a symmetric decoder and encoder components accessible via the encoder and decoder
@@ -84,14 +115,24 @@ class StackedDenoisingAutoEncoder(Module):
         )
         self.encoder = Sequential(*encoder_units)
         # construct the decoder
-        decoder_units = build_units(reversed(self.dimensions[1:]), activation, dropout)
-        decoder_units.extend(
-            build_units([self.dimensions[1], self.dimensions[0]], final_activation)
-        )
+        if is_tied:
+            decoder_units = build_tied_units(reversed(self.dimensions[:-1]), reversed(encoder_units[1:]), activation)
+            decoder_units.extend(
+                build_tied_units([self.dimensions[0]], [encoder_units[0]], final_activation)
+            )
+        else:
+            decoder_units = build_units(reversed(self.dimensions[1:]), activation, dropout)
+            decoder_units.extend(
+                build_units([self.dimensions[1], self.dimensions[0]], final_activation)
+            )
         self.decoder = Sequential(*decoder_units)
         # initialise the weights and biases in the layers
-        for layer in concat([self.encoder, self.decoder]):
-            weight_init(layer[0].weight, layer[0].bias, gain)
+        if is_tied:
+            for layer in self.encoder:
+                weight_init(layer[0].weight, layer[0].bias, gain)
+        else:
+            for layer in concat([self.encoder, self.decoder]):
+                weight_init(layer[0].weight, layer[0].bias, gain)
 
     def get_stack(self, index: int) -> Tuple[Module, Module]:
         """
