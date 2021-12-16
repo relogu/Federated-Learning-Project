@@ -118,8 +118,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=partial(SobelLoss, 0.5, torch.nn.MSELoss, True, cuda),
-            #loss_fn=partial(GaussianBlurredLoss, 1, 0.7, torch.nn.MSELoss, True, cuda),
+            # loss_fn=partial(SobelLoss, 0.5, torch.nn.MSELoss, True, cuda),
+            loss_fn=partial(GaussianBlurredLoss, 1, 0., torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=pretrain_epochs,
@@ -161,8 +161,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=partial(SobelLoss, 0.5, torch.nn.MSELoss, True, cuda),
-            #loss_fn=partial(GaussianBlurredLoss, 1, 0.7, torch.nn.MSELoss, True, cuda),
+            # loss_fn=partial(SobelLoss, 0.5, torch.nn.MSELoss, True, cuda),
+            loss_fn=partial(GaussianBlurredLoss, 1, 0.5, torch.nn.MSELoss, True, cuda),
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,
