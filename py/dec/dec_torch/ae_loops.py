@@ -99,7 +99,7 @@ def train(
                 output = autoencoder(F.dropout(batch, corruption))
             else:
                 output = autoencoder(batch)
-            output[output!=output] = 0
+            #output[output!=output] = 0
             loss = loss_function(output, batch)
             #loss = mse_loss(output, batch) + loss_function(output, batch)
             # accuracy = pretrain_accuracy(output, batch)
