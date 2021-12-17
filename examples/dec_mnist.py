@@ -75,7 +75,7 @@ from py.datasets.mnist import CachedMNIST
 )
 @click.option(
     '--ae-main-loss',
-    type=click.Choice(['mse', 'bce']),
+    type=click.Choice(['mse', 'bce', 'bce-wl']),
     default='mse',
     help='Main loss function for autoencoder training (default mse)'
 )
