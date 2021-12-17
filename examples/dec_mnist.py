@@ -75,16 +75,14 @@ from py.datasets.mnist import CachedMNIST
 )
 @click.option(
     '--ae-main-loss',
-    type=type(''),
+    type=click.Choice(['mse', 'bce']),
     default='mse',
-    choices=['mse', 'bce'],
     help='Main loss function for autoencoder training'
 )
 @click.option(
     '--ae-mod-loss',
-    type=type(''),
+    type=click.Choice(['sobel', 'gausk1', 'gausk3']),
     default=None,
-    choices=['sobel', 'gausk1', 'gausk3'],
     help='Modified loss function for autoencoder training'
 )
 @click.option(
