@@ -83,7 +83,7 @@ from py.datasets.mnist import CachedMNIST
     '--ae-mod-loss',
     type=click.Choice(['sobel', 'gausk1', 'gausk3']),
     default=None,
-    help='Modified loss function for autoencoder training (deafult None)'
+    help='Modified loss function for autoencoder training (default None)'
 )
 @click.option(
     "--alpha",
