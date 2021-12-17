@@ -105,21 +105,6 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             {"lr": lr, "loss": loss, "validation_loss": validation_loss,},
             epoch,
         )
-
-    ds_train = CachedBMNIST(
-        train=True, cuda=cuda, testing_mode=testing_mode
-    )  # training dataset
-    ds_val = CachedBMNIST(
-        train=False, cuda=cuda, testing_mode=testing_mode
-    )  # evaluation dataset
-    autoencoder = StackedDenoisingAutoEncoder(
-        [28 * 28, 500, 500, 2000, 10],
-        final_activation=torch.nn.Sigmoid(),
-        dropout=0.2,
-        is_tied=is_tied,
-    )
-    if cuda:
-        autoencoder.cuda()
     
     ae_main_loss_fn = get_main_loss(ae_main_loss)
     if ae_mod_loss is not None:
@@ -129,6 +114,22 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             cuda=cuda)
     else:
         ae_mod_loss_fn = get_main_loss(ae_main_loss)
+    
+
+    ds_train = CachedBMNIST(
+        train=True, cuda=cuda, testing_mode=testing_mode
+    )  # training dataset
+    ds_val = CachedBMNIST(
+        train=False, cuda=cuda, testing_mode=testing_mode
+    )  # evaluation dataset
+    autoencoder = StackedDenoisingAutoEncoder(
+        [28 * 28, 500, 500, 2000, 10],
+        final_activation=torch.nn.Sigmoid() if ae_main_loss == 'mse' else torch.nn.ReLU(),
+        dropout=0.2,
+        is_tied=is_tied,
+    )
+    if cuda:
+        autoencoder.cuda()
     
     if (path_to_out/'pretrain_ae').exists():
         print('Skipping pretraining since weights already exist.')
@@ -188,7 +189,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         print("Training stage.")
         autoencoder = StackedDenoisingAutoEncoder(
             [28 * 28, 500, 500, 2000, 10],
-            final_activation=torch.nn.Sigmoid(),
+            final_activation=torch.nn.Sigmoid() if ae_main_loss == 'mse' else torch.nn.ReLU(),
             dropout=0.2,
             is_tied=is_tied,
         )
