@@ -95,7 +95,7 @@ class DenoisingAutoencoder(Module):
     def decode(self, batch: torch.Tensor) -> torch.Tensor:
         transformed = F.linear(batch, self.decoder_weight, self.decoder_bias)
         if self.final_activation is not None:
-            transformed = self.activation(transformed)
+            transformed = self.final_activation(transformed)
         return transformed
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:
