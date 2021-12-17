@@ -259,16 +259,16 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         if cuda:
             batch = batch.cuda(non_blocking=True)
         features.append(autoencoder.encoder(batch).detach().cpu())
-    np.savez(path_to_out/'final_ae_features', torch.cat(features).numpy())
+    np.savez(path_to_out/'final_ae_features_alpha{}'.format(alpha), torch.cat(features).numpy())
     print("Final DEC accuracy: %s" % accuracy)
-    torch.save(autoencoder.state_dict(), path_to_out/'final_ae')
-    torch.save(model.state_dict(), path_to_out/'clustering_model')
+    torch.save(autoencoder.state_dict(), path_to_out/'final_ae_alpha{}'.format(alpha))
+    torch.save(model.state_dict(), path_to_out/'clustering_model_alpha{}'.format(alpha))
     if not testing_mode:
         predicted_reassigned = [
             reassignment[item] for item in predicted
         ]  # TODO numpify
-        np.savez(path_to_out/'final_assignments', predicted_reassigned)
-        np.savez(path_to_out/'actual_labels', torch.cat(actual).detach().cpu().numpy())
+        np.savez(path_to_out/'final_assignments_alpha{}'.format(alpha), predicted_reassigned)
+        np.savez(path_to_out/'actual_labels_alpha{}'.format(alpha), torch.cat(actual).detach().cpu().numpy())
         # confusion = confusion_matrix(actual, predicted_reassigned)
         # normalised_confusion = (
         #     confusion.astype("float") / confusion.sum(axis=1)[:, np.newaxis]
