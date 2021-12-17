@@ -56,42 +56,42 @@ export PYTHONPATH="$PWD:$PYTHONPATH"
 # wait
 
 python3 examples/dec_mnist.py --cuda True --gpu-id 0 --out-folder out_torch_mnist_bce --ae-main-loss bce &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 1 --out-folder out_torch_mnist_tied_bce --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-main-loss bce &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 2 --out-folder out_torch_mnist_bce_sobel --ae-main-loss bce --ae-mod-loss sobel &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 3 --out-folder out_torch_mnist_tied_bce_sobel --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss sobel --ae-main-loss bce &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 4 --out-folder out_torch_mnist_bce_gausk1 --ae-main-loss bce --ae-mod-loss gausk1 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 5 --out-folder out_torch_mnist_tied_bce_gausk1 --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss gausk1 --ae-main-loss bce &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 6 --out-folder out_torch_mnist_bce_gausk3 --ae-main-loss bce --ae-mod-loss gausk3 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 7 --out-folder out_torch_mnist_tied_bce_gausk3 --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss gausk3 --ae-main-loss bce &
-wait 10 &
+sleep 10 &
 
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
 wait
 
 python3 examples/dec_mnist.py --cuda True --gpu-id 0 --out-folder out_torch_mnist_bce --ae-main-loss bce --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 1 --out-folder out_torch_mnist_tied_bce --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-main-loss bce --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 2 --out-folder out_torch_mnist_bce_sobel --ae-main-loss bce --ae-mod-loss sobel --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 3 --out-folder out_torch_mnist_tied_bce_sobel --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss sobel --ae-main-loss bce --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 4 --out-folder out_torch_mnist_bce_gausk1 --ae-main-loss bce --ae-mod-loss gausk1 --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 5 --out-folder out_torch_mnist_tied_bce_gausk1 --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss gausk1 --ae-main-loss bce --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 6 --out-folder out_torch_mnist_bce_gausk3 --ae-main-loss bce --ae-mod-loss gausk3 --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_mnist.py --cuda True --gpu-id 7 --out-folder out_torch_mnist_tied_bce_gausk3 --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss gausk3 --ae-main-loss bce --alpha 9 &
-wait 10 &
+sleep 10 &
 
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
@@ -99,19 +99,19 @@ wait
 
 python3 examples/dec_bmnist.py --cuda True --gpu-id 0 --out-folder out_torch_bmnist_bce --ae-main-loss bce &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 1 --out-folder out_torch_bmnist_tied_bce --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-main-loss bce &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 2 --out-folder out_torch_bmnist_bce_sobel --ae-main-loss bce --ae-mod-loss sobel &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 3 --out-folder out_torch_bmnist_tied_bce_sobel --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss sobel --ae-main-loss bce &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 4 --out-folder out_torch_bmnist_bce_gausk1 --ae-main-loss bce --ae-mod-loss gausk1 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 5 --out-folder out_torch_bmnist_tied_bce_gausk1 --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss gausk1 --ae-main-loss bce &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 6 --out-folder out_torch_bmnist_bce_gausk3 --ae-main-loss bce --ae-mod-loss gausk3 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 7 --out-folder out_torch_bmnist_tied_bce_gausk3 --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss gausk3 --ae-main-loss bce &
-wait 10 &
+sleep 10 &
 
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
@@ -119,19 +119,19 @@ wait
 
 python3 examples/dec_bmnist.py --cuda True --gpu-id 0 --out-folder out_torch_bmnist_bce --ae-main-loss bce --alpha 9 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 1 --out-folder out_torch_bmnist_tied_bce --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-main-loss bce --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 2 --out-folder out_torch_bmnist_bce_sobel --ae-main-loss bce --ae-mod-loss sobel --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 3 --out-folder out_torch_bmnist_tied_bce_sobel --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss sobel --ae-main-loss bce --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 4 --out-folder out_torch_bmnist_bce_gausk1 --ae-main-loss bce --ae-mod-loss gausk1 --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 5 --out-folder out_torch_bmnist_tied_bce_gausk1 --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss gausk1 --ae-main-loss bce --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 6 --out-folder out_torch_bmnist_bce_gausk3 --ae-main-loss bce --ae-mod-loss gausk3 --alpha 9 &
-wait 10 &
+sleep 10 &
 python3 examples/dec_bmnist.py --cuda True --gpu-id 7 --out-folder out_torch_bmnist_tied_bce_gausk3 --is-tied True --pretrain-epochs 500 --finetune-epochs 300 --ae-mod-loss gausk3 --ae-main-loss bce --alpha 9 &
-wait 10 &
+sleep 10 &
 
 # This will allow you to use CTRL+C to stop all background processes
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT;
