@@ -1,8 +1,33 @@
+from functools import partial
 import numpy as np
 import torch
 from typing import Optional
 from scipy.optimize import linear_sum_assignment
 
+from py.losses.torch import SobelLoss, GaussianBlurredLoss
+
+
+def get_main_loss(name: str):
+    loss_dict = {
+        'mse': torch.nn.MSELoss,
+        'bce': torch.nn.BCEWithLogitsLoss,
+    }
+    return loss_dict[name]
+
+
+def get_mod_loss(
+    name: str,
+    main_loss: str,
+    alpha: float = 0.5,
+    unflatten: bool = True,
+    cuda: bool = False,
+    ):
+    loss_dict = {
+        'sobel': partial(SobelLoss, alpha, get_main_loss(main_loss), unflatten, cuda),
+        'gausk1': partial(GaussianBlurredLoss, 1, alpha, get_main_loss(main_loss), unflatten, cuda),
+        'gausk3': partial(GaussianBlurredLoss, 3, alpha, get_main_loss(main_loss), unflatten, cuda),
+    }
+    return loss_dict[name]
 
 def cluster_accuracy(y_true, y_predicted, cluster_number: Optional[int] = None):
     """
