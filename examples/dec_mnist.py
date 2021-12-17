@@ -62,7 +62,7 @@ from py.datasets.mnist import CachedMNIST
 )
 @click.option(
     "--out-folder",
-    help="folder for dumping results",
+    help="folder for dumping results (default None)",
     type=str,
     default=False,
 )
@@ -77,13 +77,13 @@ from py.datasets.mnist import CachedMNIST
     '--ae-main-loss',
     type=click.Choice(['mse', 'bce']),
     default='mse',
-    help='Main loss function for autoencoder training'
+    help='Main loss function for autoencoder training (default mse)'
 )
 @click.option(
     '--ae-mod-loss',
     type=click.Choice(['sobel', 'gausk1', 'gausk3']),
     default=None,
-    help='Modified loss function for autoencoder training'
+    help='Modified loss function for autoencoder training (deafult None)'
 )
 @click.option(
     "--alpha",
@@ -102,8 +102,6 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     os.makedirs(path_to_out, exist_ok=True)
     print('Output folder {}'.format(path_to_out))
     
-    #gpus = tf.config.list_physical_devices('GPU')
-    #tf.config.set_visible_devices(gpus[gpu_id], 'GPU')
     if cuda:
         torch.cuda.set_device(gpu_id)
     # callback function to call during training, uses writer from the scope
