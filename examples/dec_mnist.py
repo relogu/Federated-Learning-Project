@@ -232,9 +232,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
     print("DEC stage.")
     # callback function to call during training, uses writer from the scope
-    def training_callback1(epoch, lr, accuracy, loss, delta_label):
+    def training_callback1(alpha, epoch, lr, accuracy, loss, delta_label):
         writer.add_scalars(
-            "data/clustering",
+            "data/clustering_alpha{}".format(alpha),
             {"lr": lr, "accuracy": accuracy, "loss": loss, "delta_label": delta_label,},
             epoch,
         )
@@ -253,7 +253,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         batch_size=256,
         optimizer=dec_optimizer,
         stopping_delta=0.000001,
-        update_callback=training_callback1,
+        update_callback=partial(training_callback1, alpha),
         cuda=cuda,
     )
     predicted, actual = predict(
