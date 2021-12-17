@@ -143,7 +143,13 @@ def train(
                     dlb="%.4f" % (delta_label or 0.0),
                 )
                 if update_callback is not None:
-                    update_callback(accuracy, loss_value, delta_label)
+                    update_callback(
+                        epoch,
+                        optimizer.param_groups[0]["lr"],
+                        accuracy,
+                        loss_value,
+                        1.0 if delta_label is None else delta_label
+                        )
         predicted, actual = predict(
             dataset,
             model,

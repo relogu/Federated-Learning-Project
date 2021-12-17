@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Any, Callable, Optional
 import torch
 import torch.nn.functional as F
@@ -237,7 +238,7 @@ def pretrain(
             sampler=sampler,
             silent=silent,
             update_freq=update_freq,
-            update_callback=update_callback,
+            update_callback=partial(update_callback, 'pretraining_{}'.format(index)),
             num_workers=num_workers,
             epoch_callback=epoch_callback,
         )

@@ -99,9 +99,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     if cuda:
         torch.cuda.set_device(gpu_id)
     # callback function to call during training, uses writer from the scope
-    def training_callback(epoch, lr, loss, validation_loss):
+    def training_callback(name, epoch, lr, loss, validation_loss):
         writer.add_scalars(
-            "data/autoencoder",
+            "data/autoencoder_{}".format(name),
             {"lr": lr, "loss": loss, "validation_loss": validation_loss,},
             epoch,
         )
@@ -151,7 +151,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 optimizer=lambda_ae_opt(autoencoder),
                 scheduler=lambda_scheduler(lambda_ae_opt(autoencoder)),
                 corruption=0.4,
-                update_callback=training_callback,
+                update_callback=partial(training_callback, 'pretraining'),
             )
         else:
             ae.pretrain(
@@ -166,6 +166,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 optimizer=lambda_ae_opt,
                 scheduler=lambda_scheduler,
                 corruption=0.4,
+                update_callback=training_callback,
             )
         torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
     print('Saving features after pretraining.')
@@ -209,7 +210,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             optimizer=ae_opt,
             scheduler=scheduler,
             corruption=0.2,
-            update_callback=training_callback,
+            update_callback=partial(training_callback, 'finetuning'),
         )
         torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
     print('Saving features after finetuning.')
@@ -225,6 +226,13 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             features.append(autoencoder.encoder(batch).detach().cpu())
         np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
     print("DEC stage.")
+    # callback function to call during training, uses writer from the scope
+    def training_callback1(epoch, lr, accuracy, loss, delta_label):
+        writer.add_scalars(
+            "data/clustering",
+            {"lr": lr, "accuracy": accuracy, "loss": loss, "delta_label": delta_label,},
+            epoch,
+        )
     model = DEC(cluster_number=10,
                 hidden_dimension=10,
                 encoder=autoencoder.encoder,
@@ -240,6 +248,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         batch_size=256,
         optimizer=dec_optimizer,
         stopping_delta=0.000001,
+        update_callback=training_callback1,
         cuda=cuda,
     )
     predicted, actual = predict(
