@@ -87,7 +87,6 @@ from py.datasets.bmnist import CachedBMNIST
 )
 def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
          is_tied, ae_main_loss, ae_mod_loss, alpha):
-    writer = SummaryWriter()  # create the TensorBoard object
     # defining output folder
     if out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
@@ -95,6 +94,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         path_to_out = pathlib.Path(out_folder)
     os.makedirs(path_to_out, exist_ok=True)
     print('Output folder {}'.format(path_to_out))
+    writer = SummaryWriter(logdir=str('runs/'+path_to_out.parts[-1]))  # create the TensorBoard object
     
     if cuda:
         torch.cuda.set_device(gpu_id)
