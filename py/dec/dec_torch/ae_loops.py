@@ -7,6 +7,7 @@ from torch.nn.modules.loss import MSELoss
 from torch.optim import Optimizer
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 from torch.utils.data.sampler import Sampler
+from torchsummary import summary
 from tqdm import tqdm
 
 from .dae import DenoisingAutoencoder
@@ -247,24 +248,30 @@ def pretrain(
         sub_autoencoder.copy_weights(encoder, decoder)
         # pass the dataset through the encoder part of the subautoencoder
         if index != (number_of_subautoencoders - 1):
-            current_dataset = TensorDataset(
-                predict(
+            predictions = predict(
                     current_dataset,
                     sub_autoencoder,
                     batch_size,
                     cuda=cuda,
                     silent=silent,
                 )
+            if loss_fn == torch.nn.BCEWithLogitsLoss or torch.nn.BCELoss:
+                predictions = torch.sigmoid(predictions)
+            current_dataset = TensorDataset(
+                predictions
             )
             if current_validation is not None:
-                current_validation = TensorDataset(
-                    predict(
+                predictions = predict(
                         current_validation,
                         sub_autoencoder,
                         batch_size,
                         cuda=cuda,
                         silent=silent,
                     )
+                if loss_fn == torch.nn.BCEWithLogitsLoss or torch.nn.BCELoss:
+                    predictions = torch.sigmoid(predictions)
+                current_validation = TensorDataset(
+                    predictions
                 )
         else:
             current_dataset = None  # minor optimisation on the last subautoencoder

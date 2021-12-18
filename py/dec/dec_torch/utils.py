@@ -10,6 +10,7 @@ from py.losses.torch import SobelLoss, GaussianBlurredLoss
 def get_main_loss(name: str):
     loss_dict = {
         'mse': torch.nn.MSELoss,
+        'ce': torch.nn.CrossEntropyLoss,
         'bce': torch.nn.BCELoss,
         'bce-wl': torch.nn.BCEWithLogitsLoss,
     }
