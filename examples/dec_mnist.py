@@ -232,6 +232,14 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             features.append(autoencoder.encoder(batch).detach().cpu())
         np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
     print("DEC stage.")
+    autoencoder = StackedDenoisingAutoEncoder(
+        [28 * 28, 500, 500, 2000, 10],
+        final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
+        is_tied=is_tied,
+    )
+    autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
+    if cuda:
+        autoencoder.cuda()
     # callback function to call during training, uses writer from the scope
     def training_callback1(alpha, epoch, lr, accuracy, loss, delta_label):
         writer.add_scalars(
