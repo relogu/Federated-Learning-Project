@@ -129,7 +129,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     )  # evaluation dataset
     autoencoder = StackedDenoisingAutoEncoder(
         [28 * 28, 500, 500, 2000, 10],
-        final_activation=torch.nn.ReLU() if ae_main_loss == 'mse' else torch.nn.Sigmoid(),
+        final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
         dropout=0.2,
         is_tied=is_tied,
     )
@@ -164,7 +164,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 ds_train,
                 autoencoder,
                 loss_fn=ae_main_loss_fn,
-                final_activation=torch.nn.ReLU() if ae_main_loss == 'mse' else torch.nn.Sigmoid(),
+                final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
                 cuda=cuda,
                 validation=ds_val,
                 epochs=pretrain_epochs,
@@ -194,7 +194,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         print("Training stage.")
         autoencoder = StackedDenoisingAutoEncoder(
             [28 * 28, 500, 500, 2000, 10],
-            final_activation=torch.nn.ReLU() if ae_main_loss == 'mse' else torch.nn.Sigmoid(),
+            final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
             dropout=0.2,
             is_tied=is_tied,
         )
