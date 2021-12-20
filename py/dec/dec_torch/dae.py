@@ -33,6 +33,7 @@ class DenoisingAutoencoder(Module):
         self.final_activation = final_activation
         self.gain = gain
         self.corruption = corruption
+        self.tied = tied
         # encoder parameters
         self.encoder_weight = Parameter(
             torch.Tensor(hidden_dimension, embedding_dimension)
@@ -42,7 +43,7 @@ class DenoisingAutoencoder(Module):
         # decoder parameters
         self._decoder_weight = (
             Parameter(torch.Tensor(embedding_dimension, hidden_dimension))
-            if not tied
+            if not self.tied
             else None
         )
         self.decoder_bias = Parameter(torch.Tensor(embedding_dimension))
@@ -81,8 +82,9 @@ class DenoisingAutoencoder(Module):
         """
         encoder.weight.data.copy_(self.encoder_weight)
         encoder.bias.data.copy_(self.encoder_bias)
-        decoder.weight.data.copy_(self.decoder_weight)
-        decoder.bias.data.copy_(self.decoder_bias)
+        if not self.tied:
+            decoder.weight.data.copy_(self.decoder_weight)
+            decoder.bias.data.copy_(self.decoder_bias)
 
     def encode(self, batch: torch.Tensor) -> torch.Tensor:
         transformed = F.linear(batch, self.encoder_weight, self.encoder_bias)
