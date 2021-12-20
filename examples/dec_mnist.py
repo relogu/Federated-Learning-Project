@@ -68,8 +68,14 @@ from py.datasets.mnist import CachedMNIST
 )
 # customized arguments
 @click.option(
+    "--glw-pretraining",
+    help="whether to use greedy layer-wise pretraining(default True)",
+    type=bool,
+    default=True
+)
+@click.option(
     "--is-tied",
-    help="whether to use tied weights for the SDAE (the training procedure changes accordingly, default False)",
+    help="whether to use tied weights for the SDAE (default False)",
     type=bool,
     default=False
 )
@@ -92,7 +98,7 @@ from py.datasets.mnist import CachedMNIST
     default=1,
 )
 def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
-         is_tied, ae_main_loss, ae_mod_loss, alpha):
+         glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha):
     # defining output folder
     if out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
@@ -141,25 +147,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
     else:
         print("Pretraining stage.")
-        # lambda_ae_opt = lambda model: SGD(model.parameters(), lr=0.1, momentum=0.9)
-        # lambda_scheduler = lambda x: StepLR(x, 100, gamma=0.1)
-        lambda_ae_opt = lambda model: Adam(model.parameters(), lr=1e-4)
-        lambda_scheduler = lambda x: None
-        if is_tied:
-            ae.train(
-                ds_train,
-                autoencoder,
-                loss_fn=ae_mod_loss_fn,
-                cuda=cuda,
-                validation=ds_val,
-                epochs=pretrain_epochs,
-                batch_size=batch_size,
-                optimizer=lambda_ae_opt(autoencoder),
-                scheduler=lambda_scheduler(lambda_ae_opt(autoencoder)),
-                corruption=0.4,
-                update_callback=partial(training_callback, 'pretraining'),
-            )
-        else:
+        if glw_pretraining:
+            lambda_ae_opt = lambda model: SGD(model.parameters(), lr=0.1, momentum=0.9)
+            lambda_scheduler = lambda x: StepLR(x, 100, gamma=0.1)
             ae.pretrain(
                 ds_train,
                 autoencoder,
@@ -173,6 +163,22 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 scheduler=lambda_scheduler,
                 corruption=0.4,
                 update_callback=training_callback,
+            )
+        else:
+            lambda_ae_opt = lambda model: Adam(model.parameters(), lr=1e-4)
+            lambda_scheduler = lambda x: None
+            ae.train(
+                ds_train,
+                autoencoder,
+                loss_fn=ae_mod_loss_fn,
+                cuda=cuda,
+                validation=ds_val,
+                epochs=pretrain_epochs,
+                batch_size=batch_size,
+                optimizer=lambda_ae_opt(autoencoder),
+                scheduler=lambda_scheduler(lambda_ae_opt(autoencoder)),
+                corruption=0.4,
+                update_callback=partial(training_callback, 'pretraining'),
             )
         torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
     print('Saving features after pretraining.')
@@ -201,10 +207,12 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
         if cuda:
             autoencoder.cuda()
-        # ae_opt = SGD(autoencoder.parameters(), lr=0.1, momentum=0.9)
-        # scheduler = StepLR(ae_opt, 100, gamma=0.1)
-        ae_opt = Adam(autoencoder.parameters(), lr=1e-4)
-        scheduler = None
+        if glw_pretraining:
+            ae_opt = SGD(autoencoder.parameters(), lr=0.1, momentum=0.9)
+            scheduler = StepLR(ae_opt, 100, gamma=0.1)
+        else:
+            ae_opt = Adam(autoencoder.parameters(), lr=1e-4)
+            scheduler = None
         ae.train(
             ds_train,
             autoencoder,
@@ -259,7 +267,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     train(
         dataset=ds_train,
         model=model,
-        epochs=100,
+        epochs=200,
         batch_size=256,
         optimizer=dec_optimizer,
         stopping_delta=0.000001,
