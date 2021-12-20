@@ -104,6 +104,7 @@ class StackedDenoisingAutoEncoder(Module):
         """
         super(StackedDenoisingAutoEncoder, self).__init__()
         self.dimensions = dimensions
+        self.is_tied = is_tied
         self.embedding_dimension = dimensions[0]
         self.hidden_dimension = dimensions[-1]
         # construct the encoder
@@ -113,7 +114,7 @@ class StackedDenoisingAutoEncoder(Module):
         )
         self.encoder = Sequential(*encoder_units)
         # construct the decoder
-        if is_tied:
+        if self.is_tied:
             decoder_units = build_tied_units(reversed(self.dimensions[:-1]), reversed(encoder_units[1:]), activation)
             decoder_units.extend(
                 build_tied_units([self.dimensions[0]], [encoder_units[0]], final_activation)
@@ -125,7 +126,7 @@ class StackedDenoisingAutoEncoder(Module):
             )
         self.decoder = Sequential(*decoder_units)
         # initialise the weights and biases in the layers
-        if is_tied:
+        if self.is_tied:
             for layer in self.encoder:
                 weight_init(layer[0].weight, layer[0].bias, gain)
         else:
@@ -144,7 +145,10 @@ class StackedDenoisingAutoEncoder(Module):
             raise ValueError(
                 "Requested subautoencoder cannot be constructed, index out of range."
             )
-        return self.encoder[index].linear, self.decoder[-(index + 1)].linear
+        if self.is_tied:
+            return self.encoder[index].linear, self.decoder[-(index + 1)].linear_tied
+        else:
+            return self.encoder[index].linear, self.decoder[-(index + 1)].linear
 
     def forward(self, batch: torch.Tensor) -> torch.Tensor:
         encoded = self.encoder(batch)
