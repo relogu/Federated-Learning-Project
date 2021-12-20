@@ -221,7 +221,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=ae_mod_loss_fn,
+            loss_fn=ae_main_loss_fn,#ae_mod_loss_fn,
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,
