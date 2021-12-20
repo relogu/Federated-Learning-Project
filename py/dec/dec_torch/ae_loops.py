@@ -221,6 +221,7 @@ def pretrain(
             else None,
             final_activation=final_activation,
             corruption=Dropout(corruption) if corruption is not None else None,
+            tied=autoencoder.is_tied,
         )
         if cuda:
             sub_autoencoder = sub_autoencoder.cuda()
