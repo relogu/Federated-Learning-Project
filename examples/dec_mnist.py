@@ -235,6 +235,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     autoencoder = StackedDenoisingAutoEncoder(
         [28 * 28, 500, 500, 2000, 10],
         final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
+        dropout=0.2,
         is_tied=is_tied,
     )
     autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
