@@ -128,9 +128,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ae_mod_loss_fn = get_main_loss(ae_main_loss)
     
     # this corresponds to noise
-    input_dropout = 0.2
+    input_dropout = 0.4
     # this corresponds to regularization of fully-connected layers
-    hidden_dropout = 0.5
+    hidden_dropout = 0.4
 
     ds_train = CachedMNIST(
         train=True, cuda=cuda, testing_mode=testing_mode
@@ -228,7 +228,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             batch_size=batch_size,
             optimizer=ae_opt,
             scheduler=scheduler,
-            corruption=input_dropout,
+            corruption=input_dropout/2,
             update_callback=partial(training_callback, 'finetuning'),
         )
         torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
