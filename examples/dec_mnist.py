@@ -228,7 +228,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             batch_size=batch_size,
             optimizer=ae_opt,
             scheduler=scheduler,
-            corruption=input_dropout/2,
+            corruption=input_dropout,
             update_callback=partial(training_callback, 'finetuning'),
         )
         torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
@@ -267,8 +267,10 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 alpha=alpha)
     if cuda:
         model.cuda()
-    dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
-    # dec_optimizer = Adam(params=model.parameters(), lr=1e-4)
+    if glw_pretraining:
+        dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
+    else:
+        dec_optimizer = Adam(params=model.parameters(), lr=1e-4)
     train(
         dataset=ds_train,
         model=model,
