@@ -97,8 +97,20 @@ from py.datasets.mnist import CachedMNIST
     type=int,
     default=1,
 )
+@click.option(
+    "--input-do",
+    help="value for dropout of input in pretraining and finetuning (default 0.2).",
+    type=float,
+    default=10.2,
+)
+@click.option(
+    "--hidden-do",
+    help="value for dropout of hidden linear layers of AE (default 0.5).",
+    type=float,
+    default=0.5,
+)
 def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
-         glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha):
+         glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do):
     # defining output folder
     if out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
@@ -126,11 +138,6 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             cuda=cuda)
     else:
         ae_mod_loss_fn = get_main_loss(ae_main_loss)
-    
-    # this corresponds to noise
-    input_dropout = 0.4
-    # this corresponds to regularization of fully-connected layers
-    hidden_dropout = 0.4
 
     ds_train = CachedMNIST(
         train=True, cuda=cuda, testing_mode=testing_mode
@@ -141,7 +148,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     autoencoder = StackedDenoisingAutoEncoder(
         [28 * 28, 500, 500, 2000, 10],
         final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-        dropout=hidden_dropout,
+        dropout=hidden_do,
         is_tied=is_tied,
     )
     if cuda:
@@ -166,7 +173,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 batch_size=batch_size,
                 optimizer=lambda_ae_opt,
                 scheduler=lambda_scheduler,
-                corruption=input_dropout,
+                corruption=input_do,
                 update_callback=training_callback,
             )
         else:
@@ -182,7 +189,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 batch_size=batch_size,
                 optimizer=lambda_ae_opt(autoencoder),
                 scheduler=lambda_scheduler(lambda_ae_opt(autoencoder)),
-                corruption=input_dropout,
+                corruption=input_do,
                 update_callback=partial(training_callback, 'pretraining'),
             )
         torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
@@ -206,7 +213,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         autoencoder = StackedDenoisingAutoEncoder(
             [28 * 28, 500, 500, 2000, 10],
             final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-            dropout=hidden_dropout,
+            dropout=hidden_do,
             is_tied=is_tied,
         )
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
@@ -216,7 +223,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             ae_opt = SGD(autoencoder.parameters(), lr=0.1, momentum=0.9)
             scheduler = StepLR(ae_opt, 100, gamma=0.1)
         else:
-            ae_opt = Adam(autoencoder.parameters(), lr=1e-4)
+            ae_opt = Adam(autoencoder.parameters(), lr=1e-2)
             scheduler = None
         ae.train(
             ds_train,
@@ -228,7 +235,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             batch_size=batch_size,
             optimizer=ae_opt,
             scheduler=scheduler,
-            corruption=input_dropout,
+            corruption=input_do,
             update_callback=partial(training_callback, 'finetuning'),
         )
         torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
@@ -248,7 +255,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     autoencoder = StackedDenoisingAutoEncoder(
         [28 * 28, 500, 500, 2000, 10],
         final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-        dropout=hidden_dropout,
+        dropout=hidden_do,
         is_tied=is_tied,
     )
     autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
