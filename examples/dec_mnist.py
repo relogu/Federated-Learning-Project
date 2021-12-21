@@ -5,7 +5,6 @@ from functools import partial
 import numpy as np
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
-import tensorflow as tf
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import SGD, Adam
@@ -144,7 +143,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             main_loss=ae_main_loss,
             cuda=cuda)
     else:
-        ae_mod_loss_fn = get_main_loss(ae_main_loss)
+        ae_mod_loss_fn = [get_main_loss(ae_main_loss)]
+    
 
     ds_train = CachedMNIST(
         train=True, cuda=cuda, testing_mode=testing_mode
@@ -172,7 +172,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             ae.pretrain(
                 ds_train,
                 autoencoder,
-                loss_fn=ae_main_loss_fn,
+                loss_fn=[ae_main_loss_fn],
                 final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
                 cuda=cuda,
                 validation=ds_val,
