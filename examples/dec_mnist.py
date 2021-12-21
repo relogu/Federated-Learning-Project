@@ -223,12 +223,12 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     else:
         print("Training stage.")
         # finetuning
-        # autoencoder = StackedDenoisingAutoEncoder(
-        #     [28 * 28, 500, 500, 2000, 10],
-        #     final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-        #     dropout=hidden_do,
-        #     is_tied=is_tied,
-        # )
+        autoencoder = StackedDenoisingAutoEncoder(
+            [28 * 28, 500, 500, 2000, 10],
+            final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
+            #dropout=hidden_do,
+            is_tied=is_tied,
+        )
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
         if cuda:
             autoencoder.cuda()
@@ -248,7 +248,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             batch_size=batch_size,
             optimizer=ae_opt,
             scheduler=scheduler,
-            corruption=input_do,
+            #corruption=input_do,
             update_callback=partial(training_callback, 'finetuning'),
         )
         torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
