@@ -291,6 +291,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
     else:
         dec_optimizer = Adam(params=model.parameters(), lr=1e-3)
+    dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
     train(
         dataset=ds_train,
         model=model,
