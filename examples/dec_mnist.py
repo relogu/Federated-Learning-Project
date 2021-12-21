@@ -87,7 +87,7 @@ from py.datasets.mnist import CachedMNIST
 )
 @click.option(
     '--ae-mod-loss',
-    type=click.Choice(['sobel', 'gausk1', 'gausk3', 'mix1']),
+    type=click.Choice(['sobel', 'gausk1', 'gausk3', 'mix', 'mix-gk', 'mix-s-gk1', 'mix-s-gk3']),
     default=None,
     help='Modified loss function for autoencoder training (default None)'
 )
@@ -109,8 +109,14 @@ from py.datasets.mnist import CachedMNIST
     type=float,
     default=0.5,
 )
+@click.option(
+    "--beta",
+    help="value for scaling multiple losses (default 0.5).",
+    type=int,
+    default=1,
+)
 def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
-         glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do):
+         glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta):
     # defining output folder
     if out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
@@ -134,6 +140,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     if ae_mod_loss is not None:
         ae_mod_loss_fn = get_mod_loss(
             name=ae_mod_loss,
+            beta=beta,
             main_loss=ae_main_loss,
             cuda=cuda)
     else:
