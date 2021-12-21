@@ -87,7 +87,7 @@ from py.datasets.mnist import CachedMNIST
 )
 @click.option(
     '--ae-mod-loss',
-    type=click.Choice(['sobel', 'gausk1', 'gausk3']),
+    type=click.Choice(['sobel', 'gausk1', 'gausk3', 'mix1']),
     default=None,
     help='Modified loss function for autoencoder training (default None)'
 )
@@ -101,7 +101,7 @@ from py.datasets.mnist import CachedMNIST
     "--input-do",
     help="value for dropout of input in pretraining and finetuning (default 0.2).",
     type=float,
-    default=10.2,
+    default=0.2,
 )
 @click.option(
     "--hidden-do",
@@ -223,12 +223,12 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             ae_opt = SGD(autoencoder.parameters(), lr=0.1, momentum=0.9)
             scheduler = StepLR(ae_opt, 100, gamma=0.1)
         else:
-            ae_opt = Adam(autoencoder.parameters(), lr=1e-2)
+            ae_opt = Adam(autoencoder.parameters(), lr=1e-1)
             scheduler = None
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=ae_main_loss_fn,#ae_mod_loss_fn,
+            loss_fn=[ae_main_loss_fn],#ae_mod_loss_fn,
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,

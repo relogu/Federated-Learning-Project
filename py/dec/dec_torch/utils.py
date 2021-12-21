@@ -25,9 +25,14 @@ def get_mod_loss(
     cuda: bool = False,
     ):
     loss_dict = {
-        'sobel': partial(SobelLoss, alpha, get_main_loss(main_loss), unflatten, cuda),
-        'gausk1': partial(GaussianBlurredLoss, 1, alpha, get_main_loss(main_loss), unflatten, cuda),
-        'gausk3': partial(GaussianBlurredLoss, 3, alpha, get_main_loss(main_loss), unflatten, cuda),
+        'sobel': [partial(SobelLoss, alpha, get_main_loss(main_loss), unflatten, cuda)],
+        'gausk1': [partial(GaussianBlurredLoss, 1, alpha, get_main_loss(main_loss), unflatten, cuda)],
+        'gausk3': [partial(GaussianBlurredLoss, 3, alpha, get_main_loss(main_loss), unflatten, cuda)],
+        'mix1': [
+            partial(SobelLoss, alpha, get_main_loss(main_loss), unflatten, cuda),
+            partial(GaussianBlurredLoss, 1, alpha, get_main_loss(main_loss), unflatten, cuda),
+            partial(GaussianBlurredLoss, 3, alpha, get_main_loss(main_loss), unflatten, cuda),
+        ],
     }
     return loss_dict[name]
 

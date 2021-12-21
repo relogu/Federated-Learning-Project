@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Iterable
 import torch
 import torch.nn.functional as F
 from torch.nn import Module, ReLU, Dropout
@@ -20,7 +20,7 @@ def train(
     epochs: int,
     batch_size: int,
     optimizer: Optimizer,
-    loss_fn: Optional[Module] = MSELoss,
+    loss_fn: Optional[Iterable[Module]] = [MSELoss],
     scheduler: Any = None,
     validation: Optional[Dataset] = None,
     corruption: Optional[float] = None,
@@ -71,7 +71,7 @@ def train(
         )
     else:
         validation_loader = None
-    loss_function = loss_fn()
+    loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
     #mse_loss = MSELoss()
     autoencoder.train()
     validation_loss_value = -1
@@ -101,7 +101,9 @@ def train(
             else:
                 output = autoencoder(batch)
             #output[output!=output] = 0
-            loss = loss_function(output, batch)
+            losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
+            loss = sum(losses)/len(loss_fn)
+            #loss = loss_function(output, batch)
             #loss = mse_loss(output, batch) + loss_function(output, batch)
             # accuracy = pretrain_accuracy(output, batch)
             loss_value = float(loss.item())
@@ -133,7 +135,9 @@ def train(
                 if cuda:
                     validation_actual = validation_actual.cuda(non_blocking=True)
                     validation_output = validation_output.cuda(non_blocking=True)
-                validation_loss = loss_function(validation_output, validation_actual)
+                val_losses = [l_fn_i(validation_output, validation_actual) for l_fn_i in loss_functions]
+                validation_loss = sum(val_losses)/len(loss_fn)
+                #validation_loss = loss_function(validation_output, validation_actual)
                 # validation_accuracy = pretrain_accuracy(validation_output, validation_actual)
                 validation_loss_value = float(validation_loss.item())
                 data_iterator.set_postfix(
@@ -167,7 +171,7 @@ def pretrain(
     epochs: int,
     batch_size: int,
     optimizer: Callable[[Module], Optimizer],
-    loss_fn: Optional[Module] = MSELoss,
+    loss_fn: Optional[Iterable[Module]] = [MSELoss],
     final_activation: Optional[Module] = None,
     scheduler: Optional[Callable[[Optimizer], Any]] = None,
     validation: Optional[Dataset] = None,
@@ -256,7 +260,7 @@ def pretrain(
                     cuda=cuda,
                     silent=silent,
                 )
-            if loss_fn == torch.nn.BCEWithLogitsLoss or torch.nn.BCELoss:
+            if loss_fn[0] == torch.nn.BCEWithLogitsLoss or torch.nn.BCELoss:
                 predictions = torch.sigmoid(predictions)
             current_dataset = TensorDataset(
                 predictions
@@ -269,7 +273,7 @@ def pretrain(
                         cuda=cuda,
                         silent=silent,
                     )
-                if loss_fn == torch.nn.BCEWithLogitsLoss or torch.nn.BCELoss:
+                if loss_fn[0] == torch.nn.BCEWithLogitsLoss or torch.nn.BCELoss:
                     predictions = torch.sigmoid(predictions)
                 current_validation = TensorDataset(
                     predictions
