@@ -112,7 +112,7 @@ from py.datasets.mnist import CachedMNIST
 @click.option(
     "--beta",
     help="value for scaling multiple losses (default 0.5).",
-    type=int,
+    type=float,
     default=0.5,
 )
 def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
