@@ -123,7 +123,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         path_to_out = pathlib.Path(out_folder)
     os.makedirs(path_to_out, exist_ok=True)
     print('Output folder {}'.format(path_to_out))
-    writer = SummaryWriter(logdir=str('runs/'+path_to_out.parts[-1]))  # create the TensorBoard object
+    writer = SummaryWriter(logdir=str('runs/'+str(path_to_out)))  # create the TensorBoard object
     
     if cuda:
         torch.cuda.set_device(gpu_id)
