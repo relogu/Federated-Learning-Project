@@ -24,6 +24,7 @@ def train(
     scheduler: Any = None,
     validation: Optional[Dataset] = None,
     corruption: Optional[float] = None,
+    noising: Optional[Module] = None,
     cuda: bool = True,
     sampler: Optional[Sampler] = None,
     silent: bool = False,
@@ -41,8 +42,10 @@ def train(
     :param epochs: number of training epochs
     :param batch_size: batch size for training
     :param optimizer: optimizer to use
+    :param loss_fn: TODO
     :param scheduler: scheduler to use, or None to disable, defaults to None
     :param corruption: proportion of masking corruption to apply, set to None to disable, defaults to None
+    :param noising: TODO
     :param validation: instance of Dataset to use for validation, set to None to disable, defaults to None
     :param cuda: whether CUDA is used, defaults to True
     :param sampler: sampler to use in the DataLoader, set to None to disable, defaults to None
@@ -95,11 +98,13 @@ def train(
                 batch = batch[0]
             if cuda:
                 batch = batch.cuda(non_blocking=True)
+            input = batch
             # run the batch through the autoencoder and obtain the output
             if corruption is not None:
-                output = autoencoder(F.dropout(batch, corruption))
-            else:
-                output = autoencoder(batch)
+                input = F.dropout(input, corruption)
+            if noising is not None:
+                input = noising(input)
+            output = autoencoder(input)
             #output[output!=output] = 0
             losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
             loss = sum(losses)/len(loss_fn)
@@ -176,6 +181,7 @@ def pretrain(
     scheduler: Optional[Callable[[Optimizer], Any]] = None,
     validation: Optional[Dataset] = None,
     corruption: Optional[float] = None,
+    noising: Optional[Module] = None,
     cuda: bool = True,
     sampler: Optional[Sampler] = None,
     silent: bool = False,
@@ -194,7 +200,9 @@ def pretrain(
     :param epochs: number of training epochs
     :param batch_size: batch size for training
     :param corruption: proportion of masking corruption to apply, set to None to disable, defaults to None
+    :param noising: TODO
     :param optimizer: function taking model and returning optimizer
+    :param loss_fn: TODO
     :param scheduler: function taking optimizer and returning scheduler, or None to disable
     :param validation: instance of Dataset to use for validation
     :param cuda: whether CUDA is used, defaults to True
@@ -240,6 +248,7 @@ def pretrain(
             loss_fn=loss_fn,
             validation=current_validation,
             corruption=None,  # already have dropout in the DAE
+            noising=noising,
             scheduler=ae_scheduler,
             cuda=cuda,
             sampler=sampler,
