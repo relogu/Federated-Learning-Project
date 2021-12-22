@@ -26,5 +26,15 @@ class TruncatedGaussianNoise(nn.Module):
                 mask = torch.rand(self.shape) > self.rate
             self.noise = self.noise.masked_fill(mask, 0)
             input = input + self.noise
+            if self.cuda:
+                mask = (input > 1.0).cuda()
+            else:
+                mask = input > 1.0
+            input = input.masked_fill(mask, 1.0)
+            if self.cuda:
+                mask = (input < 0.0).cuda()
+            else:
+                mask = input < 0.0
+            input = input.masked_fill(mask, 0.0)
         return input
     
