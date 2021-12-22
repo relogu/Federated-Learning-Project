@@ -18,6 +18,7 @@ from py.losses.torch import SobelLoss, GaussianBlurredLoss
 from py.dec.dec_torch.dec import DEC
 from py.dec.dec_torch.cluster_loops import train, predict
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.layers.torch import TruncatedGaussianNoise
 import py.dec.dec_torch.ae_loops as ae
 from py.dec.dec_torch.utils import cluster_accuracy, get_main_loss, get_mod_loss
 from py.datasets.bmnist import CachedBMNIST
@@ -62,8 +63,14 @@ from py.datasets.bmnist import CachedBMNIST
 )
 # customized arguments
 @click.option(
+    "--glw-pretraining",
+    help="whether to use greedy layer-wise pretraining(default True)",
+    type=bool,
+    default=True
+)
+@click.option(
     "--is-tied",
-    help="whether to use tied weights for the SDAE (the training procedure changes accordingly, default False)",
+    help="whether to use tied weights for the SDAE (default False)",
     type=bool,
     default=False
 )
@@ -75,7 +82,7 @@ from py.datasets.bmnist import CachedBMNIST
 )
 @click.option(
     '--ae-mod-loss',
-    type=click.Choice(['sobel', 'gausk1', 'gausk3']),
+    type=click.Choice(['sobel', 'gausk1', 'gausk3', 'mix', 'mix-gk', 'mix-s-gk1', 'mix-s-gk3']),
     default=None,
     help='Modified loss function for autoencoder training (default None)'
 )
@@ -85,8 +92,33 @@ from py.datasets.bmnist import CachedBMNIST
     type=int,
     default=1,
 )
+@click.option(
+    "--input-do",
+    help="value for dropout of input in pretraining and finetuning (default 0.2).",
+    type=float,
+    default=0.2,
+)
+@click.option(
+    "--hidden-do",
+    help="value for dropout of hidden linear layers of AE (default 0.5).",
+    type=float,
+    default=0.5,
+)
+@click.option(
+    "--beta",
+    help="value for scaling multiple losses (default 0.5).",
+    type=float,
+    default=0.5,
+)
+@click.option(
+    "--gaus-noise",
+    help="whether to apply gaussian noise in input at pretraining stage (default False)",
+    type=bool,
+    default=False
+)
 def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
-         is_tied, ae_main_loss, ae_mod_loss, alpha):
+         glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta,
+         gaus_noise):
     # defining output folder
     if out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
@@ -94,7 +126,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         path_to_out = pathlib.Path(out_folder)
     os.makedirs(path_to_out, exist_ok=True)
     print('Output folder {}'.format(path_to_out))
-    writer = SummaryWriter(logdir=str('runs/'+path_to_out.parts[-1]))  # create the TensorBoard object
+    writer = SummaryWriter(logdir=str('runs/'+str(path_to_out)))  # create the TensorBoard object
     
     if cuda:
         torch.cuda.set_device(gpu_id)
@@ -106,22 +138,35 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             epoch,
         )
     
+    # set up loss(es) used in training the SDAE
     ae_main_loss_fn = get_main_loss(ae_main_loss)
     if ae_mod_loss is not None:
         ae_mod_loss_fn = get_mod_loss(
             name=ae_mod_loss,
+            beta=beta,
             main_loss=ae_main_loss,
             cuda=cuda)
     else:
-        ae_mod_loss_fn = get_main_loss(ae_main_loss)
+        ae_mod_loss_fn = [get_main_loss(ae_main_loss)]
+        
+    # set noising to data        
+    if gaus_noise:
+        noising = TruncatedGaussianNoise(
+            shape=784,
+            stddev=input_do,
+            rate=1.0,
+            cuda=cuda)
+    else:
+        noising = None
     
-
+    # get datasets
     ds_train = CachedBMNIST(
         train=True, cuda=cuda, testing_mode=testing_mode
     )  # training dataset
     ds_val = CachedBMNIST(
         train=False, cuda=cuda, testing_mode=testing_mode
     )  # evaluation dataset
+    # set up SDAE
     autoencoder = StackedDenoisingAutoEncoder(
         [28 * 28, 500, 500, 2000, 10],
         final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
@@ -136,29 +181,14 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
     else:
         print("Pretraining stage.")
-        # lambda_ae_opt = lambda model: SGD(model.parameters(), lr=0.1, momentum=0.9)
-        # lambda_scheduler = lambda x: StepLR(x, 100, gamma=0.1)
-        lambda_ae_opt = lambda model: Adam(model.parameters(), lr=1e-4)
-        lambda_scheduler = lambda x: None
-        if is_tied:
-            ae.train(
-                ds_train,
-                autoencoder,
-                loss_fn=ae_mod_loss_fn,
-                cuda=cuda,
-                validation=ds_val,
-                epochs=pretrain_epochs,
-                batch_size=batch_size,
-                optimizer=lambda_ae_opt(autoencoder),
-                scheduler=lambda_scheduler(lambda_ae_opt(autoencoder)),
-                corruption=0.4,
-                update_callback=partial(training_callback, 'pretraining'),
-            )
-        else:
+        if glw_pretraining:
+            # greedy layer-wise pretraining
+            lambda_ae_opt = lambda model: SGD(model.parameters(), lr=0.1, momentum=0.9)
+            lambda_scheduler = lambda x: StepLR(x, 100, gamma=0.1)
             ae.pretrain(
                 ds_train,
                 autoencoder,
-                loss_fn=ae_main_loss_fn,
+                loss_fn=[ae_main_loss_fn],
                 final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
                 cuda=cuda,
                 validation=ds_val,
@@ -166,8 +196,27 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 batch_size=batch_size,
                 optimizer=lambda_ae_opt,
                 scheduler=lambda_scheduler,
-                corruption=0.4,
+                corruption=input_do if noising is None else None,
+                noising=noising,
                 update_callback=training_callback,
+            )
+        else:
+            # pretraining with standard methods (may be apply some kind of noise to data that is not d/o)
+            lambda_ae_opt = lambda model: Adam(model.parameters(), lr=1e-4)
+            lambda_scheduler = lambda x: None
+            ae.train(
+                ds_train,
+                autoencoder,
+                loss_fn=ae_mod_loss_fn,#[ae_main_loss_fn],#
+                cuda=cuda,
+                validation=ds_val,
+                epochs=pretrain_epochs,
+                batch_size=batch_size,
+                optimizer=lambda_ae_opt(autoencoder),
+                scheduler=lambda_scheduler(lambda_ae_opt(autoencoder)),
+                corruption=input_do if noising is None else None,
+                noising=noising,
+                update_callback=partial(training_callback, 'pretraining'),
             )
         torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
     print('Saving features after pretraining.')
@@ -187,30 +236,34 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
     else:
         print("Training stage.")
+        # finetuning
         autoencoder = StackedDenoisingAutoEncoder(
             [28 * 28, 500, 500, 2000, 10],
             final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-            dropout=0.2,
+            #dropout=hidden_do,
             is_tied=is_tied,
         )
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
         if cuda:
             autoencoder.cuda()
-        # ae_opt = SGD(autoencoder.parameters(), lr=0.1, momentum=0.9)
-        # scheduler = StepLR(ae_opt, 100, gamma=0.1)
-        ae_opt = Adam(autoencoder.parameters(), lr=1e-4)
-        scheduler = None
+        if glw_pretraining:
+            ae_opt = SGD(autoencoder.parameters(), lr=0.1, momentum=0.9)
+            scheduler = StepLR(ae_opt, 100, gamma=0.1)
+        else:
+            ae_opt = Adam(autoencoder.parameters(), lr=1e-4)
+            scheduler = None
         ae.train(
             ds_train,
             autoencoder,
-            loss_fn=ae_mod_loss_fn,
+            loss_fn=ae_mod_loss_fn,#[ae_main_loss_fn],
             cuda=cuda,
             validation=ds_val,
             epochs=finetune_epochs,
             batch_size=batch_size,
             optimizer=ae_opt,
             scheduler=scheduler,
-            corruption=0.2,
+            corruption=input_do,
+            noising=None,
             update_callback=partial(training_callback, 'finetuning'),
         )
         torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
@@ -227,11 +280,12 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             features.append(autoencoder.encoder(batch).detach().cpu())
         np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
     print("DEC stage.")
-    autoencoder = StackedDenoisingAutoEncoder(
-        [28 * 28, 500, 500, 2000, 10],
-        final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-        is_tied=is_tied,
-    )
+    # autoencoder = StackedDenoisingAutoEncoder(
+    #     [28 * 28, 500, 500, 2000, 10],
+    #     final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
+    #     dropout=hidden_do,
+    #     is_tied=is_tied,
+    # )
     autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
     if cuda:
         autoencoder.cuda()
@@ -248,8 +302,11 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 alpha=alpha)
     if cuda:
         model.cuda()
-    # dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
-    dec_optimizer = Adam(params=model.parameters(), lr=1e-4)
+    if glw_pretraining:
+        dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
+    else:
+        dec_optimizer = Adam(params=model.parameters(), lr=1e-3)
+    dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
     train(
         dataset=ds_train,
         model=model,
@@ -287,15 +344,6 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         ]  # TODO numpify
         np.savez(path_to_out/'final_assignments_alpha{}'.format(alpha), predicted_reassigned)
         np.savez(path_to_out/'actual_labels_alpha{}'.format(alpha), torch.cat(actual).detach().cpu().numpy())
-        # confusion = confusion_matrix(actual, predicted_reassigned)
-        # normalised_confusion = (
-        #     confusion.astype("float") / confusion.sum(axis=1)[:, np.newaxis]
-        # )
-        # confusion_id = uuid.uuid4().hex
-        # sns.heatmap(normalised_confusion).get_figure().savefig(
-        #     "confusion_%s.png" % confusion_id
-        # )
-        # print("Writing out confusion diagram with UUID: %s" % confusion_id)
         writer.close()
 
 
