@@ -14,6 +14,8 @@ CUDA Toolkit Helper*
 *RESULTS
 *.png
 *results/*/*.png
+*out_torch*
+*runs*
 
 # obscuring results for now
 #*results*
