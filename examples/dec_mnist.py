@@ -267,7 +267,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             batch_size=batch_size,
             optimizer=ae_opt,
             scheduler=scheduler,
-            corruption=None,
+            corruption=input_do,
             noising=None,
             update_callback=partial(training_callback, 'finetuning'),
         )
