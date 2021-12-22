@@ -23,7 +23,7 @@ class TruncatedGaussianNoise(nn.Module):
 
     def forward(self, input):
         if not self.training: return input
-        self.noise.data.normal_(0, std=self.std)
+        self.noise.data.normal_(0, std=self.stddev)
         if self.cuda:
             mask = (torch.rand(self.shape) > self.rate).cuda()
         else:
