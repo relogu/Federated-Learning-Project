@@ -13,9 +13,9 @@ class TruncatedGaussianNoise(nn.Module):
         self.shape = shape
         self.cuda = cuda
         if self.cuda:
-            self.noise = Variable(torch.zeros(self.shape,self.shape).cuda())
+            self.noise = Variable(torch.zeros(self.shape).cuda())
         else:
-            self.noise = Variable(torch.zeros(self.shape,self.shape))
+            self.noise = Variable(torch.zeros(self.shape))
 
     def forward(self, input):
         if self.training:
