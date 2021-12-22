@@ -268,7 +268,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             optimizer=ae_opt,
             scheduler=scheduler,
             corruption=None,
-            noising=noising,
+            noising=None,
             update_callback=partial(training_callback, 'finetuning'),
         )
         torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
