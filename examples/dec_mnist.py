@@ -17,6 +17,7 @@ from py.losses.torch import SobelLoss, GaussianBlurredLoss
 from py.dec.dec_torch.dec import DEC
 from py.dec.dec_torch.cluster_loops import train, predict
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.layers.torch import TruncatedGaussianNoise
 import py.dec.dec_torch.ae_loops as ae
 from py.dec.dec_torch.utils import cluster_accuracy, get_main_loss, get_mod_loss
 from py.datasets.mnist import CachedMNIST
@@ -114,8 +115,15 @@ from py.datasets.mnist import CachedMNIST
     type=float,
     default=0.5,
 )
+@click.option(
+    "--gaus-noise",
+    help="whether to apply gaussian noise in input at pretraining stage (default False)",
+    type=bool,
+    default=False
+)
 def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
-         glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta):
+         glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta,
+         gaus_noise):
     # defining output folder
     if out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
@@ -145,7 +153,16 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             cuda=cuda)
     else:
         ae_mod_loss_fn = [get_main_loss(ae_main_loss)]
-    
+        
+    # set noising to data        
+    if gaus_noise:
+        noising = TruncatedGaussianNoise(
+            shape=784,
+            stddev=input_do,
+            rate=1.0,
+            cuda=cuda)
+    else:
+        noising = None
     # get datasets
     ds_train = CachedMNIST(
         train=True, cuda=cuda, testing_mode=testing_mode
@@ -184,7 +201,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 batch_size=batch_size,
                 optimizer=lambda_ae_opt,
                 scheduler=lambda_scheduler,
-                corruption=input_do,
+                corruption=input_do if noising is None else None,
+                noising=noising,
                 update_callback=training_callback,
             )
         else:
@@ -201,7 +219,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 batch_size=batch_size,
                 optimizer=lambda_ae_opt(autoencoder),
                 scheduler=lambda_scheduler(lambda_ae_opt(autoencoder)),
-                corruption=input_do,
+                corruption=input_do if noising is None else None,
+                noising=noising,
                 update_callback=partial(training_callback, 'pretraining'),
             )
         torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
@@ -248,7 +267,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             batch_size=batch_size,
             optimizer=ae_opt,
             scheduler=scheduler,
-            #corruption=input_do,
+            corruption=None,
+            noising=noising,
             update_callback=partial(training_callback, 'finetuning'),
         )
         torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
