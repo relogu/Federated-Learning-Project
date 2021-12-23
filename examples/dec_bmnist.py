@@ -3,17 +3,14 @@ import pathlib
 import click
 from functools import partial
 import numpy as np
-import seaborn as sns
-from sklearn.metrics import confusion_matrix
-import tensorflow as tf
+
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import StepLR, ExponentialLR
 from tensorboardX import SummaryWriter
-import uuid
-
-from py.losses.torch import SobelLoss, GaussianBlurredLoss
 
 from py.dec.dec_torch.dec import DEC
 from py.dec.dec_torch.cluster_loops import train, predict

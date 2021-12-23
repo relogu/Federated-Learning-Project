@@ -5,6 +5,9 @@ from functools import partial
 import numpy as np
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
+
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import SGD, Adam
