@@ -318,7 +318,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     train(
         dataset=ds_train,
         model=model,
-        epochs=100,
+        epochs=20,
         batch_size=256,
         optimizer=dec_optimizer,
         stopping_delta=0.000001,
