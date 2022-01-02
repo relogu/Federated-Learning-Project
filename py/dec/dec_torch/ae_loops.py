@@ -81,7 +81,7 @@ def train(
     loss_value = 0
     for epoch in range(epochs):
         if scheduler is not None:
-            scheduler.step()
+            scheduler.step(validation_loss_value)
         data_iterator = tqdm(
             dataloader,
             leave=True,
