@@ -306,8 +306,18 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             ae_opt = SGD(autoencoder.parameters(), lr=0.1, momentum=0.9)
             scheduler = StepLR(ae_opt, 100, gamma=0.1)
         else:
-            ae_opt = Adam(autoencoder.parameters(), lr=adam_lr)
-            scheduler = None
+            lambda_ae_opt = lambda model: Yogi(
+                model.parameters(),
+                lr=1e-2,
+                betas=(0.9, 0.999),
+                eps=1e-3,
+                initial_accumulator=1e-6,
+                weight_decay=0)  # Adam(model.parameters(), lr=adam_lr)
+            lambda_scheduler = lambda x: ReduceLROnPlateau(
+                x,
+                mode='min',
+                factor=0.5,
+                patience=20,)#None
         ae.train(
             ds_train,
             autoencoder,
@@ -318,7 +328,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             batch_size=batch_size,
             optimizer=ae_opt,
             scheduler=scheduler,
-            corruption=input_do,
+            #corruption=input_do,
             noising=None,
             update_callback=partial(training_callback, 'finetuning'),
         )
