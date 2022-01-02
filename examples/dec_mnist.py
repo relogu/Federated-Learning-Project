@@ -314,7 +314,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 initial_accumulator=1e-6,
                 weight_decay=0)  # Adam(model.parameters(), lr=adam_lr)
             scheduler = ReduceLROnPlateau(
-                lambda_ae_opt,
+                ae_opt,
                 mode='min',
                 factor=0.5,
                 patience=20,)#None
