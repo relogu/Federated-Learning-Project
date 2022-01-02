@@ -178,6 +178,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     z_dim = 30#10
     # learning rate for Adam
     adam_lr = 1e-4
+    # AE layers' dimension
+    linears = [28*28, 1000, 500, 250, z_dim],#[28 * 28, 500, 500, 2000, z_dim],
     
     # get datasets
     ds_train = CachedMNIST(
@@ -189,7 +191,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     
     # set up SDAE
     autoencoder = StackedDenoisingAutoEncoder(
-        [28*28, 1000, 500, 250, z_dim],#[28 * 28, 500, 500, 2000, z_dim],
+        linears,
         activation=torch.nn.Sigmoid(),
         final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
         dropout=hidden_do,
@@ -292,7 +294,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         print("Training stage.")
         # finetuning
         autoencoder = StackedDenoisingAutoEncoder(
-            [28 * 28, 500, 500, 2000, z_dim],
+            linears,
             final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
             #dropout=hidden_do,
             is_tied=is_tied,
@@ -357,7 +359,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 )
     print("DEC stage.")
     # autoencoder = StackedDenoisingAutoEncoder(
-    #     [28 * 28, 500, 500, 2000, z_dim],
+    #     linears,
     #     final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
     #     dropout=hidden_do,
     #     is_tied=is_tied,
