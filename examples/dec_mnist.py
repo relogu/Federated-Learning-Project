@@ -179,7 +179,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     # learning rate for Adam
     adam_lr = 1e-4
     # AE layers' dimension
-    linears = [28*28, 1000, 500, 250, z_dim],#[28 * 28, 500, 500, 2000, z_dim],
+    linears = [28*28, 1000, 500, 250, z_dim]#[28 * 28, 500, 500, 2000, z_dim],
     
     # get datasets
     ds_train = CachedMNIST(
