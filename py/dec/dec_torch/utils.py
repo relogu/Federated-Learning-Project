@@ -24,26 +24,27 @@ def get_mod_loss(
     unflatten: bool = True,
     cuda: bool = False,
     ):
+    main_loss = get_main_loss(main_loss)
     loss_dict = {
-        'sobel': [partial(SobelLoss, beta, get_main_loss(main_loss), unflatten, cuda)],
-        'gausk1': [partial(GaussianBlurredLoss, 1, beta, get_main_loss(main_loss), unflatten, cuda)],
-        'gausk3': [partial(GaussianBlurredLoss, 3, beta, get_main_loss(main_loss), unflatten, cuda)],
+        'sobel': [partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, cuda)],
+        'gausk1': [partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, cuda)],
+        'gausk3': [partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, cuda)],
         'mix': [
-            partial(SobelLoss, beta, get_main_loss(main_loss), unflatten, cuda),
-            partial(GaussianBlurredLoss, 1, beta, get_main_loss(main_loss), unflatten, cuda),
-            partial(GaussianBlurredLoss, 3, beta, get_main_loss(main_loss), unflatten, cuda),
+            partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, cuda),
+            partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, cuda),
+            partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, cuda),
         ],
         'mix-gk': [
-            partial(GaussianBlurredLoss, 1, beta, get_main_loss(main_loss), unflatten, cuda),
-            partial(GaussianBlurredLoss, 3, beta, get_main_loss(main_loss), unflatten, cuda),
+            partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, cuda),
+            partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, cuda),
         ],
         'mix-s-gk1': [
-            partial(SobelLoss, beta, get_main_loss(main_loss), unflatten, cuda),
-            partial(GaussianBlurredLoss, 1, beta, get_main_loss(main_loss), unflatten, cuda),
+            partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, cuda),
+            partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, cuda),
         ],
         'mix-s-gk3': [
-            partial(SobelLoss, beta, get_main_loss(main_loss), unflatten, cuda),
-            partial(GaussianBlurredLoss, 3, beta, get_main_loss(main_loss), unflatten, cuda),
+            partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, cuda),
+            partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, cuda),
         ],
     }
     return loss_dict[name]
