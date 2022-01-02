@@ -306,14 +306,14 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             ae_opt = SGD(autoencoder.parameters(), lr=0.1, momentum=0.9)
             scheduler = StepLR(ae_opt, 100, gamma=0.1)
         else:
-            lambda_ae_opt = Yogi(
+            ae_opt = Yogi(
                 autoencoder.parameters(),
                 lr=1e-2,
                 betas=(0.9, 0.999),
                 eps=1e-3,
                 initial_accumulator=1e-6,
                 weight_decay=0)  # Adam(model.parameters(), lr=adam_lr)
-            lambda_scheduler = ReduceLROnPlateau(
+            scheduler = ReduceLROnPlateau(
                 lambda_ae_opt,
                 mode='min',
                 factor=0.5,
