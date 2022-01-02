@@ -1,5 +1,7 @@
 import numpy as np
+import sklearn
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler, Normalizer
 import torch
 from torch.nn import Module, KLDivLoss
 from torch.optim import Optimizer
@@ -7,8 +9,10 @@ from torch.utils.data.dataloader import DataLoader, default_collate
 from torch.utils.data.sampler import Sampler
 from typing import Tuple, Callable, Optional, Union
 from tqdm import tqdm
+import copy
 
 from .utils import target_distribution, cluster_accuracy
+from py.util import compute_centroid_np
 
 
 def train(
@@ -73,6 +77,7 @@ def train(
         },
         disable=silent,
     )
+    '''
     kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
     model.train()
     features = []
@@ -97,9 +102,28 @@ def train(
     with torch.no_grad():
         # initialise the cluster centers
         model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
+    '''
+    predicted_previous, accuracy = assign_cluster_centers(
+        dataset=dataset,
+        model=model,
+        batch_size=batch_size,
+        collate_fn=collate_fn,
+        cuda=cuda,
+        sampler=sampler,
+        silent=silent
+    )
     loss_function = KLDivLoss(size_average=False)
     delta_label = None
     for epoch in range(epochs):
+        # predicted_previous, accuracy = assign_cluster_centers(
+        #     dataset=dataset,
+        #     model=model,
+        #     batch_size=batch_size,
+        #     collate_fn=collate_fn,
+        #     cuda=cuda,
+        #     sampler=sampler,
+        #     silent=silent
+        # )
         features = []
         data_iterator = tqdm(
             train_dataloader,
@@ -113,8 +137,11 @@ def train(
             },
             disable=silent,
         )
+        # old_model = copy.deepcopy(model)
         model.train()
         for index, batch in enumerate(data_iterator):
+            # if index % 140:
+            #     old_model = copy.deepcopy(model)
             if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
                 batch
             ) == 2:
@@ -122,7 +149,9 @@ def train(
             if cuda:
                 batch = batch.cuda(non_blocking=True)
             output = model(batch)
-            target = target_distribution(output).detach()
+            soft_labels = output
+            # soft_labels = old_model(batch)
+            target = target_distribution(soft_labels).detach()
             loss = loss_function(output.log(), target) / output.shape[0]
             data_iterator.set_postfix(
                 epo=epoch,
@@ -227,3 +256,77 @@ def predict(
         return torch.cat(features).max(1)[1], torch.cat(actual).long()
     else:
         return torch.cat(features).max(1)[1]
+    
+
+def assign_cluster_centers(
+    dataset: torch.utils.data.Dataset,
+    model: Module,
+    batch_size: int,
+    collate_fn=default_collate,
+    cuda: bool = True,
+    sampler: Optional[Sampler] = None,
+    silent: bool = False,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    static_dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        collate_fn=collate_fn,
+        pin_memory=False,
+        sampler=sampler,
+        shuffle=False,
+    )
+    data_iterator = tqdm(
+        static_dataloader,
+        leave=True,
+        unit="batch",
+        # postfix={
+        #     "epo": -1,
+        #     "acc": "%.4f" % 0.0,
+        #     "lss": "%.8f" % 0.0,
+        #     "dlb": "%.4f" % -1,
+        # },
+        disable=True,
+    )
+    # scaler = StandardScaler()
+    scaler = Normalizer(norm='l1')
+    kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
+    #model.train()
+    features = []
+    actual = []
+    # form initial cluster centres
+    for index, batch in enumerate(data_iterator):
+        if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+            batch, value = batch  # if we have a prediction label, separate it to actual
+            actual.append(value)
+        if cuda:
+            batch = batch.cuda(non_blocking=True)
+        features.append(model.encoder(batch).detach().cpu())
+    actual = torch.cat(actual).long()
+    
+    predicted = kmeans.fit_predict(scaler.fit_transform(torch.cat(features).numpy()))
+    # predicted = kmeans.fit_predict(normalize(torch.cat(features).numpy()))
+    predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
+    _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
+    
+    emp_centroids = []
+    for i in np.unique(predicted):
+        idx = (predicted == i)
+        emp_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
+    
+    # true_centroids = []
+    # for i in np.unique(actual.cpu().numpy()):
+    #     idx = (actual.cpu().numpy() == i)
+    #     true_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
+    
+    cluster_centers = torch.tensor(
+        np.array(emp_centroids),#kmeans.cluster_centers_,np.array(true_centroids),#
+        dtype=torch.float,
+        requires_grad=False,#True
+    )
+    if cuda:
+        cluster_centers = cluster_centers.cuda(non_blocking=True)
+    with torch.no_grad():
+        # initialise the cluster centers
+        model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
+    
+    return predicted_previous, accuracy
