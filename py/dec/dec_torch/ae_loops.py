@@ -100,10 +100,10 @@ def train(
                 batch = batch.cuda(non_blocking=True)
             input = batch
             # run the batch through the autoencoder and obtain the output
-            if corruption is not None:
-                input = F.dropout(input, corruption)
             if noising is not None:
                 input = noising(input)
+            if corruption is not None:
+                input = F.dropout(input, corruption)
             output = autoencoder(input)
             #output[output!=output] = 0
             losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
