@@ -175,7 +175,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         noising = None
         
     # features space dimension
-    z_dim = 30#10
+    z_dim = 10
     # learning rate for Adam
     adam_lr = 1e-4
     # AE layers' dimension
