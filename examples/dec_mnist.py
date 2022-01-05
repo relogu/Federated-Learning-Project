@@ -177,7 +177,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     # features space dimension
     z_dim = 10
     # learning rate for Adam
-    adam_lr = 1e-4
+    adam_lr = 1
     # AE layers' dimension
     #linears = [28 * 28, 1000, 500, 250, z_dim]
     linears = [28 * 28, 500, 500, 2000, z_dim]
@@ -229,7 +229,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             # pretraining with standard methods (may be apply some kind of noise to data that is not d/o)
             lambda_ae_opt = lambda model: Yogi(
                 model.parameters(),
-                lr=1e-2,
+                lr=adam_lr,
                 betas=(0.9, 0.999),
                 eps=1e-3,
                 initial_accumulator=1e-6,
@@ -309,7 +309,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         else:
             ae_opt = Yogi(
                 autoencoder.parameters(),
-                lr=1e-2,
+                lr=adam_lr,
                 betas=(0.9, 0.999),
                 eps=1e-3,
                 initial_accumulator=1e-6,
