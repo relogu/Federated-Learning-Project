@@ -193,7 +193,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     # set up SDAE
     autoencoder = StackedDenoisingAutoEncoder(
         linears,
-        activation=torch.nn.Sigmoid(),
+        activation=torch.nn.ReLU(),#torch.nn.Sigmoid(),
         final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
         dropout=hidden_do,
         is_tied=is_tied,
