@@ -158,7 +158,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     #     torch.cuda.set_device(gpu_id)
     device = "cpu"
     if cuda:#torch.cuda.is_available():
-        device = "cuda:{}".format(gpu_id)
+        device = "cuda:0"#{}".format(gpu_id)
     
     torch.autograd.set_detect_anomaly(True)
     # callback function to call during training, uses writer from the scope
