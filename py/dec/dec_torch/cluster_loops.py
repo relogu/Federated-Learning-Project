@@ -23,7 +23,8 @@ def train(
     optimizer: Optimizer,
     stopping_delta: Optional[float] = None,
     collate_fn=default_collate,
-    cuda: bool = True,
+    # cuda: bool = True,
+    device: str = 'cpu',
     sampler: Optional[Sampler] = None,
     silent: bool = False,
     update_freq: int = 10,
@@ -42,6 +43,7 @@ def train(
     :param stopping_delta: label delta as a proportion to use for stopping, None to disable, default None
     :param collate_fn: function to merge a list of samples into mini-batch
     :param cuda: whether to use CUDA, defaults to True
+    :param device: TODO
     :param sampler: optional sampler to use in the DataLoader, defaults to None
     :param silent: set to True to prevent printing out summary statistics, defaults to False
     :param update_freq: frequency of batches with which to update counter, None disables, default 10
@@ -108,7 +110,8 @@ def train(
         model=model,
         batch_size=batch_size,
         collate_fn=collate_fn,
-        cuda=cuda,
+        # cuda=cuda,
+        device=device,
         sampler=sampler,
         silent=silent
     )
@@ -120,7 +123,8 @@ def train(
         #     model=model,
         #     batch_size=batch_size,
         #     collate_fn=collate_fn,
-        #     cuda=cuda,
+        #     # cuda=cuda,
+        #     device=device,
         #     sampler=sampler,
         #     silent=silent
         # )
@@ -146,8 +150,9 @@ def train(
                 batch
             ) == 2:
                 batch, _ = batch  # if we have a prediction label, strip it away
-            if cuda:
-                batch = batch.cuda(non_blocking=True)
+            # if cuda:
+            #     batch = batch.cuda(non_blocking=True)
+            batch = batch.to(device, non_blocking=True)
             output = model(batch)
             soft_labels = output
             # soft_labels = old_model(batch)
@@ -186,7 +191,8 @@ def train(
             collate_fn=collate_fn,
             silent=True,
             return_actual=True,
-            cuda=cuda,
+            # cuda=cuda,
+            device=device,
         )
         delta_label = (
             float((predicted != predicted_previous).float().sum().item())
@@ -215,7 +221,8 @@ def predict(
     model: Module,
     batch_size: int = 1024,
     collate_fn=default_collate,
-    cuda: bool = True,
+    # cuda: bool = True,
+    device: str = 'cpu',
     silent: bool = False,
     return_actual: bool = False,
 ) -> Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
@@ -227,6 +234,7 @@ def predict(
     :param batch_size: size of the batch to predict with, default 1024
     :param collate_fn: function to merge a list of samples into mini-batch
     :param cuda: whether CUDA is used, defaults to True
+    :param device: TODO
     :param silent: set to True to prevent printing out summary statistics, defaults to False
     :param return_actual: return actual values, if present in the Dataset
     :return: tuple of prediction and actual if return_actual is True otherwise prediction
@@ -247,8 +255,9 @@ def predict(
             raise ValueError(
                 "Dataset has no actual value to unpack, but return_actual is set."
             )
-        if cuda:
-            batch = batch.cuda(non_blocking=True)
+        # if cuda:
+        #     batch = batch.cuda(non_blocking=True)
+        batch = batch.to(device, non_blocking=True)
         features.append(
             model(batch).detach().cpu()
         )  # move to the CPU to prevent out of memory on the GPU
@@ -263,10 +272,22 @@ def assign_cluster_centers(
     model: Module,
     batch_size: int,
     collate_fn=default_collate,
-    cuda: bool = True,
+    # cuda: bool = True,
+    device: str = 'cpu',
     sampler: Optional[Sampler] = None,
     silent: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    TODO
+
+    :param dataset: instance of Dataset to use for training
+    :param model: instance of DEC model to predict
+    :param batch_size: size of the batch to predict with, default 1024
+    :param collate_fn: function to merge a list of samples into mini-batch
+    :param cuda: whether CUDA is used, defaults to True
+    :param device: TODO
+    :param silent: set to True to prevent printing out summary statistics, defaults to False
+    """
     static_dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
@@ -298,8 +319,9 @@ def assign_cluster_centers(
         if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
             batch, value = batch  # if we have a prediction label, separate it to actual
             actual.append(value)
-        if cuda:
-            batch = batch.cuda(non_blocking=True)
+        # if cuda:
+        #     batch = batch.cuda(non_blocking=True)
+        batch = batch.to(device, non_blocking=True)
         features.append(model.encoder(batch).detach().cpu())
     actual = torch.cat(actual).long()
     
@@ -323,8 +345,9 @@ def assign_cluster_centers(
         dtype=torch.float,
         requires_grad=False,#True
     )
-    if cuda:
-        cluster_centers = cluster_centers.cuda(non_blocking=True)
+    # if cuda:
+    #     cluster_centers = cluster_centers.cuda(non_blocking=True)
+    cluster_centers = cluster_centers.to(device, non_blocking=True)
     with torch.no_grad():
         # initialise the cluster centers
         model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)

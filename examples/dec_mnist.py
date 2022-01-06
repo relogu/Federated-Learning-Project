@@ -154,8 +154,12 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         logdir=str('runs/'+str(path_to_out)),
         flush_secs=5)  # create the TensorBoard object
     
-    if cuda:
-        torch.cuda.set_device(gpu_id)
+    # if cuda:
+    #     torch.cuda.set_device(gpu_id)
+    device = "cpu"
+    if cuda:#torch.cuda.is_available():
+        device = "cuda:{}".format(gpu_id)
+    
     torch.autograd.set_detect_anomaly(True)
     # callback function to call during training, uses writer from the scope
     def training_callback(name, epoch, lr, loss, validation_loss):
@@ -172,7 +176,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             name=ae_mod_loss,
             beta=beta,
             main_loss=ae_main_loss,
-            cuda=cuda)
+            #cuda=cuda,
+            device=device,
+            )
     else:
         ae_mod_loss_fn = [get_main_loss(ae_main_loss)]
         
@@ -185,7 +191,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             shape=784,
             stddev=input_do,
             rate=1.0,
-            cuda=cuda)
+            # cuda=cuda,
+            device=device,
+            )
     else:
         noising = None
         
@@ -215,8 +223,11 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         dropout=hidden_do,
         is_tied=is_tied,
     )
-    if cuda:
-        autoencoder.cuda()
+    # if cuda:
+    #     autoencoder.cuda()
+    if torch.cuda.device_count() > 1:
+        autoencoder = torch.nn.DataParallel(autoencoder)
+    autoencoder.to(device)
         
     if (path_to_out/'pretrain_ae').exists():
         print('Skipping pretraining since weights already exist.')
@@ -232,7 +243,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 autoencoder,
                 loss_fn=[ae_main_loss_fn],
                 final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-                cuda=cuda,
+                # cuda=cuda,
+                device=device,
                 validation=ds_val,
                 epochs=pretrain_epochs,
                 batch_size=batch_size,
@@ -261,7 +273,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 ds_train,
                 autoencoder,
                 loss_fn=ae_mod_loss_fn,#[ae_main_loss_fn],#
-                cuda=cuda,
+                # cuda=cuda,
+                device=device,
                 validation=ds_val,
                 epochs=pretrain_epochs,
                 batch_size=batch_size,
@@ -283,8 +296,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             for i, batch in enumerate(dataloader):
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                     batch, value = batch  # if we have a prediction label, separate it to actual
-                if cuda:
-                    batch = batch.cuda(non_blocking=True)
+                # if cuda:
+                #     batch = batch.cuda(non_blocking=True)
+                batch = batch.to(device, non_blocking=True)
                 features.append(autoencoder.encoder(batch).detach().cpu())
                 r_images.append(autoencoder(batch).detach().cpu())
                 labels.append(value.detach().cpu())
@@ -342,7 +356,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             ds_train,
             autoencoder,
             loss_fn=ae_mod_loss_fn,#[ae_main_loss_fn],
-            cuda=cuda,
+            # cuda=cuda,
+            device=device,
             validation=ds_val,
             epochs=finetune_epochs,
             batch_size=batch_size,
@@ -364,8 +379,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             for i, batch in enumerate(dataloader):
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                     batch, value = batch  # if we have a prediction label, separate it to actual
-                if cuda:
-                    batch = batch.cuda(non_blocking=True)
+                # if cuda:
+                #     batch = batch.cuda(non_blocking=True)
+                batch = batch.to(device, non_blocking=True)
                 features.append(autoencoder.encoder(batch).detach().cpu())
                 r_images.append(autoencoder(batch).detach().cpu())
                 labels.append(value.detach().cpu())
@@ -395,8 +411,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     #     is_tied=is_tied,
     # )
     autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
-    if cuda:
-        autoencoder.cuda()
+    # if cuda:
+    #     autoencoder.cuda()
+    autoencoder = autoencoder.to(device)
     # callback function to call during training, uses writer from the scope
     def training_callback1(alpha, epoch, lr, accuracy, loss, delta_label):
         writer.add_scalars(
@@ -414,8 +431,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         for i, batch in enumerate(dataloader):
             if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                 batch, value = batch  # if we have a prediction label, separate it to actual
-            if cuda:
-                batch = batch.cuda(non_blocking=True)
+            # if cuda:
+            #     batch = batch.cuda(non_blocking=True)
+            batch = batch.to(device, non_blocking=True)
             features.append(model.encoder(batch).detach().cpu())
             r_images.append(autoencoder(batch).detach().cpu())
             labels.append(value.detach().cpu())
@@ -440,8 +458,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 hidden_dimension=z_dim,
                 encoder=autoencoder.encoder,
                 alpha=alpha)
-    if cuda:
-        model.cuda()
+    # if cuda:
+    #     model.cuda()
+    model = model.to(device)
     if glw_pretraining:
         dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
     else:
@@ -457,7 +476,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         stopping_delta=0.000001,
         update_callback=partial(training_callback1, alpha),
         epoch_callback=epoch_callback1,
-        cuda=cuda,
+        #cuda=cuda,
+        device=device,
     )
     predicted, actual = predict(
         ds_train, model, 1024, silent=True, return_actual=True, cuda=cuda
@@ -474,8 +494,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
             batch, value = batch  # if we have a prediction label, separate it to actual
             actual.append(value)
-        if cuda:
-            batch = batch.cuda(non_blocking=True)
+        # if cuda:
+        #     batch = batch.cuda(non_blocking=True)
+        batch = batch.to(device, non_blocking=True)
         features.append(autoencoder.encoder(batch).detach().cpu())
         images.append(batch.detach().cpu())
     np.savez(path_to_out/'final_ae_features_alpha{}'.format(alpha), torch.cat(features).numpy())

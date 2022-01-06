@@ -25,7 +25,8 @@ def train(
     validation: Optional[Dataset] = None,
     corruption: Optional[float] = None,
     noising: Optional[Module] = None,
-    cuda: bool = True,
+    #cuda: bool = True,
+    device: str = 'cpu',
     sampler: Optional[Sampler] = None,
     silent: bool = False,
     update_freq: Optional[int] = 1,
@@ -48,6 +49,7 @@ def train(
     :param noising: TODO
     :param validation: instance of Dataset to use for validation, set to None to disable, defaults to None
     :param cuda: whether CUDA is used, defaults to True
+    :param device: TODO
     :param sampler: sampler to use in the DataLoader, set to None to disable, defaults to None
     :param silent: set to True to prevent printing out summary statistics, defaults to False
     :param update_freq: frequency of batches with which to update counter, set to None disables, default 1
@@ -96,8 +98,9 @@ def train(
                 and len(batch) in [1, 2]
             ):
                 batch = batch[0]
-            if cuda:
-                batch = batch.cuda(non_blocking=True)
+            # if cuda:
+            #     batch = batch.cuda(non_blocking=True)
+            batch = batch.to(device)
             input = batch
             # run the batch through the autoencoder and obtain the output
             if noising is not None:
@@ -124,7 +127,8 @@ def train(
                     validation,
                     autoencoder,
                     batch_size,
-                    cuda=cuda,
+                    # cuda=cuda,
+                    device=device,
                     silent=True,
                     encode=False,
                 )
@@ -137,9 +141,11 @@ def train(
                     else:
                         validation_inputs.append(val_batch)
                 validation_actual = torch.cat(validation_inputs)
-                if cuda:
-                    validation_actual = validation_actual.cuda(non_blocking=True)
-                    validation_output = validation_output.cuda(non_blocking=True)
+                # if cuda:
+                #     validation_actual = validation_actual.cuda(non_blocking=True)
+                #     validation_output = validation_output.cuda(non_blocking=True)
+                validation_actual = validation_actual.to(device, non_blocking=True)
+                validation_output = validation_output.to(device, non_blocking=True)
                 val_losses = [l_fn_i(validation_output, validation_actual) for l_fn_i in loss_functions]
                 validation_loss = sum(val_losses)/len(loss_fn)
                 #validation_loss = loss_function(validation_output, validation_actual)
@@ -182,7 +188,8 @@ def pretrain(
     validation: Optional[Dataset] = None,
     corruption: Optional[float] = None,
     noising: Optional[Module] = None,
-    cuda: bool = True,
+    #cuda: bool = True,
+    device: str = 'cpu',
     sampler: Optional[Sampler] = None,
     silent: bool = False,
     update_freq: Optional[int] = 1,
@@ -206,6 +213,7 @@ def pretrain(
     :param scheduler: function taking optimizer and returning scheduler, or None to disable
     :param validation: instance of Dataset to use for validation
     :param cuda: whether CUDA is used, defaults to True
+    :param device: TODO
     :param sampler: sampler to use in the DataLoader, defaults to None
     :param silent: set to True to prevent printing out summary statistics, defaults to False
     :param update_freq: frequency of batches with which to update counter, None disables, default 1
@@ -235,8 +243,9 @@ def pretrain(
             corruption=Dropout(corruption) if corruption is not None else None,
             tied=autoencoder.is_tied,
         )
-        if cuda:
-            sub_autoencoder = sub_autoencoder.cuda()
+        # if cuda:
+        #     sub_autoencoder = sub_autoencoder.cuda()
+        sub_autoencoder = sub_autoencoder.to(device)
         ae_optimizer = optimizer(sub_autoencoder)
         ae_scheduler = scheduler(ae_optimizer) if scheduler is not None else scheduler
         train(
@@ -250,7 +259,8 @@ def pretrain(
             corruption=None,  # already have dropout in the DAE
             noising=noising,
             scheduler=ae_scheduler,
-            cuda=cuda,
+            # cuda=cuda,
+            device=device,
             sampler=sampler,
             silent=silent,
             update_freq=update_freq,
@@ -266,7 +276,8 @@ def pretrain(
                     current_dataset,
                     sub_autoencoder,
                     batch_size,
-                    cuda=cuda,
+                    # cuda=cuda,
+                    device=device,
                     silent=silent,
                 )
             if loss_fn[0] == torch.nn.BCEWithLogitsLoss or torch.nn.BCELoss:
@@ -279,7 +290,8 @@ def pretrain(
                         current_validation,
                         sub_autoencoder,
                         batch_size,
-                        cuda=cuda,
+                        # cuda=cuda,
+                        device=device,
                         silent=silent,
                     )
                 if loss_fn[0] == torch.nn.BCEWithLogitsLoss or torch.nn.BCELoss:
@@ -296,7 +308,8 @@ def predict(
     dataset: Dataset,
     model: Module,
     batch_size: int,
-    cuda: bool = True,
+    #cuda: bool = True,
+    device: str = 'cpu',
     silent: bool = False,
     encode: bool = True,
 ) -> torch.Tensor:
@@ -308,6 +321,7 @@ def predict(
     :param model: autoencoder for prediction
     :param batch_size: batch size
     :param cuda: whether CUDA is used, defaults to True
+    :param device: TODO
     :param silent: set to True to prevent printing out summary statistics, defaults to False
     :param encode: whether to encode or use the full autoencoder
     :return: predicted features from the Dataset
@@ -322,8 +336,9 @@ def predict(
     for batch in data_iterator:
         if isinstance(batch, tuple) or isinstance(batch, list) and len(batch) in [1, 2]:
             batch = batch[0]
-        if cuda:
-            batch = batch.cuda(non_blocking=True)
+        # if cuda:
+        #     batch = batch.cuda(non_blocking=True)
+        batch = batch.to(device)
         batch = batch.squeeze(1).view(batch.size(0), -1)
         if encode:
             output = model.encode(batch)
