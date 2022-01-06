@@ -1,10 +1,21 @@
 from functools import partial
 import numpy as np
 import torch
+from torch.optim import SGD, Adam
+from torch_optimizer import Yogi 
 from typing import Optional
 from scipy.optimize import linear_sum_assignment
 
 from py.losses.torch import SobelLoss, GaussianBlurredLoss
+
+
+def get_ae_opt(name: str, lr: float):
+    ae_opt_dict = {
+        'sgd': partial(SGD, lr=lr, momentum=0.9),
+        'adam': partial(Adam, lr=lr),
+        'yogi': partial(Yogi, lr=lr, eps=1e-3, initial_accumulator=1e-6,),
+    }
+    return ae_opt_dict[name]
 
 
 def get_main_loss(name: str):

@@ -26,7 +26,7 @@ from py.dec.dec_torch.cluster_loops import train, predict
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
 from py.dec.layers.torch import TruncatedGaussianNoise
 import py.dec.dec_torch.ae_loops as ae
-from py.dec.dec_torch.utils import cluster_accuracy, get_main_loss, get_mod_loss
+from py.dec.dec_torch.utils import cluster_accuracy, get_main_loss, get_mod_loss, get_ae_opt
 from py.datasets.mnist import CachedMNIST
 
 
@@ -128,9 +128,21 @@ from py.datasets.mnist import CachedMNIST
     type=bool,
     default=False
 )
+@click.option(
+    '--ae-opt',
+    type=click.Choice(['sgd', 'adam', 'yogi']),
+    default='sgd',
+    help='Optimizer for AE training (default sgd)'
+)
+@click.option(
+    "--lr",
+    help="value for learning rate of AE opt (default 0.01).",
+    type=float,
+    default=0.01,
+)
 def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
          glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta,
-         gaus_noise):
+         gaus_noise, ae_opt, lr):
     # defining output folder
     if out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
@@ -164,6 +176,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     else:
         ae_mod_loss_fn = [get_main_loss(ae_main_loss)]
         
+    # set up optimizer used in training the SDAE
+    ae_opt_fn = get_ae_opt(ae_opt, lr)
+        
     # set noising to data        
     if gaus_noise:
         noising = TruncatedGaussianNoise(
@@ -177,7 +192,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     # features space dimension
     z_dim = 10
     # learning rate for Adam
-    adam_lr = 1
+    adam_lr = lr
     # AE layers' dimension
     #linears = [28 * 28, 1000, 500, 250, z_dim]
     linears = [28 * 28, 500, 500, 2000, z_dim]
@@ -210,7 +225,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         print("Pretraining stage.")
         if glw_pretraining:
             # greedy layer-wise pretraining
-            lambda_ae_opt = lambda model: SGD(model.parameters(), lr=0.1, momentum=0.9)
+            lambda_ae_opt = lambda model: ae_opt_fn(params=model.parameters())#SGD(model.parameters(), lr=0.1, momentum=0.9)
             lambda_scheduler = lambda x: StepLR(x, 100, gamma=0.1)
             ae.pretrain(
                 ds_train,
@@ -236,7 +251,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             #     eps=1e-3,
             #     initial_accumulator=1e-6,
             #     weight_decay=0)  
-            lambda_ae_opt = lambda model: Adam(model.parameters(), lr=adam_lr)
+            lambda_ae_opt = lambda model: ae_opt_fn(params=model.parameters())#Adam(model.parameters(), lr=adam_lr)
             lambda_scheduler = lambda x: ReduceLROnPlateau(
                 x,
                 mode='min',
@@ -307,7 +322,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         if cuda:
             autoencoder.cuda()
         if glw_pretraining:
-            ae_opt = SGD(autoencoder.parameters(), lr=0.1, momentum=0.9)
+            ae_opt = ae_opt_fn(params=autoencoder.parameters())#SGD(autoencoder.parameters(), lr=0.1, momentum=0.9)
             scheduler = StepLR(ae_opt, 100, gamma=0.1)
         else:
             # ae_opt = Yogi(
@@ -317,7 +332,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             #     eps=1e-3,
             #     initial_accumulator=1e-6,
             #     weight_decay=0)
-            ae_opt = Adam(autoencoder.parameters(), lr=adam_lr)
+            ae_opt = ae_opt_fn(params=autoencoder.parameters())#Adam(autoencoder.parameters(), lr=adam_lr)
             scheduler = ReduceLROnPlateau(
                 ae_opt,
                 mode='min',
