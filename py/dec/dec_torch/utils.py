@@ -17,7 +17,7 @@ def get_ae_opt(name: str, lr: float = None):
         'adam': partial(Adam,
                         lr=1e-4 if lr is None else lr),
         'yogi': partial(Yogi,
-                        lr=5e-2 if lr is None else lr,
+                        lr=3e-2 if lr is None else lr,
                         eps=1e-3,
                         initial_accumulator=1e-6,),
     }
