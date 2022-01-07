@@ -9,11 +9,17 @@ from scipy.optimize import linear_sum_assignment
 from py.losses.torch import SobelLoss, GaussianBlurredLoss
 
 
-def get_ae_opt(name: str, lr: float):
+def get_ae_opt(name: str, lr: float = None):
     ae_opt_dict = {
-        'sgd': partial(SGD, lr=lr, momentum=0.9),
-        'adam': partial(Adam, lr=lr),
-        'yogi': partial(Yogi, lr=lr, eps=1e-3, initial_accumulator=1e-6,),
+        'sgd': partial(SGD,
+                       lr=1e-3 if lr is None else lr,
+                       momentum=0.9),
+        'adam': partial(Adam,
+                        lr=1e-4 if lr is None else lr),
+        'yogi': partial(Yogi,
+                        lr=5e-2 if lr is None else lr,
+                        eps=1e-3,
+                        initial_accumulator=1e-6,),
     }
     return ae_opt_dict[name]
 
