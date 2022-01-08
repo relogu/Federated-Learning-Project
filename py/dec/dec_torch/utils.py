@@ -39,7 +39,6 @@ def get_mod_loss(
     main_loss: str,
     beta: float = 0.5,
     unflatten: bool = True,
-    cuda: bool = False,
     device: str = 'cpu',
     ):
     main_loss = get_main_loss(main_loss)

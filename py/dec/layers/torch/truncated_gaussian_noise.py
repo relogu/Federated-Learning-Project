@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.autograd import Variable
 
 class TruncatedGaussianNoise(nn.Module):
@@ -9,7 +8,6 @@ class TruncatedGaussianNoise(nn.Module):
                  stddev: float = 0.05,
                  rate: float = 0.5,
                  seed=None,
-                #  cuda: bool = False,
                  device: str = 'cpu',
                  ):
         super(TruncatedGaussianNoise, self).__init__()
@@ -19,36 +17,20 @@ class TruncatedGaussianNoise(nn.Module):
         self.seed = seed
         self.shape = shape
         self.device = device
-        # self.cuda = cuda
-        # if self.cuda:
-        #     self.noise = Variable(torch.zeros(self.shape).cuda())
-        # else:
-        #     self.noise = Variable(torch.zeros(self.shape))
+        
         self.noise = Variable(torch.zeros(self.shape)).to(self.device)
 
     def forward(self, input):
         if self.training:
             self.noise.data.normal_(0, std=self.stddev)
             
-            # if self.cuda:
-            #     mask = (torch.rand(self.shape) > self.rate).cuda()
-            # else:
-            #     mask = torch.rand(self.shape) > self.rate
             mask = (torch.rand(self.shape) > self.rate).to(self.device)
             self.noise = self.noise.masked_fill(mask, 0)
             input = input + self.noise
             
-            # if self.cuda:
-            #     mask = (input > 1.0).cuda()
-            # else:
-            #     mask = input > 1.0
             mask = (input > 1.0).to(self.device)
             input = input.masked_fill(mask, 1.0)
             
-            # if self.cuda:
-            #     mask = (input < 0.0).cuda()
-            # else:
-            #     mask = input < 0.0
             mask = (input < 0.0).to(self.device)
             input = input.masked_fill(mask, 0.0)
         return input

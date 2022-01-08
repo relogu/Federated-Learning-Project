@@ -23,7 +23,6 @@ def train(
     optimizer: Optimizer,
     stopping_delta: Optional[float] = None,
     collate_fn=default_collate,
-    # cuda: bool = True,
     device: str = 'cpu',
     sampler: Optional[Sampler] = None,
     silent: bool = False,
@@ -42,7 +41,6 @@ def train(
     :param optimizer: instance of optimizer to use
     :param stopping_delta: label delta as a proportion to use for stopping, None to disable, default None
     :param collate_fn: function to merge a list of samples into mini-batch
-    :param cuda: whether to use CUDA, defaults to True
     :param device: TODO
     :param sampler: optional sampler to use in the DataLoader, defaults to None
     :param silent: set to True to prevent printing out summary statistics, defaults to False
@@ -79,41 +77,12 @@ def train(
         },
         disable=silent,
     )
-    '''
-    kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
-    model.train()
-    features = []
-    actual = []
-    # form initial cluster centres
-    for index, batch in enumerate(data_iterator):
-        if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-            batch, value = batch  # if we have a prediction label, separate it to actual
-            actual.append(value)
-        if cuda:
-            batch = batch.cuda(non_blocking=True)
-        features.append(model.encoder(batch).detach().cpu())
-    actual = torch.cat(actual).long()
-    predicted = kmeans.fit_predict(torch.cat(features).numpy())
-    predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
-    _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
-    cluster_centers = torch.tensor(
-        kmeans.cluster_centers_, dtype=torch.float, requires_grad=True
-    )
-    if cuda:
-        cluster_centers = cluster_centers.cuda(non_blocking=True)
-    with torch.no_grad():
-        # initialise the cluster centers
-        model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
-    '''
     predicted_previous, accuracy = assign_cluster_centers(
         dataset=dataset,
         model=model,
         batch_size=batch_size,
         collate_fn=collate_fn,
-        # cuda=cuda,
         device=device,
-        sampler=sampler,
-        silent=silent
     )
     loss_function = KLDivLoss(size_average=False)
     delta_label = None
@@ -123,10 +92,7 @@ def train(
         #     model=model,
         #     batch_size=batch_size,
         #     collate_fn=collate_fn,
-        #     # cuda=cuda,
         #     device=device,
-        #     sampler=sampler,
-        #     silent=silent
         # )
         features = []
         data_iterator = tqdm(
@@ -150,8 +116,6 @@ def train(
                 batch
             ) == 2:
                 batch, _ = batch  # if we have a prediction label, strip it away
-            # if cuda:
-            #     batch = batch.cuda(non_blocking=True)
             batch = batch.to(device, non_blocking=True)
             output = model(batch)
             soft_labels = output
@@ -191,7 +155,6 @@ def train(
             collate_fn=collate_fn,
             silent=True,
             return_actual=True,
-            # cuda=cuda,
             device=device,
         )
         delta_label = (
@@ -221,7 +184,6 @@ def predict(
     model: Module,
     batch_size: int = 1024,
     collate_fn=default_collate,
-    # cuda: bool = True,
     device: str = 'cpu',
     silent: bool = False,
     return_actual: bool = False,
@@ -233,7 +195,6 @@ def predict(
     :param model: instance of DEC model to predict
     :param batch_size: size of the batch to predict with, default 1024
     :param collate_fn: function to merge a list of samples into mini-batch
-    :param cuda: whether CUDA is used, defaults to True
     :param device: TODO
     :param silent: set to True to prevent printing out summary statistics, defaults to False
     :param return_actual: return actual values, if present in the Dataset
@@ -255,8 +216,6 @@ def predict(
             raise ValueError(
                 "Dataset has no actual value to unpack, but return_actual is set."
             )
-        # if cuda:
-        #     batch = batch.cuda(non_blocking=True)
         batch = batch.to(device, non_blocking=True)
         features.append(
             model(batch).detach().cpu()
@@ -272,10 +231,7 @@ def assign_cluster_centers(
     model: Module,
     batch_size: int,
     collate_fn=default_collate,
-    # cuda: bool = True,
     device: str = 'cpu',
-    sampler: Optional[Sampler] = None,
-    silent: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     TODO
@@ -284,43 +240,25 @@ def assign_cluster_centers(
     :param model: instance of DEC model to predict
     :param batch_size: size of the batch to predict with, default 1024
     :param collate_fn: function to merge a list of samples into mini-batch
-    :param cuda: whether CUDA is used, defaults to True
     :param device: TODO
-    :param silent: set to True to prevent printing out summary statistics, defaults to False
     """
     static_dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
         collate_fn=collate_fn,
         pin_memory=False,
-        sampler=sampler,
         shuffle=False,
-    )
-    data_iterator = tqdm(
-        static_dataloader,
-        leave=True,
-        unit="batch",
-        # postfix={
-        #     "epo": -1,
-        #     "acc": "%.4f" % 0.0,
-        #     "lss": "%.8f" % 0.0,
-        #     "dlb": "%.4f" % -1,
-        # },
-        disable=True,
     )
     # scaler = StandardScaler()
     scaler = Normalizer(norm='l1')
     kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
-    #model.train()
     features = []
     actual = []
     # form initial cluster centres
-    for index, batch in enumerate(data_iterator):
+    for index, batch in enumerate(static_dataloader):
         if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
             batch, value = batch  # if we have a prediction label, separate it to actual
             actual.append(value)
-        # if cuda:
-        #     batch = batch.cuda(non_blocking=True)
         batch = batch.to(device, non_blocking=True)
         features.append(model.encoder(batch).detach().cpu())
     actual = torch.cat(actual).long()
@@ -345,8 +283,6 @@ def assign_cluster_centers(
         dtype=torch.float,
         requires_grad=False,#True
     )
-    # if cuda:
-    #     cluster_centers = cluster_centers.cuda(non_blocking=True)
     cluster_centers = cluster_centers.to(device, non_blocking=True)
     with torch.no_grad():
         # initialise the cluster centers

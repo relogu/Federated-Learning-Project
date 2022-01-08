@@ -9,42 +9,22 @@ class SobelLayer(nn.Module):
                  factor: float = 2.0,
                  unflatten: bool = True,
                  return_mask: bool = True,
-                #  cuda: bool = False,
                  device: str = 'cpu',
                  ):
         super(SobelLayer, self).__init__()
         self.unflatten = unflatten
         self.return_mask = return_mask
-        # self.cuda = cuda
         self.device = device
-
-        # if self.cuda:
-        #     Gx = torch.cuda.FloatTensor([[factor, 0.0, -factor], [2*factor, 0.0, -2*factor], [factor, 0.0, -factor]]).unsqueeze(0).unsqueeze(0)
-        #     Gy = torch.cuda.FloatTensor([[factor, 2*factor, factor], [0.0, 0.0, 0.0], [-factor, -2*factor, -factor]]).unsqueeze(0).unsqueeze(0)
-        #     Gxy = torch.cuda.FloatTensor([[2*factor, factor, 0.0], [factor, 0.0, -factor], [0.0, -factor, -2*factor]]).unsqueeze(0).unsqueeze(0)
-        #     Gyx = torch.cuda.FloatTensor([[0.0, factor, 2*factor], [-factor, 0.0, factor], [-2*factor, -factor, 0.0]]).unsqueeze(0).unsqueeze(0)
-        # else:
-        #     Gx = torch.FloatTensor([[factor, 0.0, -factor], [2*factor, 0.0, -2*factor], [factor, 0.0, -factor]]).unsqueeze(0).unsqueeze(0)
-        #     Gy = torch.FloatTensor([[factor, 2*factor, factor], [0.0, 0.0, 0.0], [-factor, -2*factor, -factor]]).unsqueeze(0).unsqueeze(0)
-        #     Gxy = torch.FloatTensor([[2*factor, factor, 0.0], [factor, 0.0, -factor], [0.0, -factor, -2*factor]]).unsqueeze(0).unsqueeze(0)
-        #     Gyx = torch.FloatTensor([[0.0, factor, 2*factor], [-factor, 0.0, factor], [-2*factor, -factor, 0.0]]).unsqueeze(0).unsqueeze(0)
+        
         Gx = torch.FloatTensor([[factor, 0.0, -factor], [2*factor, 0.0, -2*factor], [factor, 0.0, -factor]]).unsqueeze(0).unsqueeze(0).to(self.device)
         Gy = torch.FloatTensor([[factor, 2*factor, factor], [0.0, 0.0, 0.0], [-factor, -2*factor, -factor]]).unsqueeze(0).unsqueeze(0).to(self.device)
         Gxy = torch.FloatTensor([[2*factor, factor, 0.0], [factor, 0.0, -factor], [0.0, -factor, -2*factor]]).unsqueeze(0).unsqueeze(0).to(self.device)
         Gyx = torch.FloatTensor([[0.0, factor, 2*factor], [-factor, 0.0, factor], [-2*factor, -factor, 0.0]]).unsqueeze(0).unsqueeze(0).to(self.device)
-        self.weight_x = nn.Parameter(data=Gx, requires_grad=False)
-        self.weight_y = nn.Parameter(data=Gy, requires_grad=False)
-        self.weight_xy = nn.Parameter(data=Gxy, requires_grad=False)
-        self.weight_yx = nn.Parameter(data=Gyx, requires_grad=False)
-        # if self.cuda:
-        #     self.weight_x.cuda(non_blocking=True)
-        #     self.weight_y.cuda(non_blocking=True)
-        #     self.weight_xy.cuda(non_blocking=True)
-        #     self.weight_yx.cuda(non_blocking=True)
-        self.weight_x.to(self.device, non_blocking=True)
-        self.weight_y.to(self.device, non_blocking=True)
-        self.weight_xy.to(self.device, non_blocking=True)
-        self.weight_yx.to(self.device, non_blocking=True)
+        
+        self.weight_x = nn.Parameter(data=Gx, requires_grad=False).to(self.device, non_blocking=True)
+        self.weight_y = nn.Parameter(data=Gy, requires_grad=False).to(self.device, non_blocking=True)
+        self.weight_xy = nn.Parameter(data=Gxy, requires_grad=False).to(self.device, non_blocking=True)
+        self.weight_yx = nn.Parameter(data=Gyx, requires_grad=False).to(self.device, non_blocking=True)
             
 
     def get_gray(self,x):
@@ -73,11 +53,8 @@ class SobelLayer(nn.Module):
             output = nn.Flatten()(output)
         
         batch_norm = nn.BatchNorm1d(output.shape[1], track_running_stats=False)
-        # if self.cuda:
-        #     batch_norm.cuda()
         batch_norm = batch_norm.to(self.device)
         output = batch_norm(output)
-        #output = F.batch_norm(output)
         mask = (output > 1e-3)
         if self.return_mask:
             return output, mask
@@ -119,7 +96,6 @@ class SobelLoss(nn.Module):
                  apply_sigmoid: bool = False,
                  unflatten: bool = True,
                  return_mask: bool = True,
-                #  cuda: bool = True,
                  device: str = 'cpu',
                  ):
         super(SobelLoss, self).__init__()
@@ -128,7 +104,6 @@ class SobelLoss(nn.Module):
         self.apply_sigmoid = apply_sigmoid
         self.grad_layer = SobelLayer(unflatten=unflatten,
                                      return_mask=return_mask,
-                                    #  cuda=cuda,
                                      device=device)
         self.loss.reduction = 'none'
 

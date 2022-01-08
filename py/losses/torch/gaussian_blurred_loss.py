@@ -36,15 +36,11 @@ class GaussianBlurLayer(nn.Module):
     def __init__(self,
                  kernel_size: int,
                  unflatten: bool = True,
-                #  cuda: bool = False,
                  device: str = 'cpu',
                  ):
         super(GaussianBlurLayer, self).__init__()
         self.kernel_size = kernel_size
-        self.kernel = _gaussian_kernel(size=kernel_size)
-        # if cuda:
-        #     self.kernel = self.kernel.cuda()
-        self.kernel = self.kernel.to(device)
+        self.kernel = _gaussian_kernel(size=kernel_size).to(device)
         self.unflatten = unflatten
 
     def get_gray(self,x):
@@ -65,7 +61,7 @@ class GaussianBlurLayer(nn.Module):
 
         padding = int((self.kernel_size - 1) / 2)
         x = F.pad(x, (padding, padding, padding, padding), mode='reflect')
-        x = torch.squeeze(F.conv2d(x, self.kernel))#, groups=3))
+        x = torch.squeeze(F.conv2d(x, self.kernel))
         if self.unflatten:
             x = nn.Flatten()(x)
 
@@ -78,7 +74,6 @@ class GaussianBlurredLoss(nn.Module):
                  alpha: float = 1.0,
                  loss_fn: Optional[torch.nn.Module] = nn.MSELoss,
                  unflatten: bool = True,
-                 cuda: bool = False,
                  device: str = 'cpu',
                  ):
         super(GaussianBlurredLoss, self).__init__()
@@ -87,7 +82,6 @@ class GaussianBlurredLoss(nn.Module):
         self.grad_layer = GaussianBlurLayer(
             kernel_size=kernel_size,
             unflatten=unflatten,
-            #cuda=cuda,
             device=device
         )
 

@@ -25,7 +25,6 @@ def train(
     validation: Optional[Dataset] = None,
     corruption: Optional[float] = None,
     noising: Optional[Module] = None,
-    #cuda: bool = True,
     device: str = 'cpu',
     sampler: Optional[Sampler] = None,
     silent: bool = False,
@@ -48,7 +47,6 @@ def train(
     :param corruption: proportion of masking corruption to apply, set to None to disable, defaults to None
     :param noising: TODO
     :param validation: instance of Dataset to use for validation, set to None to disable, defaults to None
-    :param cuda: whether CUDA is used, defaults to True
     :param device: TODO
     :param sampler: sampler to use in the DataLoader, set to None to disable, defaults to None
     :param silent: set to True to prevent printing out summary statistics, defaults to False
@@ -98,8 +96,6 @@ def train(
                 and len(batch) in [1, 2]
             ):
                 batch = batch[0]
-            # if cuda:
-            #     batch = batch.cuda(non_blocking=True)
             batch = batch.to(device)
             input = batch
             # run the batch through the autoencoder and obtain the output
@@ -127,7 +123,6 @@ def train(
                     validation,
                     autoencoder,
                     batch_size,
-                    # cuda=cuda,
                     device=device,
                     silent=True,
                     encode=False,
@@ -141,14 +136,11 @@ def train(
                     else:
                         validation_inputs.append(val_batch)
                 validation_actual = torch.cat(validation_inputs)
-                # if cuda:
-                #     validation_actual = validation_actual.cuda(non_blocking=True)
-                #     validation_output = validation_output.cuda(non_blocking=True)
                 validation_actual = validation_actual.to(device, non_blocking=True)
                 validation_output = validation_output.to(device, non_blocking=True)
                 val_losses = [l_fn_i(validation_output, validation_actual) for l_fn_i in loss_functions]
                 validation_loss = sum(val_losses)/len(loss_fn)
-                #validation_loss = loss_function(validation_output, validation_actual)
+                # validation_loss = loss_function(validation_output, validation_actual)
                 # validation_accuracy = pretrain_accuracy(validation_output, validation_actual)
                 validation_loss_value = float(validation_loss.item())
                 data_iterator.set_postfix(
@@ -188,7 +180,6 @@ def pretrain(
     validation: Optional[Dataset] = None,
     corruption: Optional[float] = None,
     noising: Optional[Module] = None,
-    #cuda: bool = True,
     device: str = 'cpu',
     sampler: Optional[Sampler] = None,
     silent: bool = False,
@@ -212,7 +203,6 @@ def pretrain(
     :param loss_fn: TODO
     :param scheduler: function taking optimizer and returning scheduler, or None to disable
     :param validation: instance of Dataset to use for validation
-    :param cuda: whether CUDA is used, defaults to True
     :param device: TODO
     :param sampler: sampler to use in the DataLoader, defaults to None
     :param silent: set to True to prevent printing out summary statistics, defaults to False
@@ -243,8 +233,6 @@ def pretrain(
             corruption=Dropout(corruption) if corruption is not None else None,
             tied=autoencoder.is_tied,
         )
-        # if cuda:
-        #     sub_autoencoder = sub_autoencoder.cuda()
         sub_autoencoder = sub_autoencoder.to(device)
         ae_optimizer = optimizer(sub_autoencoder)
         ae_scheduler = scheduler(ae_optimizer) if scheduler is not None else scheduler
@@ -259,7 +247,6 @@ def pretrain(
             corruption=None,  # already have dropout in the DAE
             noising=noising,
             scheduler=ae_scheduler,
-            # cuda=cuda,
             device=device,
             sampler=sampler,
             silent=silent,
@@ -276,7 +263,6 @@ def pretrain(
                     current_dataset,
                     sub_autoencoder,
                     batch_size,
-                    # cuda=cuda,
                     device=device,
                     silent=silent,
                 )
@@ -290,7 +276,6 @@ def pretrain(
                         current_validation,
                         sub_autoencoder,
                         batch_size,
-                        # cuda=cuda,
                         device=device,
                         silent=silent,
                     )
@@ -308,7 +293,6 @@ def predict(
     dataset: Dataset,
     model: Module,
     batch_size: int,
-    #cuda: bool = True,
     device: str = 'cpu',
     silent: bool = False,
     encode: bool = True,
@@ -320,7 +304,6 @@ def predict(
     :param dataset: evaluation Dataset
     :param model: autoencoder for prediction
     :param batch_size: batch size
-    :param cuda: whether CUDA is used, defaults to True
     :param device: TODO
     :param silent: set to True to prevent printing out summary statistics, defaults to False
     :param encode: whether to encode or use the full autoencoder
@@ -336,8 +319,6 @@ def predict(
     for batch in data_iterator:
         if isinstance(batch, tuple) or isinstance(batch, list) and len(batch) in [1, 2]:
             batch = batch[0]
-        # if cuda:
-        #     batch = batch.cuda(non_blocking=True)
         batch = batch.to(device)
         batch = batch.squeeze(1).view(batch.size(0), -1)
         if encode:
