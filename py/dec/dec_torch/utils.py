@@ -5,9 +5,18 @@ from torch.optim import SGD, Adam
 from torch_optimizer import Yogi 
 from typing import Optional
 from scipy.optimize import linear_sum_assignment
+from sklearn.preprocessing import StandardScaler, Normalizer
 
 from py.losses.torch import SobelLoss, GaussianBlurredLoss
 
+
+def get_scaler(name: str):
+    scaler_dict = {
+        'standard': StandardScaler(),
+        'normal-l1': Normalizer(norm='l1'),
+        'normal-l2': Normalizer(norm='l2'),
+    }
+    return scaler_dict[name]
 
 def get_ae_opt(name: str, lr: float = None):
     ae_opt_dict = {
