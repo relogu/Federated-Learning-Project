@@ -1,17 +1,14 @@
 from functools import partial
 import os
-from typing import Any, Callable, Optional, Iterable, List, Dict
+from typing import Any, Dict
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.nn import Module, ReLU, Dropout, Sigmoid, KLDivLoss
+from torch.nn import ReLU, Sigmoid, KLDivLoss
 from torch.nn.modules.loss import MSELoss
-from torch.optim import Optimizer, SGD
-from torch.utils.data import Dataset, DataLoader, TensorDataset
-from torch.utils.data.sampler import Sampler
+from torch.optim import SGD
+from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import StepLR, ExponentialLR, ReduceLROnPlateau
-from torchsummary import summary
-from tqdm import tqdm
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
@@ -30,8 +27,7 @@ def train_ae(
     device: str = 'cpu',
 ) -> None:
     """
-    Function to train an autoencoder using the provided dataset. If the dataset consists of 2-tuples or lists of
-    (feature, prediction), then the prediction is stripped away.
+    TODO
 
     :param config: TODO
     :param scheduler: scheduler to use, or None to disable, defaults to None
@@ -54,12 +50,12 @@ def train_ae(
     dataloader = DataLoader(
         ds_train,
         batch_size=config['batch_size'],
-        shuffle=True,
+        shuffle=False,
     )
     validation_loader = DataLoader(
         ds_val,
         batch_size=config['batch_size'],
-        shuffle=True,
+        shuffle=False,
     )
     ## SDAE Training Loop
     # set up loss(es) used in training the SDAE
@@ -219,6 +215,7 @@ def train_ae(
     with tune.checkpoint_dir(epoch) as checkpoint_dir:
         path = os.path.join(checkpoint_dir, "SDAE_checkpoint")
         torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
+        
     print("Finished SDAE Training")
     
     model = DEC(cluster_number=10,
@@ -326,6 +323,7 @@ def train_ae(
     with tune.checkpoint_dir(epoch) as checkpoint_dir:
         path = os.path.join(checkpoint_dir, "DEC_checkpoint")
         torch.save((model.state_dict(), optimizer.state_dict()), path)
+        
     print("Finished DEC Training")
 
 
@@ -394,28 +392,6 @@ def main(num_samples=1, max_num_epochs=300, gpus_per_trial=1):
     print("Best DEC trial config: {}".format(best_trial.config))
     print("Best DEC trial final accuracy: {}".format(
         best_trial.last_result["accuracy"]))
-    # print("Best trial final validation accuracy: {}".format(
-    #     best_trial.last_result["accuracy"]))
-
-    # best_trained_model = StackedDenoisingAutoEncoder(
-    #     dimensions=best_trial.config["linear"],
-    #     activation=best_trial.config["activation"],
-    #     final_activation=best_trial.config["final_activation"],
-    #     dropout=best_trial.config["dropout"],
-    #     is_tied=True,
-    #     )
-    
-    # if gpus_per_trial > 1:
-    #     best_trained_model = torch.nn.DataParallel(best_trained_model)
-    # best_trained_model.to(device)
-
-    # best_checkpoint_dir = best_trial.checkpoint.value
-    # model_state, optimizer_state = torch.load(os.path.join(
-    #     best_checkpoint_dir, "checkpoint"))
-    # best_trained_model.load_state_dict(model_state)
-
-    # test_acc = test_accuracy(best_trained_model, device)
-    # print("Best trial test set accuracy: {}".format(test_acc))
 
 
 if __name__ == "__main__":
