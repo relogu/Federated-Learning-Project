@@ -4,10 +4,12 @@ import torch.nn.functional as F
 class IoULoss(nn.Module):
     def __init__(
         self,
+        use_sigmoid: bool = False,
         weight=None,
         size_average=True,
         ):
         super(IoULoss, self).__init__()
+        self.use_sigmoid = use_sigmoid
 
     def forward(
         self,
@@ -16,8 +18,8 @@ class IoULoss(nn.Module):
         smooth: float = 1,
         ):
         
-        # comment out if your model contains a sigmoid or equivalent activation layer
-        inputs = F.sigmoid(inputs)       
+        if self.use_sigmoid:
+            inputs = F.sigmoid(inputs)
         
         # flatten label and prediction tensors
         inputs = inputs.view(-1)

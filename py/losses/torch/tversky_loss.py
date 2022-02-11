@@ -7,10 +7,12 @@ BETA = 0.5
 class TverskyLoss(nn.Module):
     def __init__(
         self,
+        use_sigmoid: bool = False,
         weight=None,
         size_average=True,
         ):
         super(TverskyLoss, self).__init__()
+        self.use_sigmoid = use_sigmoid
 
     def forward(
         self,
@@ -21,8 +23,8 @@ class TverskyLoss(nn.Module):
         beta: float = BETA,
         ):
         
-        # comment out if your model contains a sigmoid or equivalent activation layer
-        inputs = F.sigmoid(inputs)       
+        if self.use_sigmoid:
+            inputs = F.sigmoid(inputs)   
         
         # flatten label and prediction tensors
         inputs = inputs.view(-1)
