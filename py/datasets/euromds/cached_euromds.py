@@ -47,8 +47,9 @@ class CachedEUROMDS(Dataset):
     
     def __getitem__(self, index: int) -> torch.Tensor:
         if index not in self._cache:
-            self._cache[index][0] = torch.tensor(list(self.ds[index])).to(self.device, non_blocking=True)
-            self._cache[index][1] = torch.tensor(list(self.y[index])).to(self.device, non_blocking=True)
+            self._cache[index] = (torch.tensor(list(self.ds[index])), torch.tensor(list(self.y[index])))
+            self._cache[index][0] = self._cache[index][0].to(self.device, non_blocking=True)
+            self._cache[index][1] = self._cache[index][1].to(self.device, non_blocking=True)
         return self._cache[index]
     
     def _get_up_frequencies(self) -> List[float]:
