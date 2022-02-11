@@ -13,7 +13,7 @@ class DiceLoss(nn.Module):
         self,
         inputs,
         targets,
-        smooth: flaot = 1
+        smooth: float = 1
         ):
         
         # comment out if your model contains a sigmoid or equivalent activation layer
