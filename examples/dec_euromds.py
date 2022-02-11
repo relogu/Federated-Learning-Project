@@ -174,9 +174,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     if ae_mod_loss is not None:
         ae_mod_loss_fn = get_mod_binary_loss(
             name=ae_mod_loss,
-            beta=beta,
-            main_loss=ae_main_loss,
-            device=device,
+            # beta=beta,
+            # main_loss=ae_main_loss,
+            # device=device,
             )
     else:
         ae_mod_loss_fn = [get_main_loss(ae_main_loss)]
