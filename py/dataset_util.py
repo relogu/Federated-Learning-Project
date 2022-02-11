@@ -24,7 +24,7 @@ from tensorflow.keras.datasets import mnist
 
 
 EUROMDS_GROUPS = ['Genetics', 'CNA', 'GeneGene', 'CytoCyto',
-                  'GeneCyto', 'Demographics', 'Clinical']
+                  'GeneCyto', 'Demographics', 'Clinical', 'HDP']
 
 def fillcolumn_stoch(
     ser: Series,
