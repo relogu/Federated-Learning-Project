@@ -135,14 +135,7 @@ def get_euromds_dataset(
     verbose: bool = False,
     fill_fn: Callable[[Series, bool], Series] = None
     ):
-    for g in groups:
-        if g not in EUROMDS_GROUPS:
-            raise ValueError('\"{}\" from given groups is not allowed.\nAllowed groups: {}'.
-                format(g, EUROMDS_GROUPS))
-    for c in exclude_cols:
-        if c not in get_euromds_cols():
-            raise ValueError('\"{}\" from given columns is not allowed.\nAllowed columns: {}'.
-                format(c, get_euromds_cols()))
+    check_groups_and_columns(groups, exclude_cols)
     # set the path
     if path_to_data is None:
         parent = pathlib.Path(__file__).parent.parent.absolute()
@@ -193,6 +186,22 @@ def get_euromds_dataset(
     del groups
     del df_groups
     return filtered
+
+def check_groups_and_columns(
+    groups: list[str] = None,
+    exclude_cols: list[str] = None,
+    ):
+    if groups is not None:
+        for g in groups:
+            if g not in EUROMDS_GROUPS:
+                raise ValueError('\"{}\" from given groups is not allowed.\nAllowed groups: {}'.
+                    format(g, EUROMDS_GROUPS))
+    if exclude_cols is not None:
+        for c in exclude_cols:
+            if c not in get_euromds_cols():
+                raise ValueError('\"{}\" from given columns is not allowed.\nAllowed columns: {}'.
+                    format(c, get_euromds_cols()))
+    
 
 
 def get_euromds_ids(path_to_data: Union[Path, str] = None):
