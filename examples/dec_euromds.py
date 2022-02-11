@@ -90,7 +90,7 @@ from py.util import get_square_image_repr
 )
 @click.option(
     '--ae-mod-loss',
-    type=click.Choice(['mse+dice', 'combo', 'bce+dice']),
+    type=str,#click.Choice(['mse+dice', 'combo', 'bce+dice']),
     default=None,
     help='Modified loss function for autoencoder training (default None)'
 )
