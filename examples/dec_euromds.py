@@ -206,7 +206,6 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     # img_repr = get_image_repr(ds_train.n_features)
     img_repr = get_square_image_repr(ds_train.n_features)
     hdp_labels = np.array([hdp_row.argmax() for hdp_row in ds_train.hdp])
-    print(hdp_labels)
     
     print("Square image representation for {} features is (x,y,add): {}".format(ds_train.n_features, img_repr))
     additions = img_repr[2]
@@ -240,8 +239,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         is_tied=is_tied,
     )
     
-    if torch.cuda.device_count() > 1:
-        autoencoder = torch.nn.DataParallel(autoencoder)
+    # if torch.cuda.device_count() > 1:
+    #     autoencoder = torch.nn.DataParallel(autoencoder)
     autoencoder.to(device)
         
     if (path_to_out/'pretrain_ae').exists():
