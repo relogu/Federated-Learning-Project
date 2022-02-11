@@ -21,7 +21,7 @@ class CachedEUROMDS(Dataset):
                  get_outcomes: bool = False,
                  get_ids: bool = False,
                  verbose: bool = False,
-                 cuda: bool = False):
+                 device: str = 'cpu'):
         self.ds = np.array(get_euromds_dataset(
             path_to_data=path_to_data,
             groups=groups,
@@ -42,14 +42,13 @@ class CachedEUROMDS(Dataset):
         self.ids = np.array(get_euromds_ids(
             path_to_data=path_to_data)) if get_ids else None
         self._cache = dict()
-        self.cuda = cuda
+        self.device = device
     
     
     def __getitem__(self, index: int) -> torch.Tensor:
         if index not in self._cache:
-            self._cache[index] = list(self.ds[index])
-            if self.cuda:
-                self._cache[index] = torch.tensor(self._cache[index]).cuda(non_blocking=True)
+            self._cache[index][0] = torch.tensor(list(self.ds[index])).to(self.device, non_blocking=True)
+            self._cache[index][1] = torch.tensor(list(self.y[index])).to(self.device, non_blocking=True)
         return self._cache[index]
     
     def _get_up_frequencies(self) -> List[float]:
