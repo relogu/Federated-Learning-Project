@@ -53,13 +53,13 @@ def fillcolumn_prob(
     ser: Series,
     verbose: bool = False
     ) -> Series:
-    
     tot = len(ser)
     cna = len(ser[ser.isna()])
     l = ser[ser.notna()]
-    sam = len(l)
+    # sam = len(l)
     zeros = len(l[l==0])
-    prob = zeros/sam
+    # prob = zeros/sam
+    prob = zeros/tot
     if verbose:
         print('Total samples {}, NaN samples {}, prob of 0s {}'. \
             format(tot, cna, prob))
@@ -70,14 +70,14 @@ def fillcolumn_prob(
             format(cna))
     return ser
 
-def filled_columns_first(df, filled_cols):
-    all_cols = df.columns.tolist()
-    setA = set(all_cols)
-    setB = set(filled_cols)
-    onlyInA = setA.difference(setB)
-    not_filled_cols = list(onlyInA)
-    ordered_cols = filled_cols + not_filled_cols
-    return df[ordered_cols]
+# def filled_columns_first(df, filled_cols):
+#     all_cols = df.columns.tolist()
+#     setA = set(all_cols)
+#     setB = set(filled_cols)
+#     onlyInA = setA.difference(setB)
+#     not_filled_cols = list(onlyInA)
+#     ordered_cols = filled_cols + not_filled_cols
+#     return df[ordered_cols]
     
 class PrepareDataSimple(Dataset):
 
@@ -175,7 +175,7 @@ def get_euromds_dataset(
     main_df = main_df[selected_cols]
     # filtering nans
     filtered = main_df.copy()
-    filled_cols = []
+    # filled_cols = []
     for c in main_df.columns:
         a = len(main_df[main_df[c].isnull()])
         if verbose and a > 0:
@@ -186,9 +186,9 @@ def get_euromds_dataset(
         if a > accept_nan:
             filtered = filtered.drop(columns=c)
         elif a > 0:
-            filled_cols.append(c)
+            # filled_cols.append(c)
             filtered.loc[:, c] = fill_fn(filtered[c], verbose)
-    filtered = filled_columns_first(filtered, filled_cols)
+    # filtered = filled_columns_first(filtered, filled_cols)
     del main_df
     del groups
     del df_groups
