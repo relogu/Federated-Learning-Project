@@ -8,7 +8,9 @@ from typing import Optional
 from scipy.optimize import linear_sum_assignment
 from sklearn.preprocessing import StandardScaler, Normalizer
 
-from py.losses.torch import SobelLoss, GaussianBlurredLoss, ComboLoss, DiceBCELoss, DiceLoss
+from py.losses.torch import (SobelLoss, GaussianBlurredLoss, ComboLoss,
+                             DiceBCELoss, DiceLoss, FocalLoss, FocalTverskyLoss,
+                             TverskyLoss, LovaszHingeLoss, IoULoss)
 
 
 def get_scaler(name: str):
@@ -85,8 +87,23 @@ def get_mod_binary_loss(
             torch.nn.MSELoss,
             DiceLoss,
         ],
+        'lovasz-hinge': [
+            LovaszHingeLoss
+        ],
+        'iou': [
+            IoULoss
+        ],
         'combo': [
             ComboLoss
+        ],
+        'focal': [
+            FocalLoss
+        ],
+        'tversky': [
+            TverskyLoss
+        ],
+        'focal-tversky': [
+            FocalTverskyLoss
         ],
         'bce+dice': [
             DiceBCELoss

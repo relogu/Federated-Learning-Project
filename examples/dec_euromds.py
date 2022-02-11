@@ -195,7 +195,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         get_outcomes=True,
         get_ids=True,
         verbose=True,
-        cuda=cuda,
+        device=device,
     )  # training dataset
     ds_val = ds_train
     # img_repr = get_image_repr(ds_train.n_features)
@@ -294,10 +294,12 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             r_images = []
             dataloader = DataLoader(ds_val, batch_size=1024, shuffle=False)
             for i, batch in enumerate(dataloader):
+                if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                    batch, value = batch  # if we have a prediction label, separate it to actual
                 batch = batch.to(device, non_blocking=True)
                 features.append(autoencoder.encoder(batch).detach().cpu())
                 r_images.append(autoencoder(batch).detach().cpu())
-                # labels.append(value.detach().cpu())
+                labels.append(value.detach().cpu())
                 images.append(batch.detach().cpu())
             images = torch.cat(images)
             r_images = torch.cat(r_images)
@@ -309,14 +311,14 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 print(r_images.shape)
             writer.add_embedding(
                 torch.cat(features).numpy(), # Encodings per image
-                metadata=hdp_labels, # Adding the labels per image to the plot
+                metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
                 label_img=images.reshape(img_repr).numpy(),  # Adding the original images to the plot
                 global_step=0,
                 tag='pretraining',
                 )
             writer.add_embedding(
                 torch.cat(features).numpy(), # Encodings per image
-                metadata=hdp_labels, # Adding the labels per image to the plot
+                metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
                 label_img=r_images.reshape(img_repr).numpy(),  # Adding the original images to the plot
                 global_step=0,
                 tag='pretraining_r',
@@ -366,14 +368,18 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         autoencoder.eval()
         if not testing_mode:
             features = []
+            labels = []
             images = []
             r_images = []
             dataloader = DataLoader(ds_train, batch_size=1024, shuffle=True)
             for i, batch in enumerate(dataloader):
+                if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                    batch, value = batch  # if we have a prediction label, separate it to actual
                 batch = batch.to(device, non_blocking=True)
                 features.append(autoencoder.encoder(batch).detach().cpu())
                 r_images.append(autoencoder(batch).detach().cpu())
                 images.append(batch.detach().cpu())
+                labels.append(value.detach().cpu())
                 if i > 9:
                     break
             np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
@@ -385,14 +391,14 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 r_images = torch.cat((r_images, torch.Tensor(to_add)), 1)
             writer.add_embedding(
                 torch.cat(features).numpy(), # Encodings per image
-                metadata=hdp_labels, # Adding the labels per image to the plot
+                metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
                 label_img=images.reshape(img_repr).numpy(),  # Adding the original images to the plot
                 global_step=0,
                 tag='finetuning',
                 )
             writer.add_embedding(
                 torch.cat(features).numpy(), # Encodings per image
-                metadata=hdp_labels, # Adding the labels per image to the plot
+                metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
                 label_img=r_images.reshape(img_repr).numpy(),  # Adding the original images to the plot
                 global_step=0,
                 tag='finetuning_r',
@@ -419,13 +425,17 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     def epoch_callback1(epoch, model):
         features = []
         images = []
+        labels = []
         r_images = []
         dataloader = DataLoader(ds_train, batch_size=1024, shuffle=True)
         for batch in dataloader:
+            if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                batch, value = batch  # if we have a prediction label, separate it to actual
             batch = batch.to(device, non_blocking=True)
             features.append(model.encoder(batch).detach().cpu())
             r_images.append(autoencoder(batch).detach().cpu())
             images.append(batch.detach().cpu())
+            labels.append(value.detach().cpu())
         images = torch.cat(images)
         r_images = torch.cat(r_images)
         if additions > 0:
@@ -434,14 +444,14 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             r_images = torch.cat((r_images, torch.Tensor(to_add)), 1)
         writer.add_embedding(
             torch.cat(features).numpy(), # Encodings per image
-            metadata=hdp_labels, # Adding the labels per image to the plot
+            metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
             label_img=images.reshape(img_repr).numpy(),  # Adding the original images to the plot
             global_step=2+epoch,
             tag='clustering_alpha{}'.format(alpha),
             )
         writer.add_embedding(
             torch.cat(features).numpy(), # Encodings per image
-            metadata=hdp_labels, # Adding the labels per image to the plot
+            metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
             label_img=r_images.reshape(img_repr).numpy(),  # Adding the original images to the plot
             global_step=2+epoch,
             tag='clustering_alpha{}_r'.format(alpha),
@@ -479,7 +489,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     actual = []
     dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
     for batch in dataloader:
-        # actual.append(value)
+        if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+            batch, value = batch  # if we have a prediction label, separate it to actual
+            actual.append(value)
         batch = batch.to(device, non_blocking=True)
         features.append(autoencoder.encoder(batch).detach().cpu())
     np.savez(path_to_out/'final_ae_features_alpha{}'.format(alpha), torch.cat(features).numpy())
@@ -491,7 +503,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             reassignment[item] for item in predicted
         ]  # TODO numpify
         np.savez(path_to_out/'final_assignments_alpha{}'.format(alpha), predicted_reassigned)
-        # np.savez(path_to_out/'actual_labels_alpha{}'.format(alpha), torch.cat(actual).detach().cpu().numpy())
+        np.savez(path_to_out/'actual_labels_alpha{}'.format(alpha), torch.cat(actual).detach().cpu().numpy())
         writer.close()
 
 
