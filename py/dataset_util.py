@@ -127,21 +127,22 @@ def get_euromds_cols(path_to_data: Union[Path, str] = None):
     return list(cols)
 
 # pylint: 
-def get_euromds_dataset(accept_nan: int = 0,
-                        groups: List[str] = None,
-                        exclude_cols: List[str] = None,
-                        path_to_data: Union[Path, str] = None,
-                        verbose: bool = False,
-                        fill_fn: Callable[[Series, bool], Series] = None
-                        ):
+def get_euromds_dataset(
+    accept_nan: int = 0,
+    groups: list[str] = None,
+    exclude_cols: list[str] = None,
+    path_to_data: Union[Path, str] = None,
+    verbose: bool = False,
+    fill_fn: Callable[[Series, bool], Series] = None
+    ):
     for g in groups:
         if g not in EUROMDS_GROUPS:
-            raise ValueError('One of the given groups is not allowed.\nAllowed groups: {}'.
-                format(EUROMDS_GROUPS))
+            raise ValueError('\"{}\" from given groups is not allowed.\nAllowed groups: {}'.
+                format(g, EUROMDS_GROUPS))
     for c in exclude_cols:
         if c not in get_euromds_cols():
-            raise ValueError('One of the given columns is not allowed.\nAllowed columns: {}'.
-                format(get_euromds_cols()))
+            raise ValueError('\"{}\" from given columns is not allowed.\nAllowed columns: {}'.
+                format(c, get_euromds_cols()))
     # set the path
     if path_to_data is None:
         parent = pathlib.Path(__file__).parent.parent.absolute()
@@ -208,10 +209,12 @@ def get_euromds_ids(path_to_data: Union[Path, str] = None):
     return main_df
 
 
-def get_outcome_euromds_dataset(accept_nan: int = 0,
-                                groups: List[str] = None,
-                                exclude_cols: List[str] = None,
-                                path_to_data: Union[Path, str] = None):
+def get_outcome_euromds_dataset(
+    accept_nan: int = 0,
+    groups: list[str] = None,
+    exclude_cols: list[str] = None,
+    path_to_data: Union[Path, str] = None
+    ):
     # set the path
     if path_to_data is None:
         parent = pathlib.Path(__file__).parent.parent.absolute()
@@ -247,12 +250,14 @@ def get_outcome_euromds_dataset(accept_nan: int = 0,
     return ret
 
 
-def split_dataset(x,
-                  splits: int = 5,
-                  fold_n: int = 0,
-                  shuffle: bool = False,
-                  r_state: int = 51550,
-                  verbose: bool = False):
+def split_dataset(
+    x,
+    splits: int = 5,
+    fold_n: int = 0,
+    shuffle: bool = False,
+    r_state: int = 51550,
+    verbose: bool = False
+    ):
     if fold_n < 0 or fold_n > splits-1:
         raise ValueError(
             'The fold number, fold_n, cannot be lower than zero or higher than the number of splits minus one, splits-1')
