@@ -68,7 +68,7 @@ def fillcolumn_prob(
         cna = len(ser[ser.isna()])
         print('Once transformed, NaN samples {}'. \
             format(cna))
-    return ser#.astype(int)
+    return ser
 
 def filled_columns_first(df, filled_cols):
     all_cols = df.columns.tolist()
