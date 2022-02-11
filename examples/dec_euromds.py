@@ -141,9 +141,15 @@ from py.util import get_image_repr, get_square_image_repr
     type=float,
     default=0.01,
 )
+@click.option(
+    '--path-to-data',
+    type=str,
+    default=None,
+    help='Path to data (default None)'
+)
 def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
          glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta,
-         gaus_noise, ae_opt, lr):
+         gaus_noise, ae_opt, lr, path_to_data):
     # defining output folder
     if out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
@@ -184,10 +190,11 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     ae_opt_fn = get_ae_opt(ae_opt, lr)
     
     # get datasets
+    path_to_data = pathlib.Path('/home/relogu/Desktop/OneDrive/UNIBO/Magistrale/Federated Learning Project/data/euromds') if path_to_data is None else path_to_data
     ds_train = CachedEUROMDS(
         exclude_cols=['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
         groups=['Genetics', 'CNA'],
-        path_to_data=pathlib.Path('/home/relogu/Desktop/OneDrive/UNIBO/Magistrale/Federated Learning Project/data/euromds'),
+        path_to_data=path_to_data,
         fill_nans=2044,
         get_hdp=True,
         get_outcomes=True,
