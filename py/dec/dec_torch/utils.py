@@ -1,5 +1,6 @@
 from functools import partial
 import numpy as np
+from pyparsing import dictOf
 import torch
 from torch.optim import SGD, Adam
 from torch_optimizer import Yogi 
@@ -7,7 +8,7 @@ from typing import Optional
 from scipy.optimize import linear_sum_assignment
 from sklearn.preprocessing import StandardScaler, Normalizer
 
-from py.losses.torch import SobelLoss, GaussianBlurredLoss
+from py.losses.torch import SobelLoss, GaussianBlurredLoss, ComboLoss, DiceBCELoss, DiceLoss
 
 
 def get_scaler(name: str):
@@ -71,6 +72,24 @@ def get_mod_loss(
         'mix-s-gk3': [
             partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, device),
             partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, device),
+        ],
+    }
+    return loss_dict[name]
+
+
+def get_mod_binary_loss(
+    name: str,
+    ):
+    loss_dict = {
+        'mse+dice': [
+            torch.nn.MSELoss,
+            DiceLoss,
+        ],
+        'combo': [
+            ComboLoss
+        ],
+        'bce+dice': [
+            DiceBCELoss
         ],
     }
     return loss_dict[name]

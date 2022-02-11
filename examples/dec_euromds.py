@@ -3,8 +3,6 @@ import pathlib
 import click
 from functools import partial
 import numpy as np
-import seaborn as sns
-from sklearn.metrics import confusion_matrix
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
@@ -17,18 +15,15 @@ from torch.optim import SGD, Adam
 from torch_optimizer import Yogi 
 from torch.optim.lr_scheduler import StepLR, ExponentialLR, ReduceLROnPlateau
 from tensorboardX import SummaryWriter
-import uuid
-
-from py.losses.torch import SobelLoss, GaussianBlurredLoss
 
 from py.dec.dec_torch.dec import DEC
 from py.dec.dec_torch.cluster_loops import train, predict
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
 from py.dec.layers.torch import TruncatedGaussianNoise
 import py.dec.dec_torch.ae_loops as ae
-from py.dec.dec_torch.utils import cluster_accuracy, get_main_loss, get_mod_loss, get_ae_opt
+from py.dec.dec_torch.utils import cluster_accuracy, get_main_loss, get_mod_binary_loss, get_ae_opt
 from py.datasets.euromds import CachedEUROMDS
-from py.util import get_image_repr, get_square_image_repr
+from py.util import get_square_image_repr
 
 
 @click.command()
@@ -95,7 +90,7 @@ from py.util import get_image_repr, get_square_image_repr
 )
 @click.option(
     '--ae-mod-loss',
-    type=click.Choice(['sobel', 'gausk1', 'gausk3', 'mix', 'mix-gk', 'mix-s-gk1', 'mix-s-gk3']),
+    type=click.Choice(['mse+dice', 'combo', 'bce+dice']),
     default=None,
     help='Modified loss function for autoencoder training (default None)'
 )
@@ -177,7 +172,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     # set up loss(es) used in training the SDAE
     ae_main_loss_fn = get_main_loss(ae_main_loss)
     if ae_mod_loss is not None:
-        ae_mod_loss_fn = get_mod_loss(
+        ae_mod_loss_fn = get_mod_binary_loss(
             name=ae_mod_loss,
             beta=beta,
             main_loss=ae_main_loss,
