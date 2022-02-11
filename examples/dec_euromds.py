@@ -190,7 +190,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     ae_opt_fn = get_ae_opt(ae_opt, lr)
     
     # get datasets
-    path_to_data = pathlib.Path('/home/relogu/Desktop/OneDrive/UNIBO/Magistrale/Federated Learning Project/data/euromds') if path_to_data is None else path_to_data
+    path_to_data = pathlib.Path('/home/relogu/Desktop/OneDrive/UNIBO/Magistrale/Federated Learning Project/data/euromds') if path_to_data is None else pathlib.Path(path_to_data)
     ds_train = CachedEUROMDS(
         exclude_cols=['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
         groups=['Genetics', 'CNA'],
