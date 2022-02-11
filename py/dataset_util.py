@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Callable, Union, List
 
 import numpy as np
-from pandas.core.frame import DataFrame
 from pandas.core.series import Series
 import scipy
 import pandas as pd
