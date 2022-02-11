@@ -479,7 +479,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         device=device,
     )
     predicted, actual = predict(
-        ds_train, model, 1024, silent=True, return_actual=True, cuda=cuda
+        ds_train, model, 1024, silent=True, return_actual=True, device=device
     )
     predicted = predicted.cpu().numpy()
     reassignment, accuracy = cluster_accuracy(actual, predicted)
