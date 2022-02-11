@@ -124,3 +124,25 @@ def get_dims_from_weights(weights):
     for i in range(0, len(weights), 2):
         dims.append(weights[i].shape[1])
     return dims
+
+def is_prime(n):
+    return n > 1 and all(n % i for i in range(2, int(n ** 0.5) + 1))
+
+def get_image_repr(z: int):
+    current_is_prime = is_prime(z)
+    add = 0
+    # get how many to add for not to be prime
+    while current_is_prime:
+        add += 1
+        current_is_prime = is_prime(z+add)
+    dimensions = z+add
+    for i in range(1, dimensions+1):
+        left = dimensions % i
+        if left == 0 and dimensions/i <= i:
+            return i, int(dimensions/i), add
+
+def get_square_image_repr(z: int):
+    rad = np.round(np.sqrt(z))
+    if z/rad > rad:
+        rad +=1
+    return int(rad), int(rad), int(rad**2-z)
