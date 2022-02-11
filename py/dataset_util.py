@@ -210,9 +210,6 @@ def get_euromds_ids(path_to_data: Union[Path, str] = None):
 
 
 def get_outcome_euromds_dataset(
-    accept_nan: int = 0,
-    groups: list[str] = None,
-    exclude_cols: list[str] = None,
     path_to_data: Union[Path, str] = None
     ):
     # set the path
