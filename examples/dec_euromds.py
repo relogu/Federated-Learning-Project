@@ -307,8 +307,6 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 to_add = np.zeros(shape=(images.shape[0], additions))
                 images = torch.cat((images, torch.Tensor(to_add)), 1)
                 r_images = torch.cat((r_images, torch.Tensor(to_add)), 1)
-                print(images.shape)
-                print(r_images.shape)
             writer.add_embedding(
                 torch.cat(features).numpy(), # Encodings per image
                 metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
@@ -333,7 +331,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         autoencoder = StackedDenoisingAutoEncoder(
             linears,
             final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-            # dropout=hidden_do,
+            dropout=hidden_do,
             is_tied=is_tied,
         )
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
@@ -380,8 +378,6 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 r_images.append(autoencoder(batch).detach().cpu())
                 images.append(batch.detach().cpu())
                 labels.append(value.detach().cpu())
-                if i > 9:
-                    break
             np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
             images = torch.cat(images)
             r_images = torch.cat(r_images)
