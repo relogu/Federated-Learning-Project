@@ -108,3 +108,6 @@ results/DEC_EUROMDSfinal_single_g_K12/tsne_feat_pred_labels.png
 results/DEC_EUROMDSfinal_single_g_K6/AE_deno_model.png
 results/DEC_EUROMDSfinal_single_g_K6/conf_matrix_cycle_accuracy.png
 results/DEC_EUROMDSfinal_single_g_K6/tsne_feat_pred_labels.png
+
+# ignore old files
+*.old
