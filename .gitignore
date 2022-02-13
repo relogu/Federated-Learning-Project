@@ -111,3 +111,6 @@ results/DEC_EUROMDSfinal_single_g_K6/tsne_feat_pred_labels.png
 
 # ignore old files
 *.old
+
+# excluding ray tune results
+*ray_results*
