@@ -24,12 +24,15 @@ def get_scaler(name: str):
 def get_ae_opt(name: str, lr: float = None):
     ae_opt_dict = {
         'sgd': partial(SGD,
-                       lr=1e-3 if lr is None else lr,
+                       # 1e-3 for mnist, 1e-1 for euromds
+                       lr=1e-1 if lr is None else lr,
                        momentum=0.9),
         'adam': partial(Adam,
-                        lr=1e-4 if lr is None else lr),
+                        # 1e-4 for mnist, 1e-3 for euromds
+                        lr=1e-3 if lr is None else lr),
         'yogi': partial(Yogi,
-                        lr=3e-2 if lr is None else lr,
+                        # 3e-2 for mnist, 1e-2 for euromds
+                        lr=1e-2 if lr is None else lr,
                         eps=1e-3,
                         initial_accumulator=1e-6,),
     }
