@@ -45,18 +45,18 @@ def train_ae(
         get_hdp=True,
         get_outcomes=True,
         get_ids=True,
-        verbose=True,
+        verbose=False,
         device=device,
     )  # training dataset
     ds_val = ds_train # evaluation dataset
     dataloader = DataLoader(
         ds_train,
-        batch_size=config['batch_size'],
+        batch_size=config['ae_batch_size'],
         shuffle=False,
     )
     validation_loader = DataLoader(
         ds_val,
-        batch_size=config['batch_size'],
+        batch_size=config['ae_batch_size'],
         shuffle=False,
     )
     ## SDAE Training Loop
@@ -163,8 +163,12 @@ def train_ae(
 
         last_loss = (val_loss / val_steps)
         tune.report(loss=last_loss)
+    
+    with tune.checkpoint_dir(epoch) as checkpoint_dir:
+        path = os.path.join(checkpoint_dir, "SDAE_pretraining_checkpoint")
+        torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
         
-    if noising is not None:
+    if noising is not None: # N.B.: corruptions does not need finetuning or corruption is not None:
         for epoch in range(config['epochs']):
             running_loss = 0.0
             epoch_steps = 0
@@ -214,14 +218,20 @@ def train_ae(
                     
             last_loss = (val_loss / val_steps)
             tune.report(loss=last_loss)
-    with tune.checkpoint_dir(epoch) as checkpoint_dir:
-        path = os.path.join(checkpoint_dir, "SDAE_checkpoint")
-        torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
+        with tune.checkpoint_dir(epoch) as checkpoint_dir:
+            path = os.path.join(checkpoint_dir, "SDAE_finetuning_checkpoint")
+            torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
         
     print("Finished SDAE Training")
     
+    # TODO: dump also actual loss of AE when training DEC
     if config['train_dec'] == 'yes':
-        model = DEC(cluster_number=10,
+        dataloader = DataLoader(
+            ds_train,
+            batch_size=int(config['ae_batch_size']*config['update_interval']),
+            shuffle=True,
+        )
+        model = DEC(cluster_number=config['n_clusters'],
                     hidden_dimension=get_linears(config['linears'], config['f_dim'])[-1],
                     encoder=autoencoder.encoder,
                     alpha=config['alpha'])
@@ -247,7 +257,6 @@ def train_ae(
         )
         predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
         _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
-        tune.report(accuracy=accuracy)
 
         emp_centroids = []
         for i in np.unique(predicted):
@@ -298,14 +307,21 @@ def train_ae(
                 loss.backward()
                 optimizer.step(closure=None)
 
+            val_loss = 0.0
+            val_steps = 0
+            criterion = MSELoss()
             features = []
             actual = []
             model.eval()
-            for batch in dataloader:
+            for batch in validation_loader:
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                     batch, value = batch  # unpack if we have a prediction label
                     actual.append(value)
                 batch = batch.to(device, non_blocking=True)
+                validation_output = autoencoder(batch)
+                loss = criterion(validation_output, batch)
+                val_loss += loss.detach().cpu().numpy()
+                val_steps += 1
                 features.append(
                     model(batch).detach().cpu()
                 )  # move to the CPU to prevent out of memory on the GPU
@@ -316,13 +332,13 @@ def train_ae(
                 / predicted_previous.shape[0]
             )
 
-            tune.report(delta_label=delta_label)
+                    
+            cl_recon = (val_loss / val_steps)
 
             predicted_previous = predicted
             _, accuracy = cluster_accuracy(predicted.cpu().numpy(), actual.cpu().numpy())
 
-            tune.report(accuracy=accuracy)
-        tune.report(loss=last_loss, accuracy=accuracy)
+            tune.report(accuracy=accuracy, cl_recon=cl_recon, delta_label=delta_label, loss=last_loss)
         with tune.checkpoint_dir(epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "DEC_checkpoint")
             torch.save((model.state_dict(), optimizer.state_dict()), path)
@@ -330,7 +346,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
+def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
     
     device = "cpu"
     
@@ -338,22 +354,24 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
         device = "cuda:0"
 
     config = {
-        'linears': 'dec',# tune.grid_search(['dec', 'google', 'curves']),
-        'f_dim': 10,# tune.choice([6,9,10,20,30]),# tune.randint(2, 30),# 10,# tune.grid_search([9,10,11,12,13]),# tune.grid_search([10, 30]),
+        'linears': tune.grid_search(['dec', 'google']),# , 'curves']),
+        'f_dim': tune.grid_search([6,7,8,9,10]),#tune.grid_search([2,3,4,5,6,7,8,9,10,11,12,13,14]),# tune.choice([6,9,10,20,30]),# tune.randint(2, 30),# 10,# tune.grid_search([9,10,11,12,13]),# tune.grid_search([10, 30]),
         'activation': ReLU(),# tune.grid_search([ReLU(), Sigmoid()]),
         'final_activation': Sigmoid(),# tune.grid_search([ReLU(), Sigmoid()]),
-        'dropout': tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.2, 0.4, 0.5]),
+        'dropout': 0.0,# tune.grid_search([0.0, 0.25, 0.5]),# tune.uniform(0.0, 0.5),
         'epochs': max_num_epochs,
-        'batch_size': 256,
-        'optimizer': 'yogi',# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
-        'lr': tune.loguniform(1e-5, 1e-1),
+        'n_clusters': tune.grid_search([6,7,8,9,10]),
+        'ae_batch_size': 8,#tune.grid_search([8,16,32]),# 256,
+        'update_interval': tune.grid_search([20, 50, 100]),#,# 256,
+        'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
+        'lr': None,# tune.grid_search([1e-5, 1e-4, 1e-3, 1e-2, 1e-1]),# tune.loguniform(1e-5, 1e-1),
         'main_loss': 'mse',# tune.grid_search(['mse', 'bce-wl']),
         'mod_loss': 'none',# tune.grid_search(['none', 'gausk1', 'gausk3']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
         'beta': 0.0,# tune.grid_search([0.1, 0.2]),
-        'corruption': tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
+        'corruption': 0.0,#tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'noising': 0.0,# tune.grid_search([0.0, 0.1]),
         'train_dec': 'yes',
-        'alpha': 9,# tune.grid_search([1, 9]),
+        'alpha': 1,# tune.grid_search([1, 9]),
         'scaler': 'normal-l2',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'use_emp_centroids': 'yes',#tune.grid_search(['yes', 'no']),
     }
@@ -367,7 +385,7 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
     
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
-        metric_columns=["loss", "accuracy", "delta_label", "training_iteration"]
+        metric_columns=["ae_loss", "cl_recon", "accuracy", "delta_label", "training_iteration"]
         )
     
     lambda_scheduler = lambda x: ReduceLROnPlateau(
@@ -384,11 +402,13 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
         resources_per_trial={"cpu": 6, "gpu": gpus_per_trial},
         config=config,
         num_samples=num_samples,
-        keep_checkpoints_num=2,
+        keep_checkpoints_num=2 if config['train_dec'] == 'no' else 3,
         checkpoint_at_end=True,
         # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
+        name='euromds_fifth_trial',
+        #resume=True,
         )
 
     best_trial = result.get_best_trial("loss", "min", "last")
