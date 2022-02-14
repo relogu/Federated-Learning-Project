@@ -8,6 +8,7 @@ Created on Tue Jun 22 19:11:01 2021
 
 import numpy as np
 import torch
+from scipy.stats import skewnorm, uniform
 
 
 # TODO: give by argument the distance function
@@ -146,3 +147,33 @@ def get_square_image_repr(z: int):
     if z/rad > rad:
         rad +=1
     return int(rad), int(rad), int(rad**2-z)
+
+def get_f_indices(
+    n_samples: int,
+    n_clients: int,
+    client_id: int,
+    balance: int = -1,
+    seed: int = 51550,
+    verbose: bool = False,
+):
+    if n_clients < 1:
+        raise ValueError(
+            'There must be more than one client')
+    if client_id < 0 or client_id > n_clients-1:
+        raise ValueError(
+            'client_id must be in the range [0, (n_clients-1)], was given {} with n_clients {}'.
+            format(client_id, n_clients))
+    if balance < 0:
+        r = skewnorm.rvs(balance, size=n_samples, random_state=seed)
+        if verbose:
+            print('Getting ids from uniform distribution')
+    else:
+        r = uniform.rvs(balance, size=n_samples, random_state=seed)
+        if verbose:
+            print('Getting ids from skewed gaussian distribution')
+    hist = np.histogram(r, bins=n_clients)
+    rng = np.random.default_rng(seed)
+    idx = np.arange(n_samples)
+    rng.shuffle(idx)
+    start = np.sum(hist[:client_id])
+    return idx[start:start+hist[client_id+1]]
