@@ -15,6 +15,7 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.suggest.bayesopt import BayesOptSearch
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score, calinski_harabasz_score
 
 from py.dec.dec_torch.dec import DEC
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
@@ -224,10 +225,10 @@ def train_ae(
         
     print("Finished SDAE Training")
     
-    # TODO: dump also actual loss of AE when training DEC
     if config['train_dec'] == 'yes':
         dataloader = DataLoader(
             ds_train,
+            # change for including update interval procedure
             batch_size=int(config['ae_batch_size']*config['update_interval']),
             shuffle=True,
         )
@@ -310,6 +311,8 @@ def train_ae(
             val_loss = 0.0
             val_steps = 0
             criterion = MSELoss()
+            data = []
+            r_data = []
             features = []
             actual = []
             model.eval()
@@ -317,9 +320,11 @@ def train_ae(
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                     batch, value = batch  # unpack if we have a prediction label
                     actual.append(value)
+                    data.append(batch)
                 batch = batch.to(device, non_blocking=True)
-                validation_output = autoencoder(batch)
-                loss = criterion(validation_output, batch)
+                r_batch = autoencoder(batch)
+                r_data.append(r_batch)
+                loss = criterion(r_batch, batch)
                 val_loss += loss.detach().cpu().numpy()
                 val_steps += 1
                 features.append(
@@ -332,13 +337,39 @@ def train_ae(
                 / predicted_previous.shape[0]
             )
 
+            cos_sil_score = silhouette_score(
+                X=torch.cat(data).numpy(),
+                labels=torch.cat(features).max(1)[1],
+                metric='cosine')
+
+            eucl_sil_score = silhouette_score(
+                X=torch.cat(r_data).numpy(),
+                labels=torch.cat(features).max(1)[1],
+                metric='euclidean')
+            
+            data_calinski_harabasz = calinski_harabasz_score(
+                X=torch.cat(data).numpy(),
+                labels=torch.cat(features).max(1)[1])
+
+            feat_calinski_harabasz = calinski_harabasz_score(
+                X=torch.cat(r_data).numpy(),
+                labels=torch.cat(features).max(1)[1])
                     
             cl_recon = (val_loss / val_steps)
 
             predicted_previous = predicted
             _, accuracy = cluster_accuracy(predicted.cpu().numpy(), actual.cpu().numpy())
 
-            tune.report(accuracy=accuracy, cl_recon=cl_recon, delta_label=delta_label, loss=last_loss)
+            tune.report(
+                accuracy=accuracy,
+                cl_recon=cl_recon,
+                delta_label=delta_label,
+                loss=last_loss,
+                cos_sil_score=cos_sil_score,
+                eucl_sil_score=eucl_sil_score,
+                data_calinski_harabasz=data_calinski_harabasz,
+                feat_calinski_harabasz=feat_calinski_harabasz,
+                )
         with tune.checkpoint_dir(epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "DEC_checkpoint")
             torch.save((model.state_dict(), optimizer.state_dict()), path)
@@ -385,7 +416,16 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
     
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
-        metric_columns=["ae_loss", "cl_recon", "accuracy", "delta_label", "training_iteration"]
+        metric_columns=[
+            "ae_loss",
+            "cl_recon",
+            "accuracy",
+            "delta_label",
+            "training_iteration",
+            "cos_sil_score",
+            "eucl_sil_score",
+            "data_calinski_harabasz",
+            "feat_calinski_harabasz"]
         )
     
     lambda_scheduler = lambda x: ReduceLROnPlateau(
