@@ -307,19 +307,20 @@ def train_ae(
             actual = []
             model.eval()
             for batch in dataloader:
-                if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-                    batch, value = batch  # unpack if we have a prediction label
-                    actual.append(value)
-                    data.append(batch)
-                batch = batch.to(device, non_blocking=True)
-                r_batch = autoencoder(batch)
-                r_data.append(r_batch)
-                loss = criterion(r_batch, batch)
-                val_loss += loss.detach().cpu().numpy()
-                val_steps += 1
-                features.append(
-                    model(batch).detach().cpu()
-                )  # move to the CPU to prevent out of memory on the GPU
+                with torch.no_grad():
+                    if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                        batch, value = batch  # unpack if we have a prediction label
+                        actual.append(value)
+                        data.append(batch)
+                    batch = batch.to(device, non_blocking=True)
+                    r_batch = autoencoder(batch)
+                    r_data.append(r_batch)
+                    loss = criterion(r_batch, batch)
+                    val_loss += loss.cpu().numpy()
+                    val_steps += 1
+                    features.append(
+                        model(batch).cpu()
+                    )  # move to the CPU to prevent out of memory on the GPU
             predicted, actual = torch.cat(features).max(1)[1], torch.cat(actual).long()
 
             delta_label = (
