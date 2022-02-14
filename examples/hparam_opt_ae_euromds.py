@@ -168,8 +168,9 @@ def train_ae(
     with tune.checkpoint_dir(epoch) as checkpoint_dir:
         path = os.path.join(checkpoint_dir, "SDAE_pretraining_checkpoint")
         torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
-        
-    if noising is not None: # N.B.: corruptions does not need finetuning or corruption is not None:
+    
+    # N.B.: corruptions does not need finetuning
+    if noising is not None:
         for epoch in range(config['epochs']):
             running_loss = 0.0
             epoch_steps = 0
@@ -282,26 +283,15 @@ def train_ae(
         loss_function = KLDivLoss(size_average=False)
         delta_label = None
         for epoch in range(20):
-            # predicted_previous, accuracy = assign_cluster_centers(
-            #     dataset=dataset,
-            #     model=model,
-            #     batch_size=batch_size,
-            #     collate_fn=collate_fn,
-            #     device=device,
-            # )
-            # old_model = copy.deepcopy(model)
             model.train()
             for index, batch in enumerate(dataloader):
-                # if index % 140:
-                #     old_model = copy.deepcopy(model)
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
                     batch
-                ) == 2:
-                    batch, _ = batch  # if we have a prediction label, strip it away
+                ) == 2:  # if we have a prediction label, strip it away
+                    batch, _ = batch
                 batch = batch.to(device, non_blocking=True)
                 output = model(batch)
                 soft_labels = output
-                # soft_labels = old_model(batch)
                 target = target_distribution(soft_labels).detach()
                 loss = loss_function(output.log(), target) / output.shape[0]
                 optimizer.zero_grad()

@@ -14,6 +14,7 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.suggest.bayesopt import BayesOptSearch
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score, calinski_harabasz_score
 
 from py.dec.dec_torch.dec import DEC
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
@@ -162,7 +163,12 @@ def train_ae(
 
         last_loss = (val_loss / val_steps)
         tune.report(loss=last_loss)
-        
+    
+    with tune.checkpoint_dir(epoch) as checkpoint_dir:
+        path = os.path.join(checkpoint_dir, "SDAE_pretraining_checkpoint")
+        torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
+
+    # N.B.: corruptions does not need finetuning
     if noising is not None:
         for epoch in range(config['epochs']):
             running_loss = 0.0
@@ -213,13 +219,19 @@ def train_ae(
                     
             last_loss = (val_loss / val_steps)
             tune.report(loss=last_loss)
-    with tune.checkpoint_dir(epoch) as checkpoint_dir:
-        path = os.path.join(checkpoint_dir, "SDAE_checkpoint")
-        torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
+        with tune.checkpoint_dir(epoch) as checkpoint_dir:
+            path = os.path.join(checkpoint_dir, "SDAE_finetuning_checkpoint")
+            torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
         
     print("Finished SDAE Training")
     
-    if config['train_dec']:
+    if config['train_dec'] == 'yes':
+        dataloader = DataLoader(
+            ds_train,
+            # change for including update interval procedure
+            batch_size=int(config['batch_size']*config['update_interval']),
+            shuffle=True,
+        )
         model = DEC(cluster_number=10,
                     hidden_dimension=get_linears(config['linears'], config['f_dim'])[-1],
                     encoder=autoencoder.encoder,
@@ -259,7 +271,7 @@ def train_ae(
         #     true_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
 
         cluster_centers = torch.tensor(
-            np.array(emp_centroids) if config['use_emp_centroids'] else kmeans.cluster_centers_,# np.array(true_centroids)
+            np.array(emp_centroids) if config['use_emp_centroids'] == 'yes' else kmeans.cluster_centers_,# np.array(true_centroids)
             dtype=torch.float,
             requires_grad=True,
         )
@@ -271,32 +283,26 @@ def train_ae(
         loss_function = KLDivLoss(size_average=False)
         delta_label = None
         for epoch in range(20):
-            # predicted_previous, accuracy = assign_cluster_centers(
-            #     dataset=dataset,
-            #     model=model,
-            #     batch_size=batch_size,
-            #     collate_fn=collate_fn,
-            #     device=device,
-            # )
-            # old_model = copy.deepcopy(model)
             model.train()
             for index, batch in enumerate(dataloader):
-                # if index % 140:
-                #     old_model = copy.deepcopy(model)
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
                     batch
-                ) == 2:
-                    batch, _ = batch  # if we have a prediction label, strip it away
+                ) == 2:  # if we have a prediction label, strip it away
+                    batch, _ = batch
                 batch = batch.to(device, non_blocking=True)
                 output = model(batch)
                 soft_labels = output
-                # soft_labels = old_model(batch)
                 target = target_distribution(soft_labels).detach()
                 loss = loss_function(output.log(), target) / output.shape[0]
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step(closure=None)
 
+            val_loss = 0.0
+            val_steps = 0
+            criterion = MSELoss()
+            data = []
+            r_data = []
             features = []
             actual = []
             model.eval()
@@ -304,7 +310,13 @@ def train_ae(
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                     batch, value = batch  # unpack if we have a prediction label
                     actual.append(value)
+                    data.append(batch)
                 batch = batch.to(device, non_blocking=True)
+                r_batch = autoencoder(batch)
+                r_data.append(r_batch)
+                loss = criterion(r_batch, batch)
+                val_loss += loss.detach().cpu().numpy()
+                val_steps += 1
                 features.append(
                     model(batch).detach().cpu()
                 )  # move to the CPU to prevent out of memory on the GPU
@@ -315,13 +327,42 @@ def train_ae(
                 / predicted_previous.shape[0]
             )
 
-            tune.report(delta_label=delta_label)
+            cos_sil_score = silhouette_score(
+                X=torch.cat(data).numpy(),
+                labels=torch.cat(features).max(1)[1],
+                metric='cosine')
+
+            eucl_sil_score = silhouette_score(
+                X=torch.cat(r_data).numpy(),
+                labels=torch.cat(features).max(1)[1],
+                metric='euclidean')
+            
+            data_calinski_harabasz = calinski_harabasz_score(
+                X=torch.cat(data).numpy(),
+                labels=torch.cat(features).max(1)[1])
+
+            feat_calinski_harabasz = calinski_harabasz_score(
+                X=torch.cat(r_data).numpy(),
+                labels=torch.cat(features).max(1)[1])
+                    
+            cl_recon = (val_loss / val_steps)
 
             predicted_previous = predicted
             _, accuracy = cluster_accuracy(predicted.cpu().numpy(), actual.cpu().numpy())
 
-            tune.report(accuracy=accuracy)
-        tune.report(loss=last_loss, accuracy=accuracy)
+            tune.report(
+                accuracy=accuracy,
+                cl_recon=cl_recon,
+                delta_label=delta_label,
+                loss=last_loss,
+                cos_sil_score=cos_sil_score,
+                eucl_sil_score=eucl_sil_score,
+                data_calinski_harabasz=data_calinski_harabasz,
+                feat_calinski_harabasz=feat_calinski_harabasz,
+                )
+            # break loop procedure
+            if delta_label <= 0.001:
+                break
         with tune.checkpoint_dir(epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "DEC_checkpoint")
             torch.save((model.state_dict(), optimizer.state_dict()), path)
@@ -344,6 +385,7 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
         'dropout': tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.2, 0.4, 0.5]),
         'epochs': max_num_epochs,
         'batch_size': 256,
+        'update_interval': 140,
         'optimizer': 'yogi',# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
         'lr': tune.loguniform(1e-5, 1e-1),
         'main_loss': 'mse',# tune.grid_search(['mse', 'bce-wl']),
@@ -351,10 +393,10 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
         'beta': 0.0,# tune.grid_search([0.1, 0.2]),
         'corruption': tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'noising': 0.0,# tune.grid_search([0.0, 0.1]),
-        'train_dec': False,
+        'train_dec': 'yes',
         'alpha': 9,# tune.grid_search([1, 9]),
         'scaler': 'normal-l2',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'use_emp_centroids': True,#tune.grid_search([True, False]),
+        'use_emp_centroids': 'yes',#tune.grid_search(['yes', 'no']),
     }
     
     # scheduler = ASHAScheduler(
@@ -366,7 +408,16 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
     
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
-        metric_columns=["loss", "accuracy", "delta_label", "training_iteration"]
+        metric_columns=[
+            "ae_loss",
+            "cl_recon",
+            "accuracy",
+            "delta_label",
+            "training_iteration",
+            "cos_sil_score",
+            "eucl_sil_score",
+            "data_calinski_harabasz",
+            "feat_calinski_harabasz"]
         )
     
     lambda_scheduler = lambda x: ReduceLROnPlateau(
@@ -376,7 +427,7 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
         patience=20,
     )
     
-    bayesopt = BayesOptSearch(metric="loss", mode="min")
+    # bayesopt = BayesOptSearch(metric="loss", mode="min")
                 
     result = tune.run(
         partial(train_ae, scheduler=lambda_scheduler, device=device),
@@ -386,18 +437,53 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
         keep_checkpoints_num=2,
         checkpoint_at_end=True,
         # scheduler=scheduler,
-        search_alg=bayesopt,
-        progress_reporter=reporter)
+        # search_alg=bayesopt,
+        progress_reporter=reporter,
+        name='mnist',
+        # resume=True,
+        )
 
-    best_trial = result.get_best_trial("loss", "min", "last")
-    print("Best SDAE trial config: {}".format(best_trial.config))
-    print("Best SDAE trial final validation loss: {}".format(
-        best_trial.last_result["loss"]))
+    # best reconstruction loss after weights initialization
+    best_trial = result.get_best_trial("ae_loss", "min", "last")
+    print("Best reconstruction loss config: {}".format(best_trial.config))
+    print("Best reconstruction loss value: {}".format(
+        best_trial.last_result["ae_loss"]))
 
+    # best accuracy w.r.t. hdp labels
     best_trial = result.get_best_trial("accuracy", "max", "last")
-    print("Best DEC trial config: {}".format(best_trial.config))
-    print("Best DEC trial final accuracy: {}".format(
+    print("Best accuracy w.r.t. hdp labels config: {}".format(best_trial.config))
+    print("Best accuracy w.r.t. hdp labels value: {}".format(
         best_trial.last_result["accuracy"]))
+
+    # best reconstruction loss after clustering stage
+    best_trial = result.get_best_trial("cl_recon", "min", "last")
+    print("Best reconstruction loss after clustering stage config: {}".format(best_trial.config))
+    print("Best reconstruction loss after clustering stage value: {}".format(
+        best_trial.last_result["cl_recon"]))
+    
+    # best euclidean silhouette after clustering stage
+    best_trial = result.get_best_trial("eucl_sil_score", "max", "last")
+    print("Best euclidean silhouette after clustering stage config: {}".format(best_trial.config))
+    print("Best euclidean silhouette after clustering stage value: {}".format(
+        best_trial.last_result["eucl_sil_score"]))
+    
+    # best cosine silhouette after clustering stage
+    best_trial = result.get_best_trial("cos_sil_score", "max", "last")
+    print("Best cosine silhouette after clustering stage config: {}".format(best_trial.config))
+    print("Best cosine silhouette after clustering stage value: {}".format(
+        best_trial.last_result["cos_sil_score"]))
+    
+    # best calinski harabasz score of data after clustering stage
+    best_trial = result.get_best_trial("data_calinski_harabasz", "max", "last")
+    print("Best calinski harabasz score of data after clustering stage config: {}".format(best_trial.config))
+    print("Best calinski harabasz score of data after clustering stage value: {}".format(
+        best_trial.last_result["data_calinski_harabasz"]))
+    
+    # best calinski harabasz score of features after clustering stage
+    best_trial = result.get_best_trial("feat_calinski_harabasz", "max", "last")
+    print("Best calinski harabasz score of features after clustering stage config: {}".format(best_trial.config))
+    print("Best calinski harabasz score of features after clustering stage value: {}".format(
+        best_trial.last_result["feat_calinski_harabasz"]))
 
 
 if __name__ == "__main__":
