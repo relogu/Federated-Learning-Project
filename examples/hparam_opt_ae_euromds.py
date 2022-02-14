@@ -319,11 +319,11 @@ def train_ae(
             for batch in validation_loader:
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                     batch, value = batch  # unpack if we have a prediction label
-                    actual.append(value)
-                    data.append(batch)
+                    actual.append(value.cpu())
+                    data.append(batch.cpu())
                 batch = batch.to(device, non_blocking=True)
                 r_batch = autoencoder(batch)
-                r_data.append(r_batch)
+                r_data.append(r_batch.cpu())
                 loss = criterion(r_batch, batch)
                 val_loss += loss.detach().cpu().numpy()
                 val_steps += 1
