@@ -370,6 +370,9 @@ def train_ae(
                 data_calinski_harabasz=data_calinski_harabasz,
                 feat_calinski_harabasz=feat_calinski_harabasz,
                 )
+            # break loop procedure
+            if delta_label <= 0.001:
+                break
         with tune.checkpoint_dir(epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "DEC_checkpoint")
             torch.save((model.state_dict(), optimizer.state_dict()), path)
@@ -451,15 +454,47 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         #resume=True,
         )
 
-    best_trial = result.get_best_trial("loss", "min", "last")
-    print("Best SDAE trial config: {}".format(best_trial.config))
-    print("Best SDAE trial final validation loss: {}".format(
-        best_trial.last_result["loss"]))
+    # best reconstruction loss after weights initialization
+    best_trial = result.get_best_trial("ae_loss", "min", "last")
+    print("Best reconstruction loss config: {}".format(best_trial.config))
+    print("Best reconstruction loss value: {}".format(
+        best_trial.last_result["ae_loss"]))
 
+    # best accuracy w.r.t. hdp labels
     best_trial = result.get_best_trial("accuracy", "max", "last")
-    print("Best DEC trial config: {}".format(best_trial.config))
-    print("Best DEC trial final accuracy: {}".format(
+    print("Best accuracy w.r.t. hdp labels config: {}".format(best_trial.config))
+    print("Best accuracy w.r.t. hdp labels value: {}".format(
         best_trial.last_result["accuracy"]))
+
+    # best reconstruction loss after clustering stage
+    best_trial = result.get_best_trial("cl_recon", "min", "last")
+    print("Best reconstruction loss after clustering stage config: {}".format(best_trial.config))
+    print("Best reconstruction loss after clustering stage value: {}".format(
+        best_trial.last_result["cl_recon"]))
+    
+    # best euclidean silhouette after clustering stage
+    best_trial = result.get_best_trial("eucl_sil_score", "max", "last")
+    print("Best euclidean silhouette after clustering stage config: {}".format(best_trial.config))
+    print("Best euclidean silhouette after clustering stage value: {}".format(
+        best_trial.last_result["eucl_sil_score"]))
+    
+    # best cosine silhouette after clustering stage
+    best_trial = result.get_best_trial("cos_sil_score", "max", "last")
+    print("Best cosine silhouette after clustering stage config: {}".format(best_trial.config))
+    print("Best cosine silhouette after clustering stage value: {}".format(
+        best_trial.last_result["cos_sil_score"]))
+    
+    # best calinski harabasz score of data after clustering stage
+    best_trial = result.get_best_trial("data_calinski_harabasz", "max", "last")
+    print("Best calinski harabasz score of data after clustering stage config: {}".format(best_trial.config))
+    print("Best calinski harabasz score of data after clustering stage value: {}".format(
+        best_trial.last_result["data_calinski_harabasz"]))
+    
+    # best calinski harabasz score of features after clustering stage
+    best_trial = result.get_best_trial("feat_calinski_harabasz", "max", "last")
+    print("Best calinski harabasz score of features after clustering stage config: {}".format(best_trial.config))
+    print("Best calinski harabasz score of features after clustering stage value: {}".format(
+        best_trial.last_result["feat_calinski_harabasz"]))
 
 
 if __name__ == "__main__":
