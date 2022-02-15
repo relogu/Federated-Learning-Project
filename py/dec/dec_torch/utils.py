@@ -25,14 +25,14 @@ def get_ae_opt(name: str, lr: float = None):
     ae_opt_dict = {
         'sgd': partial(SGD,
                        # 1e-3 for mnist, 1e-1 for euromds
-                       lr=0.5e-1 if lr is None else lr,
+                       lr=5e-1 if lr is None else lr,
                        momentum=0.9),
         'adam': partial(Adam,
                         # 1e-4 for mnist, 1e-3 for euromds
-                        lr=0.5e-3 if lr is None else lr),
+                        lr=5e-3 if lr is None else lr),
         'yogi': partial(Yogi,
                         # 3e-2 for mnist, 1e-2 for euromds
-                        lr=0.5e-2 if lr is None else lr,
+                        lr=5e-2 if lr is None else lr,
                         eps=1e-3,
                         initial_accumulator=1e-6,),
     }
