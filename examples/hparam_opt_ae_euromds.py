@@ -371,7 +371,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
+def main(num_samples=20, max_num_epochs=150, gpus_per_trial=1):
     
     device = "cpu"
     
@@ -388,17 +388,17 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         'n_clusters': tune.grid_search([6,7,8,9,10]),
         'ae_batch_size': 8,#tune.grid_search([8,16,32]),# 256,
         'update_interval': 20,# tune.grid_search([20, 50, 100]),#,# 256,
-        'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
-        'lr': None,# tune.grid_search([1e-5, 1e-4, 1e-3, 1e-2, 1e-1]),# tune.loguniform(1e-5, 1e-1),
+        'optimizer': 'sgd',# tune.grid_search(['adam', 'yogi', 'sgd']),# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
+        'lr': tune.loguniform(1e-5, 1e-1),# tune.grid_search([1e-5, 1e-4, 1e-3, 1e-2, 1e-1]),# tune.loguniform(1e-5, 1e-1),
         'main_loss': 'mse',# tune.grid_search(['mse', 'bce-wl']),
         'mod_loss': 'none',# tune.grid_search(['none', 'gausk1', 'gausk3']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
         'beta': 0.0,# tune.grid_search([0.1, 0.2]),
-        'corruption': 0.0,#tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
+        'corruption': 0.0,# tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'noising': 0.0,# tune.grid_search([0.0, 0.1]),
-        'train_dec': 'yes',
+        'train_dec': 'no',
         'alpha': 1,# tune.grid_search([1, 9]),
         'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'use_emp_centroids': 'yes',#tune.grid_search(['yes', 'no']),
+        'use_emp_centroids': 'yes',# tune.grid_search(['yes', 'no']),
     }
     
     # scheduler = ASHAScheduler(
@@ -447,45 +447,46 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
 
     # best reconstruction loss after weights initialization
     best_trial = result.get_best_trial("ae_loss", "min", "last")
-    # print("Best reconstruction loss config: {}".format(best_trial.config))
+    print("Best reconstruction loss config: {}".format(best_trial.config))
     print("Best reconstruction loss value: {}".format(
         best_trial.last_result["ae_loss"]))
 
-    # best accuracy w.r.t. hdp labels
-    best_trial = result.get_best_trial("accuracy", "max", "last")
-    # print("Best accuracy w.r.t. hdp labels config: {}".format(best_trial.config))
-    print("Best accuracy w.r.t. hdp labels value: {}".format(
-        best_trial.last_result["accuracy"]))
+    if config['train_dec'] == 'yes':
+        # best accuracy w.r.t. hdp labels
+        best_trial = result.get_best_trial("accuracy", "max", "last")
+        # print("Best accuracy w.r.t. hdp labels config: {}".format(best_trial.config))
+        print("Best accuracy w.r.t. hdp labels value: {}".format(
+            best_trial.last_result["accuracy"]))
 
-    # best reconstruction loss after clustering stage
-    best_trial = result.get_best_trial("cl_recon", "min", "last")
-    # print("Best reconstruction loss after clustering stage config: {}".format(best_trial.config))
-    print("Best reconstruction loss after clustering stage value: {}".format(
-        best_trial.last_result["cl_recon"]))
-    
-    # best euclidean silhouette after clustering stage
-    best_trial = result.get_best_trial("eucl_sil_score", "max", "last")
-    # print("Best euclidean silhouette after clustering stage config: {}".format(best_trial.config))
-    print("Best euclidean silhouette after clustering stage value: {}".format(
-        best_trial.last_result["eucl_sil_score"]))
-    
-    # best cosine silhouette after clustering stage
-    best_trial = result.get_best_trial("cos_sil_score", "max", "last")
-    # print("Best cosine silhouette after clustering stage config: {}".format(best_trial.config))
-    print("Best cosine silhouette after clustering stage value: {}".format(
-        best_trial.last_result["cos_sil_score"]))
-    
-    # best calinski harabasz score of data after clustering stage
-    best_trial = result.get_best_trial("data_calinski_harabasz", "max", "last")
-    # print("Best calinski harabasz score of data after clustering stage config: {}".format(best_trial.config))
-    print("Best calinski harabasz score of data after clustering stage value: {}".format(
-        best_trial.last_result["data_calinski_harabasz"]))
-    
-    # best calinski harabasz score of features after clustering stage
-    best_trial = result.get_best_trial("feat_calinski_harabasz", "max", "last")
-    # print("Best calinski harabasz score of features after clustering stage config: {}".format(best_trial.config))
-    print("Best calinski harabasz score of features after clustering stage value: {}".format(
-        best_trial.last_result["feat_calinski_harabasz"]))
+        # best reconstruction loss after clustering stage
+        best_trial = result.get_best_trial("cl_recon", "min", "last")
+        # print("Best reconstruction loss after clustering stage config: {}".format(best_trial.config))
+        print("Best reconstruction loss after clustering stage value: {}".format(
+            best_trial.last_result["cl_recon"]))
+        
+        # best euclidean silhouette after clustering stage
+        best_trial = result.get_best_trial("eucl_sil_score", "max", "last")
+        # print("Best euclidean silhouette after clustering stage config: {}".format(best_trial.config))
+        print("Best euclidean silhouette after clustering stage value: {}".format(
+            best_trial.last_result["eucl_sil_score"]))
+        
+        # best cosine silhouette after clustering stage
+        best_trial = result.get_best_trial("cos_sil_score", "max", "last")
+        # print("Best cosine silhouette after clustering stage config: {}".format(best_trial.config))
+        print("Best cosine silhouette after clustering stage value: {}".format(
+            best_trial.last_result["cos_sil_score"]))
+        
+        # best calinski harabasz score of data after clustering stage
+        best_trial = result.get_best_trial("data_calinski_harabasz", "max", "last")
+        # print("Best calinski harabasz score of data after clustering stage config: {}".format(best_trial.config))
+        print("Best calinski harabasz score of data after clustering stage value: {}".format(
+            best_trial.last_result["data_calinski_harabasz"]))
+        
+        # best calinski harabasz score of features after clustering stage
+        best_trial = result.get_best_trial("feat_calinski_harabasz", "max", "last")
+        # print("Best calinski harabasz score of features after clustering stage config: {}".format(best_trial.config))
+        print("Best calinski harabasz score of features after clustering stage value: {}".format(
+            best_trial.last_result["feat_calinski_harabasz"]))
 
 
 if __name__ == "__main__":
