@@ -442,7 +442,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         # search_alg=bayesopt,
         progress_reporter=reporter,
         name='euromds_sixth_trial',
-        #resume=True,
+        # resume=True,
         )
 
     # best reconstruction loss after weights initialization
