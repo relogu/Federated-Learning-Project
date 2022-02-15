@@ -163,7 +163,7 @@ def train_ae(
                 val_steps += 1
 
         last_loss = (val_loss / val_steps)
-        tune.report(loss=last_loss)
+        tune.report(ae_loss=last_loss)
     
     with tune.checkpoint_dir(epoch) as checkpoint_dir:
         path = os.path.join(checkpoint_dir, "SDAE_pretraining_checkpoint")
@@ -219,7 +219,7 @@ def train_ae(
                     val_steps += 1
                     
             last_loss = (val_loss / val_steps)
-            tune.report(loss=last_loss)
+            tune.report(ae_loss=last_loss)
         with tune.checkpoint_dir(epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "SDAE_finetuning_checkpoint")
             torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
@@ -355,7 +355,7 @@ def train_ae(
                 accuracy=accuracy,
                 cl_recon=cl_recon,
                 delta_label=delta_label,
-                loss=last_loss,
+                ae_loss=last_loss,
                 cos_sil_score=cos_sil_score,
                 eucl_sil_score=eucl_sil_score,
                 data_calinski_harabasz=data_calinski_harabasz,
@@ -379,7 +379,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         device = "cuda:0"
 
     config = {
-        'linears': tune.grid_search(['dec', 'google']),# , 'curves']),
+        'linears': 'dec',# tune.grid_search(['dec', 'google']),# , 'curves']),
         'f_dim': tune.grid_search([6,7,8,9,10]),#tune.grid_search([2,3,4,5,6,7,8,9,10,11,12,13,14]),# tune.choice([6,9,10,20,30]),# tune.randint(2, 30),# 10,# tune.grid_search([9,10,11,12,13]),# tune.grid_search([10, 30]),
         'activation': ReLU(),# tune.grid_search([ReLU(), Sigmoid()]),
         'final_activation': Sigmoid(),# tune.grid_search([ReLU(), Sigmoid()]),
@@ -387,7 +387,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         'epochs': max_num_epochs,
         'n_clusters': tune.grid_search([6,7,8,9,10]),
         'ae_batch_size': 8,#tune.grid_search([8,16,32]),# 256,
-        'update_interval': tune.grid_search([20, 50, 100]),#,# 256,
+        'update_interval': 20,# tune.grid_search([20, 50, 100]),#,# 256,
         'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
         'lr': None,# tune.grid_search([1e-5, 1e-4, 1e-3, 1e-2, 1e-1]),# tune.loguniform(1e-5, 1e-1),
         'main_loss': 'mse',# tune.grid_search(['mse', 'bce-wl']),
@@ -397,7 +397,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         'noising': 0.0,# tune.grid_search([0.0, 0.1]),
         'train_dec': 'yes',
         'alpha': 1,# tune.grid_search([1, 9]),
-        'scaler': 'normal-l2',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
+        'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'use_emp_centroids': 'yes',#tune.grid_search(['yes', 'no']),
     }
     
@@ -441,49 +441,49 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='euromds_fifth_trial',
+        name='euromds_sixth_trial',
         #resume=True,
         )
 
     # best reconstruction loss after weights initialization
     best_trial = result.get_best_trial("ae_loss", "min", "last")
-    print("Best reconstruction loss config: {}".format(best_trial.config))
+    # print("Best reconstruction loss config: {}".format(best_trial.config))
     print("Best reconstruction loss value: {}".format(
         best_trial.last_result["ae_loss"]))
 
     # best accuracy w.r.t. hdp labels
     best_trial = result.get_best_trial("accuracy", "max", "last")
-    print("Best accuracy w.r.t. hdp labels config: {}".format(best_trial.config))
+    # print("Best accuracy w.r.t. hdp labels config: {}".format(best_trial.config))
     print("Best accuracy w.r.t. hdp labels value: {}".format(
         best_trial.last_result["accuracy"]))
 
     # best reconstruction loss after clustering stage
     best_trial = result.get_best_trial("cl_recon", "min", "last")
-    print("Best reconstruction loss after clustering stage config: {}".format(best_trial.config))
+    # print("Best reconstruction loss after clustering stage config: {}".format(best_trial.config))
     print("Best reconstruction loss after clustering stage value: {}".format(
         best_trial.last_result["cl_recon"]))
     
     # best euclidean silhouette after clustering stage
     best_trial = result.get_best_trial("eucl_sil_score", "max", "last")
-    print("Best euclidean silhouette after clustering stage config: {}".format(best_trial.config))
+    # print("Best euclidean silhouette after clustering stage config: {}".format(best_trial.config))
     print("Best euclidean silhouette after clustering stage value: {}".format(
         best_trial.last_result["eucl_sil_score"]))
     
     # best cosine silhouette after clustering stage
     best_trial = result.get_best_trial("cos_sil_score", "max", "last")
-    print("Best cosine silhouette after clustering stage config: {}".format(best_trial.config))
+    # print("Best cosine silhouette after clustering stage config: {}".format(best_trial.config))
     print("Best cosine silhouette after clustering stage value: {}".format(
         best_trial.last_result["cos_sil_score"]))
     
     # best calinski harabasz score of data after clustering stage
     best_trial = result.get_best_trial("data_calinski_harabasz", "max", "last")
-    print("Best calinski harabasz score of data after clustering stage config: {}".format(best_trial.config))
+    # print("Best calinski harabasz score of data after clustering stage config: {}".format(best_trial.config))
     print("Best calinski harabasz score of data after clustering stage value: {}".format(
         best_trial.last_result["data_calinski_harabasz"]))
     
     # best calinski harabasz score of features after clustering stage
     best_trial = result.get_best_trial("feat_calinski_harabasz", "max", "last")
-    print("Best calinski harabasz score of features after clustering stage config: {}".format(best_trial.config))
+    # print("Best calinski harabasz score of features after clustering stage config: {}".format(best_trial.config))
     print("Best calinski harabasz score of features after clustering stage value: {}".format(
         best_trial.last_result["feat_calinski_harabasz"]))
 
