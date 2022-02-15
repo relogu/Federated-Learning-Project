@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 
-class ReconstructedMNIST(Dataset):
+class ReconstructedBFEMNIST(Dataset):
     def __init__(self, reconstructed_imgs, actual, cuda):
         self.r_imgs = reconstructed_imgs
         self.actual = actual
