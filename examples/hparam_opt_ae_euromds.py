@@ -148,7 +148,6 @@ def train_ae(
                 running_loss = 0.0
                 
         val_loss = 0.0
-        val_steps = 0
         criterion = MSELoss()
         for i, val_batch in enumerate(validation_loader):
             with torch.no_grad():
@@ -160,9 +159,8 @@ def train_ae(
                 validation_output = autoencoder(val_batch)
                 loss = criterion(validation_output, val_batch)
                 val_loss += loss.cpu().numpy()
-                val_steps += 1
 
-        last_loss = (val_loss / val_steps)
+        last_loss = (val_loss / (i+1))
         tune.report(ae_loss=last_loss)
     
     with tune.checkpoint_dir(epoch) as checkpoint_dir:
@@ -204,7 +202,6 @@ def train_ae(
                     running_loss = 0.0
 
             val_loss = 0.0
-            val_steps = 0
             criterion = MSELoss()
             for i, val_batch in enumerate(validation_loader):
                 with torch.no_grad():
@@ -216,9 +213,7 @@ def train_ae(
                     validation_output = autoencoder(val_batch)
                     loss = criterion(validation_output, val_batch)
                     val_loss += loss.cpu().numpy()
-                    val_steps += 1
-                    
-            last_loss = (val_loss / val_steps)
+            last_loss = val_loss / (i+1)
             tune.report(ae_loss=last_loss)
         with tune.checkpoint_dir(epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "SDAE_finetuning_checkpoint")
@@ -246,7 +241,7 @@ def train_ae(
         features = []
         actual = []
         # form initial cluster centres
-        for index, batch in enumerate(dataloader):
+        for batch in dataloader:
             if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                 batch, value = batch  # if we have a prediction label, separate it to actual
                 actual.append(value)
@@ -284,7 +279,7 @@ def train_ae(
         delta_label = None
         for epoch in range(20):
             model.train()
-            for index, batch in enumerate(dataloader):
+            for batch in dataloader:
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
                     batch
                 ) == 2:  # if we have a prediction label, strip it away
@@ -298,15 +293,15 @@ def train_ae(
                 loss.backward()
                 optimizer.step(closure=None)
 
-            val_loss = 0.0
-            val_steps = 0
+            cl_recon = 0.0
             criterion = MSELoss()
             data = []
             r_data = []
             features = []
+            prob_labels = []
             actual = []
             model.eval()
-            for batch in validation_loader:
+            for i, batch in enumerate(validation_loader):
                 with torch.no_grad():
                     if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                         batch, value = batch  # unpack if we have a prediction label
@@ -314,42 +309,45 @@ def train_ae(
                         data.append(batch.cpu())
                     batch = batch.to(device, non_blocking=True)
                     r_batch = autoencoder(batch)
+                    f_batch = autoencoder.encoder(batch)
+                    features.append(f_batch.cpu())
                     r_data.append(r_batch.cpu())
                     loss = criterion(r_batch, batch)
-                    val_loss += loss.cpu().numpy()
-                    val_steps += 1
-                    features.append(
+                    cl_recon += loss.cpu().numpy()
+                    prob_labels.append(
                         model(batch).cpu()
                     )  # move to the CPU to prevent out of memory on the GPU
-            predicted, actual = torch.cat(features).max(1)[1], torch.cat(actual).long()
-
+                    
+            cl_recon = (cl_recon / (i+1))
+            predicted, actual = torch.cat(prob_labels).max(1)[1], torch.cat(actual).long()
+            data = torch.cat(data).numpy()
+            r_data = torch.cat(r_data).numpy()
+            features = torch.cat(features).numpy()
             delta_label = (
                 float((predicted != predicted_previous).float().sum().item())
                 / predicted_previous.shape[0]
             )
 
             cos_sil_score = silhouette_score(
-                X=torch.cat(data).numpy(),
-                labels=torch.cat(features).max(1)[1],
+                X=data,
+                labels=predicted,
                 metric='cosine')
 
             eucl_sil_score = silhouette_score(
-                X=torch.cat(r_data).numpy(),
-                labels=torch.cat(features).max(1)[1],
+                X=features,
+                labels=predicted,
                 metric='euclidean')
             
             data_calinski_harabasz = calinski_harabasz_score(
-                X=torch.cat(data).numpy(),
-                labels=torch.cat(features).max(1)[1])
+                X=data,
+                labels=predicted)
 
             feat_calinski_harabasz = calinski_harabasz_score(
-                X=torch.cat(r_data).numpy(),
-                labels=torch.cat(features).max(1)[1])
-                    
-            cl_recon = (val_loss / val_steps)
+                X=features,
+                labels=predicted)
 
             predicted_previous = predicted
-            _, accuracy = cluster_accuracy(predicted.cpu().numpy(), actual.cpu().numpy())
+            _, accuracy = cluster_accuracy(predicted.numpy(), actual.numpy())
 
             tune.report(
                 accuracy=accuracy,
@@ -385,11 +383,11 @@ def main(num_samples=20, max_num_epochs=150, gpus_per_trial=1):
         'final_activation': Sigmoid(),# tune.grid_search([ReLU(), Sigmoid()]),
         'dropout': 0.0,# tune.grid_search([0.0, 0.25, 0.5]),# tune.uniform(0.0, 0.5),
         'epochs': max_num_epochs,
-        'n_clusters': tune.grid_search([6,7,8,9,10]),
+        'n_clusters': 6,# tune.grid_search([6,7,8,9,10]),
         'ae_batch_size': 8,#tune.grid_search([8,16,32]),# 256,
         'update_interval': 20,# tune.grid_search([20, 50, 100]),#,# 256,
-        'optimizer': 'sgd',# tune.grid_search(['adam', 'yogi', 'sgd']),# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
-        'lr': tune.loguniform(1e-5, 1e-1),# tune.grid_search([1e-5, 1e-4, 1e-3, 1e-2, 1e-1]),# tune.loguniform(1e-5, 1e-1),
+        'optimizer': 'adam',# tune.grid_search(['adam', 'yogi', 'sgd']),# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
+        'lr': tune.loguniform(1e-6, 1),# tune.grid_search([1e-5, 1e-4, 1e-3, 1e-2, 1e-1]),# tune.loguniform(1e-5, 1e-1),
         'main_loss': 'mse',# tune.grid_search(['mse', 'bce-wl']),
         'mod_loss': 'none',# tune.grid_search(['none', 'gausk1', 'gausk3']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
         'beta': 0.0,# tune.grid_search([0.1, 0.2]),
@@ -397,7 +395,7 @@ def main(num_samples=20, max_num_epochs=150, gpus_per_trial=1):
         'noising': 0.0,# tune.grid_search([0.0, 0.1]),
         'train_dec': 'no',
         'alpha': 1,# tune.grid_search([1, 9]),
-        'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
+        'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'use_emp_centroids': 'yes',# tune.grid_search(['yes', 'no']),
     }
     
@@ -441,7 +439,7 @@ def main(num_samples=20, max_num_epochs=150, gpus_per_trial=1):
         # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='euromds_sixth_trial',
+        name='euromds_lr_for_adam',
         # resume=True,
         )
 
