@@ -24,6 +24,8 @@ from py.datasets.euromds import CachedEUROMDS
 from py.dec.dec_torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution
 from py.util import compute_centroid_np
 
+os.environ["CUDA_VISIBLE_DEVICES"]=["0","1"]
+
 def train_ae(
     config: Dict,
     scheduler: Any = None,
@@ -369,7 +371,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=20, max_num_epochs=150, gpus_per_trial=1):
+def main(num_samples=20, max_num_epochs=150, gpus_per_trial=0.5):
     
     device = "cpu"
     
