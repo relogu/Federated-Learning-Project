@@ -47,11 +47,11 @@ if __name__ == "__main__":
         path_to_in = pathlib.Path(args.in_folder)
     print('Input folder {}'.format(path_to_in))
     # Define data folder
-    if args.path_to_data is None:
-        path_to_data = pathlib.Path(__file__).parent.absolute()/'data'/'euromds'
+    if args.data_folder is None:
+        data_folder = pathlib.Path(__file__).parent.absolute()/'data'/'euromds'
     else:
-        path_to_data = pathlib.Path(args.path_to_data)
-    print('Data folder {}'.format(path_to_data))
+        data_folder = pathlib.Path(args.data_folder)
+    print('Data folder {}'.format(data_folder))
     
     # TODO: set client resources for ray
     client_resources = {'num_cpus': 1}
@@ -73,7 +73,7 @@ if __name__ == "__main__":
             balance=args.balance,
             seed=args.seed,
             verbose=False,
-            path_to_data=path_to_data),
+            path_to_data=data_folder),
         'get_test_fn': partial(
             CachedfEUROMDS,
             exclude_cols=args.ex_col,
@@ -86,7 +86,7 @@ if __name__ == "__main__":
             balance=args.balance,
             seed=args.seed,
             verbose=False,
-            path_to_data=path_to_data),
+            path_to_data=data_folder),
         'trainloader_fn': partial(
             DataLoader,
             batch_size=args.batch_size,
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     dataset = CachedEUROMDS(
         exclude_cols=args.ex_col,
         groups=args.groups,
-        path_to_data=path_to_data,
+        path_to_data=data_folder,
         fill_nans=args.fill_nans,
         get_hdp=False,
         verbose=True,
