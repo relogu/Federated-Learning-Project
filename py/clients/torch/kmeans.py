@@ -56,7 +56,7 @@ class KMeansClient(NumPyClient):
     """Client object, to set client performed operations."""
 
     def __init__(self,
-                 client_id: int,  # id of client
+                 client_id: str,  # id of client
                  data_loader_config: Dict = None, # config of dataloader
                  net_config: Dict = None, # config of network
                  kmeans_config: Dict = None, # config of kmeans
@@ -72,8 +72,8 @@ class KMeansClient(NumPyClient):
             os.makedirs(self.out_dir, exist_ok=True)
         self.client_id = client_id
         # get datasets
-        self.ds_train = data_loader_config['get_train_fn'](client_id=client_id)
-        self.ds_test = data_loader_config['get_test_fn'](client_id=client_id)
+        self.ds_train = data_loader_config['get_train_fn'](client_id=eval(client_id))
+        self.ds_test = data_loader_config['get_test_fn'](client_id=eavl(client_id))
         self.trainloader = data_loader_config['trainloader_fn'](self.ds_train)
         self.valloader = data_loader_config['valloader_fn'](self.ds_test)
         # get network

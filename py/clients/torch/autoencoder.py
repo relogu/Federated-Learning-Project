@@ -86,7 +86,7 @@ class AutoencoderClient(NumPyClient):
     """Client object, to set client performed operations."""
 
     def __init__(self,
-                 client_id: int,  # id of client
+                 client_id: str,  # id of client
                  data_loader_config: Dict = None, # config of dataloader
                  loss_config: Dict = None, # config of loss fn
                  net_config: Dict = None, # config of network
@@ -95,8 +95,8 @@ class AutoencoderClient(NumPyClient):
                  output_folder: Union[Path, str] = None # output folder
                  ):
         # get datasets
-        self.ds_train = data_loader_config['get_train_fn'](client_id=client_id)
-        self.ds_test = data_loader_config['get_test_fn'](client_id=client_id)
+        self.ds_train = data_loader_config['get_train_fn'](client_id=eval(client_id))
+        self.ds_test = data_loader_config['get_test_fn'](client_id=eval(client_id))
         self.trainloader = data_loader_config['trainloader_fn'](self.ds_train)
         self.valloader = data_loader_config['valloader_fn'](self.ds_test)
         # get loss
