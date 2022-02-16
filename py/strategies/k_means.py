@@ -92,5 +92,6 @@ class KMeansStrategy(FedAvg):
             basis_length = base_centroids.shape[0]
         # Save base_centroids
         print(f"Saving base centroids...")
-        np.savez(self.out_dir/'agg_clusters_centers.npz', *base_centroids)
+        with open(self.out_dir/'agg_clusters_centers.npz', 'w') as file:
+            np.savez(file, *base_centroids)
         return weights_to_parameters(base_centroids), {}
