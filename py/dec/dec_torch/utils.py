@@ -13,6 +13,14 @@ from py.losses.torch import (SobelLoss, GaussianBlurredLoss, ComboLoss,
                              TverskyLoss, LovaszHingeLoss, IoULoss)
 
 
+def get_linears(name, input_dim, f_dim):
+    linears_dict = {
+        'dec': [input_dim, 500, 500, 2000, f_dim],
+        'google': [input_dim, 1000, 500, 250, f_dim],
+        'curves': [input_dim, 400, 200, 100, 50, 25, 6],
+    }
+    return linears_dict[name]
+
 def get_scaler(name: str):
     scaler_dict = {
         'standard': StandardScaler(),
@@ -25,14 +33,13 @@ def get_ae_opt(name: str, lr: float = None):
     ae_opt_dict = {
         'sgd': partial(SGD,
                        # 1e-3 for mnist, 1e-1 for euromds
-                       lr=5e-1 if lr is None else lr,
+                       lr=1e-1 if lr is None else lr,
                        momentum=0.9),
         'adam': partial(Adam,
-                        # 1e-4 for mnist, 1e-3 for euromds
-                        lr=5e-3 if lr is None else lr),
+                        lr=1e-4 if lr is None else lr),
         'yogi': partial(Yogi,
-                        # 3e-2 for mnist, 1e-2 for euromds
-                        lr=5e-2 if lr is None else lr,
+                        # 3e-2 for mnist, 5e-3 for euromds
+                        lr=5e-3 if lr is None else lr,
                         eps=1e-3,
                         initial_accumulator=1e-6,),
     }
