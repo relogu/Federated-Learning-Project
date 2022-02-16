@@ -9,7 +9,6 @@ import flwr as fl
 import numpy as np
 import os
 import pathlib
-import argparse
 from functools import partial
 
 from torch.utils.data import DataLoader
@@ -22,7 +21,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["RAY_DISABLE_IMPORT_WARNING"] = "1"
 
 from py.clients.torch import AutoencoderClient, KMeansClient, DECClient
-from py.strategies import SaveModelStrategy, KMeansStrategy, DECModelStrategy
+from py.strategies import SaveModelStrategy, KMeansStrategy
 from py.datasets.feuromds import CachedfEUROMDS
 from py.datasets.euromds import CachedEUROMDS
 from py.dec.dec_torch.utils import get_main_loss, get_linears, get_ae_opt, get_scaler
