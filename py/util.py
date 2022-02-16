@@ -171,7 +171,7 @@ def get_f_indices(
         r = uniform.rvs(balance, size=n_samples, random_state=seed)
         if verbose:
             print('Getting ids from skewed gaussian distribution')
-    hist = np.histogram(r, bins=n_clients)
+    hist = np.histogram(r, bins=n_clients)[0]
     rng = np.random.default_rng(seed)
     idx = np.arange(n_samples)
     rng.shuffle(idx)
