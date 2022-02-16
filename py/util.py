@@ -176,4 +176,4 @@ def get_f_indices(
     idx = np.arange(n_samples)
     rng.shuffle(idx)
     start = np.sum(hist[:client_id])
-    return idx[start:start+hist[client_id+1]]
+    return idx[start:start+hist[client_id+1]-1]
