@@ -13,7 +13,7 @@ from torch.nn import Module
 from torch.utils.data import DataLoader
 from flwr.client import NumPyClient
 from flwr.common.typing import Scalar
-from typing import Union, Dict, Any, OrderedDict
+from typing import Union, Dict, Any, OrderedDict, Iterable
 from pathlib import Path
 
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
@@ -24,7 +24,7 @@ def training_loop(
     dataloader: DataLoader = None, # dataloader for train
     device: str = 'cpu', # device to pass torch
     optimizer: Any = None, # optimizer for train
-    loss_fn: list(Any) = None, # loss(es) for train
+    loss_fn: Iterable[Module] = None, # loss(es) for train
     autoencoder: Module = None, # network
     noising: Module = None, # input noising module
     corruption: float = 0.0, # input corruption percentage
