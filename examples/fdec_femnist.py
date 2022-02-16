@@ -250,6 +250,10 @@ if __name__ == "__main__":
                 'verbose': args.verbose,
                 'actual_round': rnd,
                 'total_rounds': 1}
+    # Get SDAE parameters
+    ae_params_filename = 'agg_weights_finetune_ae.npz' if args.noising > 0 else 'agg_weights_pretrain_ae.npz'
+    with open(path_to_out/ae_params_filename, 'r') as file:
+        ae_parameters = np.load(file, allow_pickle=True)
     # Configure the strategy
     current_strategy = KMeansStrategy(
         out_dir=path_to_out,
@@ -260,6 +264,7 @@ if __name__ == "__main__":
         # the training
         min_fit_clients=args.n_clients,
         min_eval_clients=args.n_clients,
+        initial_parameters=ae_parameters,
     )
     # Launch the simulation
     fl.simulation.start_simulation(
