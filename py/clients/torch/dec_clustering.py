@@ -131,7 +131,7 @@ class DECClient(NumPyClient):
             alpha=dec_config['alpha'])
         self.dec_model = self.dec_model.to(device)
         # get initial centroids from server
-        with open(self.out_dir/'initial_centroids.npz', 'r') as file:
+        with open(self.out_dir/'agg_clusters_centers.npz', 'r') as file:
             npy_file = np.load(file, allow_pickle=True)
         centroids = np.array([npy_file[a] for a in npy_file])
         centroids = None
