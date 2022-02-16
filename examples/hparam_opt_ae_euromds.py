@@ -223,7 +223,7 @@ def train_ae(
             shuffle=True,
         )
         model = DEC(cluster_number=config['n_clusters'],
-                    hidden_dimension=get_linears(config['linears'], config['f_dim'])[-1],
+                    hidden_dimension=config['f_dim'],
                     encoder=autoencoder.encoder,
                     alpha=config['alpha'])
 
@@ -434,7 +434,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         # search_alg=bayesopt,
         progress_reporter=reporter,
         name='euromds_clustering_scaled',
-        resume=True,
+        # resume=True,
         )
 
     # best reconstruction loss after weights initialization
