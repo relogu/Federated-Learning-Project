@@ -1,6 +1,5 @@
 import argparse
 
-
 def dec_mnist_parser():
     parser = argparse.ArgumentParser(
         description='MNIST Training Script')

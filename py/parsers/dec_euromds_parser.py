@@ -1,5 +1,5 @@
 import argparse
-from losses import get_keras_loss_names
+from py.losses import get_keras_loss_names
 
 
 def dec_euromds_parser():
