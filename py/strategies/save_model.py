@@ -63,5 +63,6 @@ class SaveModelStrategy(FedAvg):
             filename = "agg_weights_{}".format(config['model'])
             parameters = np.array(parameters_to_weights(
                 aggregated_weights[0]), dtype=object)
-            np.savez(self.out_dir/filename, parameters)
+            with open(self.out_dir/filename, 'w') as file:
+                np.savez(file, parameters)
         return aggregated_weights
