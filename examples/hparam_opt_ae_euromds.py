@@ -21,7 +21,7 @@ from py.dec.dec_torch.dec import DEC
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
 from py.dec.layers.torch import TruncatedGaussianNoise
 from py.datasets.euromds import CachedEUROMDS
-from py.dec.dec_torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution
+from py.dec.dec_torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
 os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
@@ -89,17 +89,9 @@ def train_ae(
         
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
     
-    def get_linears(name, f_dim):
-        linears_dict = {
-            'dec': [ds_train.n_features, 500, 500, 2000, f_dim],
-            'google': [ds_train.n_features, 1000, 500, 250, f_dim],
-            'curves': [ds_train.n_features, 400, 200, 100, 50, 25, 6],
-        }
-        return linears_dict[name]
-    
     # set up SDAE
     autoencoder = StackedDenoisingAutoEncoder(
-        get_linears(config['linears'], config['f_dim']),
+        get_linears(config['linears'], ds_train.n_features, config['f_dim']),
         activation=config['activation'],
         final_activation=config['final_activation'],
         dropout=config['dropout'],
