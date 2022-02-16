@@ -122,7 +122,9 @@ if __name__ == "__main__":
         return {'model': 'pretrain_ae',
                 'last': rnd==args.ae_epochs,
                 'actual_round': rnd,
-                'total_rounds': args.ae_epochs}
+                'total_rounds': args.ae_epochs,
+                # TODO: set local epochs
+                'n_epochs': 1}
     # Define on_evaluate_config_fn
     def on_eval_config_pae_fn(rnd: int):
         # Must have 'dump_metrics', 'filename', 'verbose', 'actual_round'
@@ -175,7 +177,9 @@ if __name__ == "__main__":
             return {'model': 'finetune_ae',
                     'last': rnd==args.ae_epochs,
                     'actual_round': rnd,
-                    'total_rounds': args.ae_epochs}
+                    'total_rounds': args.ae_epochs,
+                    # TODO: set local epochs
+                    'n_epochs': 1}
         # Define on_evaluate_config_fn
         def on_eval_config_ftae_fn(rnd: int):
             # Must have 'dump_metrics', 'filename', 'verbose', 'actual_round'
