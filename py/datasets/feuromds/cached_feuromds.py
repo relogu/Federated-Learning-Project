@@ -14,8 +14,9 @@ from py.util import return_not_binary_indices, get_f_indices
 class CachedfEUROMDS(Dataset):
     
     def __init__(self,
-                 exclude_cols: List[str],
-                 groups: List[str],
+                 client_id: int,
+                 exclude_cols: List[str] = None,
+                 groups: List[str] = None,
                  path_to_data: Union[Path, str] = None,
                  fill_nans: int = 0,
                  get_hdp: bool = True,
@@ -23,7 +24,6 @@ class CachedfEUROMDS(Dataset):
                  get_ids: bool = False,
                  verbose: bool = False,
                  n_clients: int = 1,
-                 client_id: int = 0,
                  balance: float = 1.0,
                  seed: int = 51550,
                  device: str = 'cpu'):

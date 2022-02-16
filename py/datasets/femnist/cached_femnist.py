@@ -8,9 +8,9 @@ from torch.utils.data import Dataset
 class CachedFEMNIST(Dataset):
     def __init__(
         self,
+        client_id: int,
         train: bool = True,
         device: str = 'cpu',
-        client_id: int = 0,
         seed: int = 51550,
         path_to_data: Path = None,
         ):
