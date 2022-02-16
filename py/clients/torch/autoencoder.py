@@ -101,7 +101,7 @@ class AutoencoderClient(NumPyClient):
         self.valloader = data_loader_config['valloader_fn'](self.ds_test)
         # get loss
         self.eval_criterion = loss_config['eval_criterion']
-        self.loss_fn = loss_config['get_loss_fn'](loss_config['params'])
+        self.loss_fn = loss_config['get_loss_fn'](**loss_config['params'])
         # get network
         self.noising = None
         if 'noising' in net_config.keys():
