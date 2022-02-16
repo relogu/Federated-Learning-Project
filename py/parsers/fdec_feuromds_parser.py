@@ -198,6 +198,7 @@ def fdec_feuromds_parser():
         dest='out_folder',
         required=False,
         type=str,
+        default=None,
         help='path to output folder'
     )
     parser.add_argument(
@@ -205,6 +206,7 @@ def fdec_feuromds_parser():
         dest='in_folder',
         required=False,
         type=str,
+        default=None,
         help='path to input folder'
     )
     parser.add_argument(
@@ -212,6 +214,7 @@ def fdec_feuromds_parser():
         dest='data_folder',
         required=False,
         type=str,
+        default=None,
         help='path to data folder'
     )
     parser.add_argument(
