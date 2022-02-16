@@ -46,7 +46,13 @@ class CachedfEUROMDS(Dataset):
 
         self.ids = np.array(get_euromds_ids(
             path_to_data=path_to_data)) if get_ids else None
-        self.indices = get_f_indices(self.ds.shape[0], balance, n_clients, client_id, seed, verbose)
+        self.indices = get_f_indices(
+            n_samples=self.ds.shape[0],
+            balance=balance,
+            n_clients=n_clients,
+            client_id=client_id,
+            seed=seed,
+            verbose=verbose)
         
         
         self._cache = dict()
