@@ -47,7 +47,7 @@ if __name__ == "__main__":
     print('Input folder {}'.format(path_to_in))
     # Define data folder
     if args.data_folder is None:
-        data_folder = pathlib.Path(__file__).parent.absolute()/'data'/'femnist'
+        data_folder = pathlib.Path(__file__).parent.parent.absolute()/'data'/'femnist'
     else:
         data_folder = pathlib.Path(args.data_folder)
     print('Data folder {}'.format(data_folder))
