@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Oct 29 13:55:15 2021
+
+@author: relogu
+"""
+import os
+
+import numpy as np
+import torch
+from torch.nn import Module, KLDivLoss
+from torch.nn.modules.loss import MSELoss
+from torch.utils.data import DataLoader
+from sklearn.metrics import silhouette_score, calinski_harabasz_score
+from flwr.client import NumPyClient
+from flwr.common.typing import Scalar
+from typing import Union, Dict, Any, OrderedDict
+from pathlib import Path
+
+from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.dec_torch.dec import DEC
+from py.dec.dec_torch.utils import target_distribution, cluster_accuracy
+
+
+def dec_model_training_loop(
+    n_epochs: int = 1, # number of epochs
+    dataloader: DataLoader = None, # dataloader for train
+    device: str = 'cpu', # device to pass torch
+    optimizer: Any = None, # optimizer for train
+    model: Module = None, # network
+):
+    loss_function = KLDivLoss(size_average=False)
+    model.train()
+    for _ in range(n_epochs):
+        ret_loss = 0.0
+        for i, batch in enumerate(dataloader):
+            if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
+                batch
+            ) == 2:  # if we have a prediction label, strip it away
+                batch, _ = batch
+            batch = batch.to(device, non_blocking=True)
+            output = model(batch)
+            soft_labels = output
+            target = target_distribution(soft_labels).detach()
+            loss = loss_function(output.log(), target) / output.shape[0]
+            ret_loss += loss.cpu().numpy()
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step(closure=None)
+        ret_loss = ret_loss / (i+1)
+    return ret_loss
+            
+            
+def dec_model_evaluating_loop(
+    validation_loader: DataLoader = None, # dataloader for train
+    device: str = 'cpu', # device to pass torch
+    autoencoder: Module = None, # network
+    model: Module = None, # dec model
+):
+    recon_loss = 0.0
+    criterion = MSELoss()
+    data = []
+    r_data = []
+    features = []
+    prob_labels = []
+    actual = []
+    model.eval()
+    for i, batch in enumerate(validation_loader):
+        with torch.no_grad():
+            if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                batch, value = batch  # unpack if we have a prediction label
+                actual.append(value.cpu())
+                data.append(batch.cpu())
+            batch = batch.to(device, non_blocking=True)
+            r_batch = autoencoder(batch)
+            f_batch = autoencoder.encoder(batch)
+            r_data.append(r_batch.cpu())
+            features.append(f_batch.cpu())
+            loss = criterion(r_batch, batch)
+            recon_loss += loss.cpu().numpy()
+            prob_labels.append(
+                model(batch).cpu()
+            )  # move to the CPU to prevent out of memory on the GPU
+        recon_loss = recon_loss / (i+1)
+    predicted, actual = torch.cat(prob_labels).max(1)[1], torch.cat(actual).long()
+    return (
+        recon_loss,
+        predicted.cpu().numpy(),
+        actual.numpy(),
+        torch.cat(data).numpy(),
+        torch.cat(r_data).numpy(),
+        torch.cat(features).numpy(),
+    )
+
+
+class DECClient(NumPyClient):
+    """Client object, to set client performed operations."""
+
+    def __init__(self,
+                 client_id: int,  # id of client
+                 data_loader_config: Dict = None, # config of dataloader
+                 net_config: Dict = None, # config of network
+                 dec_config: Dict = None, # config of DEC
+                 opt_config: Dict = None, # config of optimizer
+                 device: str = 'cpu', # device to pass torch
+                 output_folder: Union[Path, str] = None # output folder
+                 ):
+        # set output folder        
+        if output_folder is None:
+            self.out_dir = output_folder
+        else:
+            self.out_dir = Path(output_folder)
+            os.makedirs(self.out_dir, exist_ok=True)
+        # get datasets
+        self.ds_train = data_loader_config['get_train_fn'](client_id=client_id)
+        self.ds_test = data_loader_config['get_test_fn'](client_id=client_id)
+        self.trainloader = data_loader_config['trainloader_fn'](self.ds_train)
+        self.valloader = data_loader_config['valloader_fn'](self.ds_test)
+        # get network
+        if 'noising' in net_config.keys():
+            net_config.pop('noising')
+        if 'corruption' in net_config.keys():
+            net_config.pop('corruption')
+        self.autoencoder = StackedDenoisingAutoEncoder(**net_config)
+        # get DEC model
+        self.dec_model = DEC(
+            cluster_number=dec_config['n_clusters'],
+            hidden_dimension=dec_config['hidden_dimension'],
+            encoder=self.autoencoder.encoder,
+            alpha=dec_config['alpha'])
+        self.dec_model = self.dec_model.to(device)
+        # get initial centroids from server
+        with open(self.out_dir/'initial_centroids.npz', 'r') as file:
+            npy_file = np.load(file, allow_pickle=True)
+        centroids = np.array([npy_file[a] for a in npy_file])
+        centroids = None
+        # set initial centroids
+        cluster_centers = torch.tensor(
+            np.array(centroids),
+            dtype=torch.float,
+            requires_grad=True,
+        )
+        cluster_centers = cluster_centers.to(device, non_blocking=True)
+        # initialise the cluster centers
+        with torch.no_grad():
+            self.dec_model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
+        # get optimizer
+        self.optimizer = opt_config['optimizer_fn'](
+            opt_config['optimizer'],
+            opt_config['lr'])(self.dec_model.parameters())
+        # get previusly predicted labels
+        with open(self.out_dir/'predicted_previous.npz', 'r') as file:
+            npy_file = np.load(file, allow_pickle=True)
+        self.predicted_previous = np.array([npy_file[a] for a in npy_file])
+        # set device
+        self.device = device
+        # general initializations
+        self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
+    
+    # def get_properties(self, ins: PropertiesIns) -> PropertiesRes:
+    def get_properties(self, ins):
+        return self.properties
+    
+    def get_parameters(self):
+        """Get the model weights by model object."""
+        return [val.cpu().numpy() for _, val in self.dec_mode.state_dict().items()]
+    
+    def set_parameters(self, parameters):
+        """Set the model weights by parameters object."""
+        params_dict = zip(self.dec_model.state_dict().keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        self.dec_model.load_state_dict(state_dict, strict=True)
+
+    def fit(self, parameters, config):  # type: ignore
+        """Perform the fit step after having assigned new weights."""
+        # set model parameters from server
+        self.set_parameters(parameters)
+        # fit DEC model
+        loss = dec_model_training_loop(
+            n_epochs=config['n_epochs'],
+            dataloader=self.trainloader,
+            device=self.device,
+            model=self.dec_model,
+            optimizer=self.optimizer,
+            predicted_previous=self.predicted_previous,
+        )
+        # returning the parameters necessary for FedAvg
+        return {self.get_parameters()}, {len(self.ds_train)}, {loss}
+    
+    def evaluate(self, parameters, config):
+        # get DEC model parameter from server
+        self.set_parameters(parameters)
+        # valuate clustering
+        recon_loss, predicted, actual, data, r_data, features = dec_model_evaluating_loop(
+            autoencoder=self.autoencoder,
+            device=self.device,
+            model=self.dec_model,
+            validation_loader=self.valloader,
+        )
+        # TODO: evaluate reconstruction
+        # TODO: manage metrics
+        # delta_label = (
+        #     float((predicted != predicted_previous).float().sum().item())
+        #     / predicted_previous.shape[0]
+        # )
+
+        # cos_sil_score = silhouette_score(
+        #     X=data,
+        #     labels=predicted,
+        #     metric='cosine')
+
+        # eucl_sil_score = silhouette_score(
+        #     X=features,
+        #     labels=predicted,
+        #     metric='euclidean')
+        
+        # data_calinski_harabasz = calinski_harabasz_score(
+        #     X=data,
+        #     labels=predicted)
+
+        # feat_calinski_harabasz = calinski_harabasz_score(
+        #     X=features,
+        #     labels=predicted)
+                
+        # cl_recon = (val_loss / val_steps)
+        
+        # _, accuracy = cluster_accuracy(predicted, actual)
+
+        with open(self.out_dir/'predicted_previous.npz', 'w') as file:
+            np.savez(file, *predicted)
+        # returning the parameters necessary for evaluation
+        return {}, {len(self.ds_test)}, {}

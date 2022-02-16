@@ -33,7 +33,8 @@ def training_loop(
         scheduler = scheduler_config['scheduler_fn'](optimizer)
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
     for _ in range(n_epochs):
-        for batch in dataloader:
+        ret_loss = 0.0
+        for i, batch in enumerate(dataloader):
             if (
                 isinstance(batch, tuple)
                 or isinstance(batch, list)
@@ -51,12 +52,15 @@ def training_loop(
             
             losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
             loss = sum(losses)/len(loss_fn)
+            ret_loss += loss.cpu().numpy()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step(closure=None)
+        ret_loss = ret_loss / (i+1)
             # TODO: print statistics?
         if scheduler_config['scheduler_fn'] is not None:
             scheduler.step(scheduler_config['last_loss'])
+    return ret_loss
 
 def evaluating_loop(
     valloader: DataLoader = None, # dataloader for eval
@@ -82,7 +86,7 @@ class AutoencoderClient(NumPyClient):
     """Client object, to set client performed operations."""
 
     def __init__(self,
-                 client_id,  # id of client
+                 client_id: int,  # id of client
                  data_loader_config: Dict = None, # config of dataloader
                  loss_config: Dict = None, # config of loss fn
                  net_config: Dict = None, # config of network
@@ -108,6 +112,7 @@ class AutoencoderClient(NumPyClient):
             self.corruption = net_config['corruption']
             net_config.pop('corruption')
         self.autoencoder = StackedDenoisingAutoEncoder(**net_config)
+        self.autoencoder = self.autoencoder.to(device)
         # get optimizer
         self.optimizer = opt_config['optimizer_fn'](
             opt_config['optimizer'],
@@ -148,7 +153,7 @@ class AutoencoderClient(NumPyClient):
         # set model parameters from server
         self.set_parameters(parameters)
         # fit the model
-        training_loop(
+        loss = training_loop(
             n_epochs=config['n_epochs'],
             scheduler_config=self.scheduler_config,
             dataloader=self.trainloader,
@@ -160,7 +165,7 @@ class AutoencoderClient(NumPyClient):
             corruption=self.corruption,
         )
         # returning the parameters necessary for FedAvg
-        return {self.get_parameters()}, {len(self.ds_train)}, {}
+        return {self.get_parameters()}, {len(self.ds_train)}, {loss}
     
     def evaluate(self, parameters, config):
         # set model parameters from server
