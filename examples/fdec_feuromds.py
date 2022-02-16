@@ -355,7 +355,6 @@ if __name__ == "__main__":
     fl.simulation.start_simulation(
         client_fn=dec_client_fn,
         num_clients=args.n_clients,
-        clients_ids=args.clients_ids,
         clients_ids=list(range(args.n_clients)),
         num_rounds=args.dec_epochs,
         strategy=current_strategy,
