@@ -345,7 +345,7 @@ if __name__ == "__main__":
                 'total_rounds': args.dec_epochs,
                 'model': 'dec'}
     # Configure the strategy
-    current_strategy = DECModelStrategy(
+    current_strategy = SaveModelStrategy(
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_dec_fn,
         on_evaluate_config_fn=on_eval_config_dec_fn,
