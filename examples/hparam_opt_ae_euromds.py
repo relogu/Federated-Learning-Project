@@ -71,8 +71,11 @@ def train_ae(
             # main_loss=ae_main_loss,
             # device=device,
             )
+        beta = [1.0-config['beta'], config['beta']]
     else:
         loss_fn = [get_main_loss(config['main_loss'])]
+        beta = [1.0]
+    
     
     noising = None
     if config['noising'] > 0:
@@ -127,7 +130,7 @@ def train_ae(
                 input = F.dropout(input, corruption)
             output = autoencoder(input)
             
-            losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
+            losses = [beta*l_fn_i(output, batch) for beta, l_fn_i in zip(beta, loss_functions)]
             loss = sum(losses)/len(loss_fn)
             optimizer.zero_grad()
             loss.backward()
@@ -181,7 +184,8 @@ def train_ae(
                 
                 output = autoencoder(input)
 
-                losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
+            
+                losses = [beta*l_fn_i(output, batch) for beta, l_fn_i in zip(beta, loss_functions)]
                 loss = sum(losses)/len(loss_fn)
                 optimizer.zero_grad()
                 loss.backward()
@@ -372,7 +376,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
 
     config = {
         'linears': 'dec',# tune.grid_search(['dec', 'google']),# , 'curves']),
-        'f_dim': tune.grid_search([6,7,8,9,10]),#tune.grid_search([2,3,4,5,6,7,8,9,10,11,12,13,14]),# tune.choice([6,9,10,20,30]),# tune.randint(2, 30),# 10,# tune.grid_search([9,10,11,12,13]),# tune.grid_search([10, 30]),
+        'f_dim': tune.grid_search([9,10]),#tune.grid_search([2,3,4,5,6,7,8,9,10,11,12,13,14]),# tune.choice([6,9,10,20,30]),# tune.randint(2, 30),# 10,# tune.grid_search([9,10,11,12,13]),# tune.grid_search([10, 30]),
         'activation': ReLU(),# tune.grid_search([ReLU(), Sigmoid()]),
         'final_activation': Sigmoid(),# tune.grid_search([ReLU(), Sigmoid()]),
         'dropout': 0.0,# tune.grid_search([0.0, 0.25, 0.5]),# tune.uniform(0.0, 0.5),
@@ -380,16 +384,16 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         'n_clusters': tune.grid_search([6,7,8,9,10]),
         'ae_batch_size': 8,#tune.grid_search([8,16,32]),# 256,
         'update_interval': 20,# tune.grid_search([20, 50, 100]),#,# 256,
-        'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
+        'optimizer': 'yogi',# tune.grid_search(['adam', 'yogi', 'sgd']),# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
         'lr': None,# tune.loguniform(1e-6, 1),# tune.grid_search([1e-5, 1e-4, 1e-3, 1e-2, 1e-1]),# tune.loguniform(1e-5, 1e-1),
         'main_loss': 'mse',# tune.grid_search(['mse', 'bce-wl']),
-        'mod_loss': 'none',# tune.grid_search(['none', 'gausk1', 'gausk3']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
-        'beta': 0.0,# tune.grid_search([0.1, 0.2]),
+        'mod_loss': tune.grid_search(['bce+dice', 'focal-tversky', 'tversky', 'focal', 'combo', 'dice', 'lovasz-hinge', 'iou']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
+        'beta': tune.grid_search([0.1, 0.2, 0.3, 0.4]),
         'corruption': 0.0,# tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'noising': 0.0,# tune.grid_search([0.0, 0.1]),
         'train_dec': 'yes',
         'alpha': 1,# tune.grid_search([1, 9]),
-        'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
+        'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'use_emp_centroids': 'yes',# tune.grid_search(['yes', 'no']),
     }
     
@@ -433,7 +437,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='euromds_clustering_scaled',
+        name='euromds_ae_mod_loss_beta',
         # resume=True,
         )
 
