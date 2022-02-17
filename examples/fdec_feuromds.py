@@ -11,6 +11,7 @@ import os
 import pathlib
 from functools import partial
 
+import torch
 from torch.utils.data import DataLoader
 from torch.nn import ReLU, Sigmoid
 from torch.nn.modules.loss import MSELoss
@@ -27,7 +28,8 @@ from py.datasets.euromds import CachedEUROMDS
 from py.dec.layers.torch import TruncatedGaussianNoise
 from py.dec.dec_torch.utils import get_main_loss, get_linears, get_ae_opt, get_scaler
 from py.parsers.fdec_feuromds_parser import fdec_feuromds_parser as get_parser
-    
+
+os.environ["CUDA_VISIBLE_DEVICES"]="6,7"
 
 # TODO: write description
 if __name__ == "__main__":
@@ -55,7 +57,10 @@ if __name__ == "__main__":
     print('Data folder {}'.format(data_folder))
     
     # TODO: set client resources for ray
-    client_resources = {'num_cpus': 1, 'num_gpus': 0.05}
+    device = "cpu" # args.device
+    if torch.cuda.is_available():
+        device = "cuda:0"
+    client_resources = {'num_cpus': 2, 'num_gpus': 0.2}
     # (optional) Specify ray config, for sure it is to be changed
     ray_config = {'include_dashboard': False}
 
@@ -121,7 +126,7 @@ if __name__ == "__main__":
             shape=n_features,
             stddev=args.noising,
             rate=1.0,
-            device=args.device,
+            device=device,
             ),
         'corruption': args.corruption,
         'dimensions': get_linears(args.linears, n_features, args.hidden_dimensions),
@@ -264,7 +269,7 @@ if __name__ == "__main__":
             net_config=net_config,
             kmeans_config=kmeans_config,
             scaler_config=scaler_config,
-            device=args.device,
+            device=device,
             output_folder=path_to_out)
     # Define on_fit_config_fn
     def on_fit_config_kmeans_fn(rnd: int):
@@ -333,7 +338,7 @@ if __name__ == "__main__":
             net_config=net_config,
             dec_config=dec_config,
             opt_config=dec_opt_config,
-            device=args.device,
+            device=device,
             output_folder=path_to_out)
     # Define on_fit_config_fn
     def on_fit_config_dec_fn(train: bool, rnd: int):
