@@ -43,12 +43,6 @@ if __name__ == "__main__":
     else:
         path_to_out = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
-    # Define input folder
-    if args.in_folder is None:
-        path_to_in = pathlib.Path(__file__).parent.parent.absolute()/'input'
-    else:
-        path_to_in = pathlib.Path(args.in_folder)
-    print('Input folder {}'.format(path_to_in))
     # Define data folder
     if args.data_folder is None:
         data_folder = pathlib.Path(__file__).parent.parent.absolute()/'data'/'euromds'
@@ -59,7 +53,7 @@ if __name__ == "__main__":
     # TODO: set client resources for ray
     device = "cpu" # args.device
     if torch.cuda.is_available():
-        device = "cuda:0"
+        device = "cuda"
     client_resources = {'num_cpus': 2, 'num_gpus': 0.2}
     # (optional) Specify ray config, for sure it is to be changed
     ray_config = {'include_dashboard': False}
@@ -176,6 +170,7 @@ if __name__ == "__main__":
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_pae_fn,
         on_evaluate_config_fn=on_eval_config_pae_fn,
+        min_available_clients=args.n_clients,
         min_fit_clients=args.n_clients,
         min_eval_clients=args.n_clients,
     )
@@ -231,6 +226,7 @@ if __name__ == "__main__":
             out_dir=path_to_out,
             on_fit_config_fn=on_fit_config_ftae_fn,
             on_evaluate_config_fn=on_eval_config_ftae_fn,
+            min_available_clients=args.n_clients,
             min_fit_clients=args.n_clients,
             min_eval_clients=args.n_clients,
         )
@@ -297,6 +293,7 @@ if __name__ == "__main__":
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_kmeans_fn,
         on_evaluate_config_fn=on_eval_config_kmeans_fn,
+        min_available_clients=args.n_clients,
         min_fit_clients=args.n_clients,
         min_eval_clients=args.n_clients,
         initial_parameters=ae_parameters,
@@ -364,6 +361,7 @@ if __name__ == "__main__":
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_dec_fn,
         on_evaluate_config_fn=on_eval_config_dec_fn,
+        min_available_clients=args.n_clients,
         min_fit_clients=args.n_clients,
         min_eval_clients=args.n_clients,
     )
