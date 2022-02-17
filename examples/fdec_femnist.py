@@ -47,8 +47,8 @@ if __name__ == "__main__":
         data_folder = pathlib.Path(args.data_folder)
     print('Data folder {}'.format(data_folder))
     
-    # TODO: set client resources for ray
-    client_resources = {'num_cpus': 2, 'num_gpus': 0.2}
+    # set client resources for ray
+    client_resources = {'num_cpus': args.n_cpus}
     # (optional) Specify ray config, for sure it is to be changed
     ray_config = {'include_dashboard': False}
 

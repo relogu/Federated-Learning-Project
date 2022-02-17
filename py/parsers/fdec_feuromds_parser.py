@@ -194,6 +194,14 @@ def fdec_feuromds_parser():
         help='seed for initializing random generators'
     )
     parser.add_argument(
+        '--n-cpus',
+        dest='n_cpus',
+        required=False,
+        type=int,
+        default=1,
+        help='set the number of cpus per client to set ray resources'
+    )
+    parser.add_argument(
         '--out-folder',
         dest='out_folder',
         required=False,

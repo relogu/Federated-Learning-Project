@@ -11,7 +11,6 @@ import os
 import pathlib
 from functools import partial
 
-import torch
 from torch.utils.data import DataLoader
 from torch.nn import ReLU, Sigmoid
 from torch.nn.modules.loss import MSELoss
@@ -29,7 +28,7 @@ from py.dec.layers.torch import TruncatedGaussianNoise
 from py.dec.dec_torch.utils import get_main_loss, get_linears, get_ae_opt, get_scaler
 from py.parsers.fdec_feuromds_parser import fdec_feuromds_parser as get_parser
 
-os.environ["CUDA_VISIBLE_DEVICES"]="6,7"
+# os.environ["CUDA_VISIBLE_DEVICES"]="6,7"
 
 # TODO: write description
 if __name__ == "__main__":
@@ -50,8 +49,8 @@ if __name__ == "__main__":
         data_folder = pathlib.Path(args.data_folder)
     print('Data folder {}'.format(data_folder))
     
-    # TODO: set client resources for ray
-    client_resources = {'num_cpus': 2, 'num_gpus': 0.2}
+    # set client resources for ray
+    client_resources = {'num_cpus': args.n_cpus}
     # (optional) Specify ray config, for sure it is to be changed
     ray_config = {'include_dashboard': False}
 
