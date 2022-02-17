@@ -54,18 +54,18 @@ def fillcolumn_prob(
     verbose: bool = False
     ) -> Series:
     tot = len(ser)
-    cna = len(ser[ser.isna()])
-    l = ser[ser.notna()]
-    # sam = len(l)
-    zeros = len(l[l==0])
-    # prob = zeros/sam
-    prob = zeros/tot
+    cna = len(ser.loc[ser.isna()])
+    l = ser.loc[ser.notna()]
+    sam = len(l)
+    zeros = len(l.loc[l==0])
+    prob = zeros/sam
     if verbose:
         print('Total samples {}, NaN samples {}, prob of 0s {}'. \
             format(tot, cna, prob))
+    # filling NaNs with prob of having value 1
     ser.loc[ser.isna()] = [float(1-prob)]*cna
     if verbose:
-        cna = len(ser[ser.isna()])
+        cna = len(ser.loc[ser.isna()])
         print('Once transformed, NaN samples {}'. \
             format(cna))
     return ser
@@ -180,7 +180,7 @@ def get_euromds_dataset(
             filtered = filtered.drop(columns=c)
         elif a > 0:
             # filled_cols.append(c)
-            filtered.loc[:, c] = fill_fn(filtered[c], verbose)
+            filtered.loc[:, c] = fill_fn(filtered[c].copy(), verbose)
     # filtered = filled_columns_first(filtered, filled_cols)
     del main_df
     del groups
