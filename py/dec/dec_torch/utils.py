@@ -93,29 +93,36 @@ def get_mod_binary_loss(
     name: str,
     ):
     loss_dict = {
-        'mse+dice': [
+        'dice': [
             torch.nn.MSELoss,
             DiceLoss,
         ],
         'lovasz-hinge': [
+            torch.nn.MSELoss,
             LovaszHingeLoss
         ],
         'iou': [
+            torch.nn.MSELoss,
             IoULoss
         ],
         'combo': [
+            torch.nn.MSELoss,
             ComboLoss
         ],
         'focal': [
+            torch.nn.MSELoss,
             FocalLoss
         ],
         'tversky': [
+            torch.nn.MSELoss,
             TverskyLoss
         ],
         'focal-tversky': [
+            torch.nn.MSELoss,
             FocalTverskyLoss
         ],
         'bce+dice': [
+            torch.nn.MSELoss,
             DiceBCELoss
         ],
     }
