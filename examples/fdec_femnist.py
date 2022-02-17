@@ -23,6 +23,7 @@ os.environ["RAY_DISABLE_IMPORT_WARNING"] = "1"
 from py.clients.torch import AutoencoderClient, KMeansClient, DECClient
 from py.strategies import SaveModelStrategy, KMeansStrategy
 from py.datasets.femnist import CachedFEMNIST
+from py.dec.layers.torch import TruncatedGaussianNoise
 from py.dec.dec_torch.utils import get_main_loss, get_linears, get_ae_opt, get_scaler
 from py.parsers.fdec_femnist_parser import fdec_femnist_parser as get_parser
     
@@ -91,7 +92,12 @@ if __name__ == "__main__":
     }
     # Set network configuration dict
     net_config = {
-        'noising': args.noising,
+        'noising': TruncatedGaussianNoise(
+            shape=784,
+            stddev=args.noising,
+            rate=1.0,
+            device=args.device,
+            ),
         'corruption': args.corruption,
         'dimensions': get_linears(args.linears, 784, args.hidden_dimensions),
         'activation': ReLU(),
@@ -153,8 +159,9 @@ if __name__ == "__main__":
         num_rounds=args.ae_epochs,
         strategy=current_strategy,
         ray_init_args=ray_config)
+    
     if args.noising > 0:
-        ## Prepare generalized AutoencoderClient for pretraining
+        ## Prepare generalized AutoencoderClient for finetuning
         # Dataloader configuration dict is the same as before
         # Loss configuration dict is the same as before
         # Network configuration dict changes here only:

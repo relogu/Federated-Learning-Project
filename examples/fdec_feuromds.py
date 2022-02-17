@@ -24,6 +24,7 @@ from py.clients.torch import AutoencoderClient, KMeansClient, DECClient
 from py.strategies import SaveModelStrategy, KMeansStrategy
 from py.datasets.feuromds import CachedfEUROMDS
 from py.datasets.euromds import CachedEUROMDS
+from py.dec.layers.torch import TruncatedGaussianNoise
 from py.dec.dec_torch.utils import get_main_loss, get_linears, get_ae_opt, get_scaler
 from py.parsers.fdec_feuromds_parser import fdec_feuromds_parser as get_parser
     
@@ -54,7 +55,7 @@ if __name__ == "__main__":
     print('Data folder {}'.format(data_folder))
     
     # TODO: set client resources for ray
-    client_resources = {'num_cpus': 1}
+    client_resources = {'num_cpus': 1, 'num_gpus': 0.05}
     # (optional) Specify ray config, for sure it is to be changed
     ray_config = {'include_dashboard': False}
 
@@ -116,7 +117,12 @@ if __name__ == "__main__":
     n_features = dataset.n_features
     del dataset
     net_config = {
-        'noising': args.noising,
+        'noising': TruncatedGaussianNoise(
+            shape=n_features,
+            stddev=args.noising,
+            rate=1.0,
+            device=args.device,
+            ),
         'corruption': args.corruption,
         'dimensions': get_linears(args.linears, n_features, args.hidden_dimensions),
         'activation': ReLU(),
