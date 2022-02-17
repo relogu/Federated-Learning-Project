@@ -28,15 +28,18 @@ def fit_kmeans_loop(
     scaler: Any = None, # scaler object
     use_emp_centroids: bool = False, # flag for using empirical centroids
 ):
+    autoencoder.to(device)
+    autoencoder.eval()
     features = []
     actual = []
     # form initial cluster centres
     for batch in dataloader:
-        if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-            batch, value = batch  # if we have a prediction label, separate it to actual
-            actual.append(value)
-        batch = batch.to(device, non_blocking=True)
-        features.append(autoencoder.encoder(batch).detach().cpu())
+        with torch.no_grad():
+            if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
+                batch, value = batch  # if we have a prediction label, separate it to actual
+                actual.append(value)
+            batch = batch.to(device, non_blocking=True)
+            features.append(autoencoder.encoder(batch).detach().cpu())
     actual = torch.cat(actual).long()
     predicted = kmeans.fit_predict(
         scaler.fit_transform(torch.cat(features).numpy()) if scaler is not None else torch.cat(features).numpy()
@@ -61,7 +64,6 @@ class KMeansClient(NumPyClient):
                  net_config: Dict = None, # config of network
                  kmeans_config: Dict = None, # config of kmeans
                  scaler_config: Dict = None, # config of scaler
-                 device: str = 'cpu', # device to pass torch
                  output_folder: Union[Path, str] = None # output folder
                  ):
         # set output folder        
@@ -92,8 +94,6 @@ class KMeansClient(NumPyClient):
         self.clusters_centers = []
         # get scaler
         self.scaler = scaler_config['get_scaler_fn'](scaler_config['name']) if scaler_config['scaler'] != 'none' else None
-        # set device
-        self.device = device
         # general initializations
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
     
@@ -113,6 +113,8 @@ class KMeansClient(NumPyClient):
 
     def fit(self, parameters, config):  # type: ignore
         """Perform the fit step after having assigned new weights."""
+        # get device
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # set model parameters from server: server must pass as initial 
         # parameter the final server parameters for the autoencoder
         self.set_parameters(parameters)
@@ -121,7 +123,7 @@ class KMeansClient(NumPyClient):
             kmeans=self.kmeans,
             autoencoder=self.autoencoder,
             dataloader=self.trainloader,
-            device=self.device,
+            device=device,
             scaler=self.scaler,
             use_emp_centroids=self.use_emp_centroids,
         )
@@ -132,6 +134,8 @@ class KMeansClient(NumPyClient):
         return {self.clusters_centers}, {len(self.ds_train)}, {}
     
     def evaluate(self, parameters, config):
+        # get device
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # set clusters centers from server
         self.kmeans_config['init'] = np.array(parameters)
         self.kmeans = KMeans(**self.kmeans_config)
@@ -140,7 +144,7 @@ class KMeansClient(NumPyClient):
             kmeans=self.kmeans,
             autoencoder=self.autoencoder,
             dataloader=self.trainloader,
-            device=self.device,
+            device=device,
             scaler=self.scaler,
         )
         # TODO: evaluate clustering

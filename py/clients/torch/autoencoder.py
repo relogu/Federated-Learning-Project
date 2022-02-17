@@ -6,7 +6,6 @@ Created on Fri Oct 29 13:55:15 2021
 @author: relogu
 """
 import os
-from ray import client
 
 import torch
 import torch.nn.functional as F
@@ -32,6 +31,7 @@ def training_loop(
 ):
     autoencoder.to(device)
     noising.to(device)
+    autoencoder.train()
     if scheduler_config['scheduler_fn'] is not None:
         scheduler = scheduler_config['scheduler_fn'](optimizer)
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
@@ -74,6 +74,7 @@ def evaluating_loop(
     autoencoder.to(device)
     val_loss = 0.0
     criterion = criterion()
+    autoencoder.eval()
     for i, val_batch in enumerate(valloader):
         with torch.no_grad():
             if (

@@ -30,6 +30,7 @@ def dec_model_training_loop(
     optimizer: Any = None, # optimizer for train
     model: Module = None, # network
 ):
+    model.to(device)
     loss_function = KLDivLoss(size_average=False)
     model.train()
     for _ in range(n_epochs):
@@ -58,6 +59,7 @@ def dec_model_evaluating_loop(
     autoencoder: Module = None, # network
     model: Module = None, # dec model
 ):
+    model.to(device)
     recon_loss = 0.0
     criterion = MSELoss()
     data = []
@@ -103,7 +105,6 @@ class DECClient(NumPyClient):
                  net_config: Dict = None, # config of network
                  dec_config: Dict = None, # config of DEC
                  opt_config: Dict = None, # config of optimizer
-                 device: str = 'cpu', # device to pass torch
                  output_folder: Union[Path, str] = None # output folder
                  ):
         # set output folder        
@@ -129,7 +130,6 @@ class DECClient(NumPyClient):
             hidden_dimension=dec_config['hidden_dimension'],
             encoder=self.autoencoder.encoder,
             alpha=dec_config['alpha'])
-        self.dec_model = self.dec_model.to(device)
         # get initial centroids from server
         with open(self.out_dir/'agg_clusters_centers.npz', 'r') as file:
             npy_file = np.load(file, allow_pickle=True)
@@ -141,7 +141,6 @@ class DECClient(NumPyClient):
             dtype=torch.float,
             requires_grad=True,
         )
-        cluster_centers = cluster_centers.to(device, non_blocking=True)
         # initialise the cluster centers
         with torch.no_grad():
             self.dec_model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
@@ -153,8 +152,6 @@ class DECClient(NumPyClient):
         with open(self.out_dir/'predicted_previous.npz', 'r') as file:
             npy_file = np.load(file, allow_pickle=True)
         self.predicted_previous = np.array([npy_file[a] for a in npy_file])
-        # set device
-        self.device = device
         # general initializations
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
     
@@ -174,13 +171,15 @@ class DECClient(NumPyClient):
 
     def fit(self, parameters, config):  # type: ignore
         """Perform the fit step after having assigned new weights."""
+        # get device
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # set model parameters from server
         self.set_parameters(parameters)
         # fit DEC model
         loss = dec_model_training_loop(
             n_epochs=config['n_epochs'],
             dataloader=self.trainloader,
-            device=self.device,
+            device=device,
             model=self.dec_model,
             optimizer=self.optimizer,
             predicted_previous=self.predicted_previous,
@@ -189,12 +188,14 @@ class DECClient(NumPyClient):
         return {self.get_parameters()}, {len(self.ds_train)}, {loss}
     
     def evaluate(self, parameters, config):
+        # get device
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # get DEC model parameter from server
         self.set_parameters(parameters)
         # valuate clustering
         recon_loss, predicted, actual, data, r_data, features = dec_model_evaluating_loop(
             autoencoder=self.autoencoder,
-            device=self.device,
+            device=device,
             model=self.dec_model,
             validation_loader=self.valloader,
         )
