@@ -183,8 +183,9 @@ if __name__ == "__main__":
         num_rounds=args.ae_epochs,
         strategy=current_strategy,
         ray_init_args=ray_config)
+    
     if args.noising > 0:
-        ## Prepare generalized AutoencoderClient for pretraining
+        ## Prepare generalized AutoencoderClient for finetuning
         # Dataloader configuration dict is the same as before
         # Loss configuration dict is the same as before
         # Network configuration dict changes here only:
