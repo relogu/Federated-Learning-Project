@@ -51,9 +51,6 @@ if __name__ == "__main__":
     print('Data folder {}'.format(data_folder))
     
     # TODO: set client resources for ray
-    device = "cpu" # args.device
-    if torch.cuda.is_available():
-        device = "cuda"
     client_resources = {'num_cpus': 2, 'num_gpus': 0.2}
     # (optional) Specify ray config, for sure it is to be changed
     ray_config = {'include_dashboard': False}
@@ -120,7 +117,6 @@ if __name__ == "__main__":
             shape=n_features,
             stddev=args.noising,
             rate=1.0,
-            device=device,
             ),
         'corruption': args.corruption,
         'dimensions': get_linears(args.linears, n_features, args.hidden_dimensions),
@@ -265,7 +261,6 @@ if __name__ == "__main__":
             net_config=net_config,
             kmeans_config=kmeans_config,
             scaler_config=scaler_config,
-            device=device,
             output_folder=path_to_out)
     # Define on_fit_config_fn
     def on_fit_config_kmeans_fn(rnd: int):
@@ -335,7 +330,6 @@ if __name__ == "__main__":
             net_config=net_config,
             dec_config=dec_config,
             opt_config=dec_opt_config,
-            device=device,
             output_folder=path_to_out)
     # Define on_fit_config_fn
     def on_fit_config_dec_fn(train: bool, rnd: int):

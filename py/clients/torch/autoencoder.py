@@ -30,6 +30,8 @@ def training_loop(
     noising: Module = None, # input noising module
     corruption: float = 0.0, # input corruption percentage
 ):
+    autoencoder.to(device)
+    noising.to(device)
     if scheduler_config['scheduler_fn'] is not None:
         scheduler = scheduler_config['scheduler_fn'](optimizer)
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
@@ -69,6 +71,7 @@ def evaluating_loop(
     device: str = 'cpu', # device to pass torch
     autoencoder: Module = None, # network
 ):
+    autoencoder.to(device)
     val_loss = 0.0
     criterion = criterion()
     for i, val_batch in enumerate(valloader):
@@ -92,7 +95,6 @@ class AutoencoderClient(NumPyClient):
                  loss_config: Dict = None, # config of loss fn
                  net_config: Dict = None, # config of network
                  opt_config: Dict = None, # config of optimizer
-                 device: str = 'cpu', # device to pass torch
                  output_folder: Union[Path, str] = None # output folder
                  ):
         print("Client {}".format(client_id))
@@ -114,7 +116,6 @@ class AutoencoderClient(NumPyClient):
             self.corruption = net_config['corruption']
             net_config.pop('corruption')
         self.autoencoder = StackedDenoisingAutoEncoder(**net_config)
-        self.autoencoder = self.autoencoder.to(device)
         # get optimizer
         self.optimizer = opt_config['optimizer_fn'](
             opt_config['optimizer'],
@@ -125,11 +126,6 @@ class AutoencoderClient(NumPyClient):
         else:
             self.out_dir = Path(output_folder)
             os.makedirs(self.out_dir, exist_ok=True)
-        # set device
-        device = "cpu" # args.device
-        if torch.cuda.is_available():
-            device = "cuda"
-        self.device = device
         # TODO: get lr scheduler state
         # TODO: get last val loss for scheduler
         self.scheduler_config = {
@@ -155,6 +151,8 @@ class AutoencoderClient(NumPyClient):
 
     def fit(self, parameters, config):  # type: ignore
         """Perform the fit step after having assigned new weights."""
+        # get device
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # set model parameters from server
         self.set_parameters(parameters)
         # fit the model
@@ -162,7 +160,7 @@ class AutoencoderClient(NumPyClient):
             n_epochs=config['n_epochs'],
             scheduler_config=self.scheduler_config,
             dataloader=self.trainloader,
-            device=self.device,
+            device=device,
             optimizer=self.optimizer,
             loss_fn=self.loss_fn,
             autoencoder=self.autoencoder,
@@ -173,13 +171,16 @@ class AutoencoderClient(NumPyClient):
         return self.get_parameters(), len(self.ds_train), loss
     
     def evaluate(self, parameters, config):
+        """Perform the eval step after having assigned new weights."""
+        # get device
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # set model parameters from server
         self.set_parameters(parameters)
         # evaluate the model
         eval_loss = evaluating_loop(
             valloader=self.valloader,
             criterion=self.eval_criterion,
-            device=self.device,
+            device=device,
             autoencoder=self.autoencoder,
         )
         # TODO: save val loss for scheduler
