@@ -126,6 +126,9 @@ class AutoencoderClient(NumPyClient):
             self.out_dir = Path(output_folder)
             os.makedirs(self.out_dir, exist_ok=True)
         # set device
+        device = "cpu" # args.device
+        if torch.cuda.is_available():
+            device = "cuda"
         self.device = device
         # TODO: get lr scheduler state
         # TODO: get last val loss for scheduler
