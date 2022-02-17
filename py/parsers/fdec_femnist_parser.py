@@ -4,13 +4,13 @@ def fdec_femnist_parser():
     parser = argparse.ArgumentParser(
         description='Federeated DEC for FEMNIST'
     )
-    # TODO:check if needed
     parser.add_argument(
-        '--device',
-        dest='device',
+        '--n-local-epochs',
+        dest='n_local_epochs',
         required=False,
-        type=str,
-        help='device to pass PyTorch'
+        type=int,
+        default=1,
+        help='set the number of local epochs'
     )
     parser.add_argument(
         '--batch-size',
@@ -197,6 +197,14 @@ def fdec_femnist_parser():
         type=int,
         default=100,
         help='number of clients that participate the federated training'
+    )
+    parser.add_argument(
+        '--min-clients',
+        dest='min_clients',
+        required=False,
+        type=int,
+        default=-1,
+        help='set the minimum number of clients available per round'
     )
     parser.add_argument(
         '--dump-metrics',

@@ -51,6 +51,8 @@ if __name__ == "__main__":
     client_resources = {'num_cpus': args.n_cpus}
     # (optional) Specify ray config, for sure it is to be changed
     ray_config = {'include_dashboard': False}
+    # set minimum number of available clients to run a federated round
+    min_clients = args.min_clients
 
     ## Prepare generalized AutoencoderClient for pretraining
     # Set dataloader configuration dict
@@ -122,8 +124,7 @@ if __name__ == "__main__":
                 'last': rnd==args.ae_epochs,
                 'actual_round': rnd,
                 'total_rounds': args.ae_epochs,
-                # TODO: set local epochs
-                'n_epochs': 1}
+                'n_epochs': args.n_local_epochs}
     # Define on_evaluate_config_fn
     def on_eval_config_pae_fn(rnd: int):
         # Must have 'dump_metrics', 'filename', 'verbose', 'actual_round'
@@ -139,15 +140,14 @@ if __name__ == "__main__":
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_pae_fn,
         on_evaluate_config_fn=on_eval_config_pae_fn,
-        # TODO: set properly for memory issues
-        min_fit_clients=args.n_clients,
-        min_eval_clients=args.n_clients,
+        min_available_clients=min_clients,
+        min_fit_clients=min_clients,
+        min_eval_clients=min_clients,
     )
     # Launch the simulation
     fl.simulation.start_simulation(
         client_fn=pae_client_fn,
         num_clients=args.n_clients,
-        clients_ids=list(range(args.n_clients)),
         client_resources=client_resources,
         num_rounds=args.ae_epochs,
         strategy=current_strategy,
@@ -178,8 +178,7 @@ if __name__ == "__main__":
                     'last': rnd==args.ae_epochs,
                     'actual_round': rnd,
                     'total_rounds': args.ae_epochs,
-                    # TODO: set local epochs
-                    'n_epochs': 1}
+                    'n_epochs': args.n_local_epochs}
         # Define on_evaluate_config_fn
         def on_eval_config_ftae_fn(rnd: int):
             # Must have 'dump_metrics', 'filename', 'verbose', 'actual_round'
@@ -195,15 +194,14 @@ if __name__ == "__main__":
             out_dir=path_to_out,
             on_fit_config_fn=on_fit_config_ftae_fn,
             on_evaluate_config_fn=on_eval_config_ftae_fn,
-            # TODO: set properly for memory issues
-            min_fit_clients=args.n_clients,
-            min_eval_clients=args.n_clients,
+            min_available_clients=min_clients,
+            min_fit_clients=min_clients,
+            min_eval_clients=min_clients,
         )
         # Launch the simulation
         fl.simulation.start_simulation(
             client_fn=ftae_client_fn,
             num_clients=args.n_clients,
-            clients_ids=list(range(args.n_clients)),
             client_resources=client_resources,
             num_rounds=args.ae_epochs,
             strategy=current_strategy,
@@ -262,17 +260,17 @@ if __name__ == "__main__":
         on_fit_config_fn=on_fit_config_kmeans_fn,
         on_evaluate_config_fn=on_eval_config_kmeans_fn,
         # TODO: check for memory issues, but
-        # we should be consider all the clients participating 
-        # the training
-        min_fit_clients=args.n_clients,
-        min_eval_clients=args.n_clients,
+        # a fraction of all the available clients
+        # might not be sufficient
+        min_available_clients=min_clients,
+        min_fit_clients=min_clients,
+        min_eval_clients=min_clients,
         initial_parameters=ae_parameters,
     )
     # Launch the simulation
     fl.simulation.start_simulation(
         client_fn=kmeans_client_fn,
         num_clients=args.n_clients,
-        clients_ids=list(range(args.n_clients)),
         client_resources=client_resources,
         num_rounds=1,
         strategy=current_strategy,
@@ -315,7 +313,8 @@ if __name__ == "__main__":
                 'last': rnd==args.dec_epochs,
                 'actual_round': rnd,
                 'total_rounds': args.dec_epochs,
-                'train': train}
+                'train': train,
+                'n_epochs': args.n_local_epochs}
     # Define on_evaluate_config_fn
     def on_eval_config_dec_fn(rnd: int):
         # Must have 'dump_metrics', 'verbose', 'actual_round'
@@ -330,9 +329,9 @@ if __name__ == "__main__":
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_dec_fn,
         on_evaluate_config_fn=on_eval_config_dec_fn,
-        # TODO: check for memory issues
-        min_fit_clients=args.n_clients,
-        min_eval_clients=args.n_clients,
+        min_available_clients=min_clients,
+        min_fit_clients=min_clients,
+        min_eval_clients=min_clients,
     )
     # Launch the simulation
     fl.simulation.start_simulation(

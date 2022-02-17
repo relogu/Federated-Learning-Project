@@ -31,14 +31,13 @@ def fdec_feuromds_parser():
         type=int,
         default=-1,
         help='skewness of the distribution of samples along clients, if negative they are uniformly distributed')
-    # TODO:check if needed
     parser.add_argument(
-        '--device',
-        dest='device',
+        '--n-local-epochs',
+        dest='n_local_epochs',
         required=False,
-        type=str,
-        help='device to pass PyTorch'
-    )
+        type=int,
+        default=1,
+        help='set the number of local epochs')
     parser.add_argument(
         '--batch-size',
         dest='batch_size',

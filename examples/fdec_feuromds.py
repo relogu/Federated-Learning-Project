@@ -148,8 +148,7 @@ if __name__ == "__main__":
                 'last': rnd==args.ae_epochs,
                 'actual_round': rnd,
                 'total_rounds': args.ae_epochs,
-                # TODO: set local epochs
-                'n_epochs': 1}
+                'n_epochs': args.n_local_epochs}
     # Define on_evaluate_config_fn
     def on_eval_config_pae_fn(rnd: int):
         # Must have 'dump_metrics', 'filename', 'verbose', 'actual_round'
@@ -173,7 +172,6 @@ if __name__ == "__main__":
     fl.simulation.start_simulation(
         client_fn=pae_client_fn,
         num_clients=args.n_clients,
-        # clients_ids=list(range(args.n_clients)),
         client_resources=client_resources,
         num_rounds=args.ae_epochs,
         strategy=current_strategy,
@@ -204,8 +202,7 @@ if __name__ == "__main__":
                     'last': rnd==args.ae_epochs,
                     'actual_round': rnd,
                     'total_rounds': args.ae_epochs,
-                    # TODO: set local epochs
-                    'n_epochs': 1}
+                    'n_epochs': args.n_local_epochs}
         # Define on_evaluate_config_fn
         def on_eval_config_ftae_fn(rnd: int):
             # Must have 'dump_metrics', 'filename', 'verbose', 'actual_round'
@@ -229,7 +226,6 @@ if __name__ == "__main__":
         fl.simulation.start_simulation(
             client_fn=ftae_client_fn,
             num_clients=args.n_clients,
-            clients_ids=list(range(args.n_clients)),
             client_resources=client_resources,
             num_rounds=args.ae_epochs,
             strategy=current_strategy,
@@ -296,7 +292,6 @@ if __name__ == "__main__":
     fl.simulation.start_simulation(
         client_fn=kmeans_client_fn,
         num_clients=args.n_clients,
-        clients_ids=list(range(args.n_clients)),
         client_resources=client_resources,
         num_rounds=1,
         strategy=current_strategy,
@@ -339,7 +334,8 @@ if __name__ == "__main__":
                 'last': rnd==args.dec_epochs,
                 'actual_round': rnd,
                 'total_rounds': args.dec_epochs,
-                'train': train}
+                'train': train,
+                'n_epochs': args.n_local_epochs}
     # Define on_evaluate_config_fn
     def on_eval_config_dec_fn(rnd: int):
         # Must have 'dump_metrics', 'verbose', 'actual_round'
@@ -362,7 +358,6 @@ if __name__ == "__main__":
     fl.simulation.start_simulation(
         client_fn=dec_client_fn,
         num_clients=args.n_clients,
-        clients_ids=list(range(args.n_clients)),
         num_rounds=args.dec_epochs,
         strategy=current_strategy,
         ray_init_args=ray_config)
