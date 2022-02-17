@@ -383,18 +383,18 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         'epochs': max_num_epochs,
         'n_clusters': tune.grid_search([6,7,8,9,10]),
         'ae_batch_size': 8,#tune.grid_search([8,16,32]),# 256,
-        'update_interval': 20,# tune.grid_search([20, 50, 100]),#,# 256,
+        'update_interval': 50,# tune.grid_search([20, 50, 100]),#,# 256,
         'optimizer': 'yogi',# tune.grid_search(['adam', 'yogi', 'sgd']),# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
         'lr': None,# tune.loguniform(1e-6, 1),# tune.grid_search([1e-5, 1e-4, 1e-3, 1e-2, 1e-1]),# tune.loguniform(1e-5, 1e-1),
         'main_loss': 'mse',# tune.grid_search(['mse', 'bce-wl']),
-        'mod_loss': tune.grid_search(['bce+dice', 'focal-tversky', 'tversky', 'focal', 'combo', 'dice', 'lovasz-hinge', 'iou']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
-        'beta': tune.grid_search([0.1, 0.2, 0.3, 0.4]),
+        'mod_loss': tune.grid_search(['bce+dice', 'none']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
+        'beta': 0.4,# tune.grid_search([0.1, 0.2, 0.3, 0.4]),
         'corruption': 0.0,# tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'noising': 0.0,# tune.grid_search([0.0, 0.1]),
         'train_dec': 'yes',
         'alpha': 1,# tune.grid_search([1, 9]),
-        'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'use_emp_centroids': 'yes',# tune.grid_search(['yes', 'no']),
+        'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
+        'use_emp_centroids': tune.grid_search(['yes', 'no']),
     }
     
     # scheduler = ASHAScheduler(
@@ -437,7 +437,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='euromds_ae_mod_loss_beta',
+        name='euromds_ae_mod_loss_scaler',
         # resume=True,
         )
 
