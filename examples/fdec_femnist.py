@@ -40,12 +40,6 @@ if __name__ == "__main__":
     else:
         path_to_out = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
-    # Define input folder
-    if args.in_folder is None:
-        path_to_in = pathlib.Path(__file__).parent.parent.absolute()/'input'
-    else:
-        path_to_in = pathlib.Path(args.in_folder)
-    print('Input folder {}'.format(path_to_in))
     # Define data folder
     if args.data_folder is None:
         data_folder = pathlib.Path(__file__).parent.parent.absolute()/'data'/'femnist'
@@ -54,7 +48,7 @@ if __name__ == "__main__":
     print('Data folder {}'.format(data_folder))
     
     # TODO: set client resources for ray
-    client_resources = {'num_cpus': 1}
+    client_resources = {'num_cpus': 2, 'num_gpus': 0.2}
     # (optional) Specify ray config, for sure it is to be changed
     ray_config = {'include_dashboard': False}
 
@@ -96,7 +90,6 @@ if __name__ == "__main__":
             shape=784,
             stddev=args.noising,
             rate=1.0,
-            device=args.device,
             ),
         'corruption': args.corruption,
         'dimensions': get_linears(args.linears, 784, args.hidden_dimensions),
@@ -241,7 +234,6 @@ if __name__ == "__main__":
             net_config=net_config,
             kmeans_config=kmeans_config,
             scaler_config=scaler_config,
-            device=args.device,
             output_folder=path_to_out)
     # Define on_fit_config_fn
     def on_fit_config_kmeans_fn(rnd: int):
@@ -313,7 +305,6 @@ if __name__ == "__main__":
             net_config=net_config,
             dec_config=dec_config,
             opt_config=dec_opt_config,
-            device=args.device,
             output_folder=path_to_out)
     # Define on_fit_config_fn
     def on_fit_config_dec_fn(train: bool, rnd: int):
