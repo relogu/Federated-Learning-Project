@@ -6,6 +6,7 @@ Created on Fri Oct 29 13:55:15 2021
 @author: relogu
 """
 import os
+from ray import client
 
 import torch
 import torch.nn.functional as F
@@ -52,7 +53,7 @@ def training_loop(
             
             losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
             loss = sum(losses)/len(loss_fn)
-            ret_loss += loss.cpu().numpy()
+            ret_loss += loss.item()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step(closure=None)
@@ -79,7 +80,7 @@ def evaluating_loop(
             val_batch = val_batch.to(device)
             validation_output = autoencoder(val_batch)
             loss = criterion(validation_output, val_batch)
-            val_loss += loss.cpu().numpy()
+            val_loss += loss.item()
     return (val_loss / (i+1))
 
 class AutoencoderClient(NumPyClient):
@@ -94,6 +95,7 @@ class AutoencoderClient(NumPyClient):
                  device: str = 'cpu', # device to pass torch
                  output_folder: Union[Path, str] = None # output folder
                  ):
+        print("Client {}".format(client_id))
         # get datasets
         self.ds_train = data_loader_config['get_train_fn'](client_id=eval(client_id))
         self.ds_test = data_loader_config['get_test_fn'](client_id=eval(client_id))
@@ -101,7 +103,7 @@ class AutoencoderClient(NumPyClient):
         self.valloader = data_loader_config['valloader_fn'](self.ds_test)
         # get loss
         self.eval_criterion = loss_config['eval_criterion']
-        self.loss_fn = loss_config['get_loss_fn'](**loss_config['params'])
+        self.loss_fn = [loss_config['get_loss_fn'](**loss_config['params'])]
         # get network
         self.noising = None
         if 'noising' in net_config.keys():
@@ -165,7 +167,7 @@ class AutoencoderClient(NumPyClient):
             corruption=self.corruption,
         )
         # returning the parameters necessary for FedAvg
-        return {self.get_parameters()}, {len(self.ds_train)}, {loss}
+        return self.get_parameters(), len(self.ds_train), loss
     
     def evaluate(self, parameters, config):
         # set model parameters from server
@@ -179,4 +181,4 @@ class AutoencoderClient(NumPyClient):
         )
         # TODO: save val loss for scheduler
         # returning the parameters necessary for evaluation
-        return {float(eval_loss)}, {len(self.ds_test)}, {}
+        return float(eval_loss), len(self.ds_test), {}
