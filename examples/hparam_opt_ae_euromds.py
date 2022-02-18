@@ -184,7 +184,6 @@ def train_ae(
                 
                 output = autoencoder(input)
 
-            
                 losses = [beta*l_fn_i(output, batch) for beta, l_fn_i in zip(beta, loss_functions)]
                 loss = sum(losses)/len(loss_fn)
                 optimizer.zero_grad()
@@ -213,6 +212,7 @@ def train_ae(
                     val_loss += loss.cpu().numpy()
             last_loss = val_loss / (i+1)
             tune.report(ae_loss=last_loss)
+            
         with tune.checkpoint_dir(epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "SDAE_finetuning_checkpoint")
             torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
@@ -252,16 +252,12 @@ def train_ae(
         )
         predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
         _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
+        tune.report(accuracy=accuracy)
 
         emp_centroids = []
         for i in np.unique(predicted):
             idx = (predicted == i)
             emp_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
-
-        # true_centroids = []
-        # for i in np.unique(actual.cpu().numpy()):
-        #     idx = (actual.cpu().numpy() == i)
-        #     true_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
 
         cluster_centers = torch.tensor(
             np.array(emp_centroids) if config['use_emp_centroids'] == 'yes' else kmeans.cluster_centers_,# np.array(true_centroids)
@@ -297,8 +293,10 @@ def train_ae(
             r_data = []
             features = []
             prob_labels = []
+            r_prob_labels = []
             actual = []
             model.eval()
+            autoencoder.eval()
             for i, batch in enumerate(validation_loader):
                 with torch.no_grad():
                     if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
@@ -312,15 +310,17 @@ def train_ae(
                     r_data.append(r_batch.cpu())
                     loss = criterion(r_batch, batch)
                     cl_recon += loss.cpu().numpy()
-                    prob_labels.append(
-                        model(batch).cpu()
-                    )  # move to the CPU to prevent out of memory on the GPU
+                    prob_labels.append(model(batch).cpu())
+                    r_prob_labels.append(model(r_batch).cpu())
                     
             cl_recon = (cl_recon / (i+1))
-            predicted, actual = torch.cat(prob_labels).max(1)[1], torch.cat(actual).long()
+            predicted = torch.cat(prob_labels).max(1)[1]
+            r_predicted = torch.cat(r_prob_labels).max(1)[1]
+            actual = torch.cat(actual).long()
             data = torch.cat(data).numpy()
             r_data = torch.cat(r_data).numpy()
             features = torch.cat(features).numpy()
+            
             delta_label = (
                 float((predicted != predicted_previous).float().sum().item())
                 / predicted_previous.shape[0]
@@ -346,9 +346,11 @@ def train_ae(
 
             predicted_previous = predicted
             _, accuracy = cluster_accuracy(predicted.numpy(), actual.numpy())
+            _, cycle_accuracy = cluster_accuracy(r_predicted.numpy(), predicted.numpy())
 
             tune.report(
                 accuracy=accuracy,
+                cycle_accuracy=cycle_accuracy,
                 cl_recon=cl_recon,
                 delta_label=delta_label,
                 ae_loss=last_loss,
@@ -360,6 +362,7 @@ def train_ae(
             # break loop procedure
             if delta_label <= 0.001:
                 break
+            
         with tune.checkpoint_dir(epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "DEC_checkpoint")
             torch.save((model.state_dict(), optimizer.state_dict()), path)
@@ -410,6 +413,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
             "ae_loss",
             "cl_recon",
             "accuracy",
+            "cycle_accuracy",
             "delta_label",
             "training_iteration",
             "cos_sil_score",
@@ -450,37 +454,37 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
     if config['train_dec'] == 'yes':
         # best accuracy w.r.t. hdp labels
         best_trial = result.get_best_trial("accuracy", "max", "last")
-        # print("Best accuracy w.r.t. hdp labels config: {}".format(best_trial.config))
+        print("Best accuracy w.r.t. hdp labels config: {}".format(best_trial.config))
         print("Best accuracy w.r.t. hdp labels value: {}".format(
             best_trial.last_result["accuracy"]))
 
         # best reconstruction loss after clustering stage
         best_trial = result.get_best_trial("cl_recon", "min", "last")
-        # print("Best reconstruction loss after clustering stage config: {}".format(best_trial.config))
+        print("Best reconstruction loss after clustering stage config: {}".format(best_trial.config))
         print("Best reconstruction loss after clustering stage value: {}".format(
             best_trial.last_result["cl_recon"]))
         
         # best euclidean silhouette after clustering stage
         best_trial = result.get_best_trial("eucl_sil_score", "max", "last")
-        # print("Best euclidean silhouette after clustering stage config: {}".format(best_trial.config))
+        print("Best euclidean silhouette after clustering stage config: {}".format(best_trial.config))
         print("Best euclidean silhouette after clustering stage value: {}".format(
             best_trial.last_result["eucl_sil_score"]))
         
         # best cosine silhouette after clustering stage
         best_trial = result.get_best_trial("cos_sil_score", "max", "last")
-        # print("Best cosine silhouette after clustering stage config: {}".format(best_trial.config))
+        print("Best cosine silhouette after clustering stage config: {}".format(best_trial.config))
         print("Best cosine silhouette after clustering stage value: {}".format(
             best_trial.last_result["cos_sil_score"]))
         
         # best calinski harabasz score of data after clustering stage
         best_trial = result.get_best_trial("data_calinski_harabasz", "max", "last")
-        # print("Best calinski harabasz score of data after clustering stage config: {}".format(best_trial.config))
+        print("Best calinski harabasz score of data after clustering stage config: {}".format(best_trial.config))
         print("Best calinski harabasz score of data after clustering stage value: {}".format(
             best_trial.last_result["data_calinski_harabasz"]))
         
         # best calinski harabasz score of features after clustering stage
         best_trial = result.get_best_trial("feat_calinski_harabasz", "max", "last")
-        # print("Best calinski harabasz score of features after clustering stage config: {}".format(best_trial.config))
+        print("Best calinski harabasz score of features after clustering stage config: {}".format(best_trial.config))
         print("Best calinski harabasz score of features after clustering stage value: {}".format(
             best_trial.last_result["feat_calinski_harabasz"]))
 
