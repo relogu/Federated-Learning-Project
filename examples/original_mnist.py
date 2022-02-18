@@ -10,12 +10,10 @@ from tensorboardX import SummaryWriter
 from sklearn.cluster import KMeans
 import uuid
 
-import dec
-import dec.torch
-from ..sdae import StackedDenoisingAutoEncoder
-import ..ae_loops as ae
-from ..utils import cluster_accuracy
-from ..datasets.mnist import CachedMNIST
+from py.dec.torch.sdae import StackedDenoisingAutoEncoder
+import py.dec.torch.ae_loops as ae
+from py.dec.torch.utils import cluster_accuracy
+from py.datasets.mnist import CachedMNIST
 
 
 @click.command()
