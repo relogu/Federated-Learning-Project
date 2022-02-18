@@ -4,10 +4,13 @@ from torchvision import transforms
 from torchvision.datasets import MNIST
 
 class CachedBMNIST(Dataset):
-    def __init__(self, train, cuda, testing_mode=False):
+    def __init__(self, train, device, path=None, download=True, testing_mode=False):
         img_transform = transforms.Compose([transforms.Lambda(self._transformation)])
-        self.ds = MNIST("./data/bmnist", download=True, train=train, transform=img_transform)
-        self.cuda = cuda
+        self.ds = MNIST("./data" if path is None else path,
+                        download=download,
+                        train=train,
+                        transform=img_transform)
+        self.device = device
         self.testing_mode = testing_mode
         self._cache = dict()
 
