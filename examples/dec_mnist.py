@@ -1,10 +1,7 @@
 import os
 import pathlib
 import click
-from functools import partial
 import numpy as np
-import seaborn as sns
-from sklearn.metrics import confusion_matrix
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
@@ -12,22 +9,21 @@ import tensorflow as tf
 import tensorboard as tb
 tf.io.gfile = tb.compat.tensorflow_stub.io.gfile
 import torch
+import torch.nn.functional as F
+from torch.nn import ReLU, Sigmoid, KLDivLoss, MSELoss
 from torch.utils.data import DataLoader
-from torch.optim import SGD, Adam
-from torch_optimizer import Yogi 
-from torch.optim.lr_scheduler import StepLR, ExponentialLR, ReduceLROnPlateau
+from torch.optim import SGD
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from sklearn.cluster import KMeans
 from tensorboardX import SummaryWriter
-import uuid
-
-from py.losses.torch import SobelLoss, GaussianBlurredLoss
 
 from py.dec.dec_torch.dec import DEC
-from py.dec.dec_torch.cluster_loops import train, predict
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
 from py.dec.layers.torch import TruncatedGaussianNoise
-import py.dec.dec_torch.ae_loops as ae
-from py.dec.dec_torch.utils import cluster_accuracy, get_main_loss, get_mod_loss, get_ae_opt
+from py.dec.dec_torch.utils import cluster_accuracy, get_main_loss, get_mod_loss, get_ae_opt, get_linears, target_distribution, get_scaler
 from py.datasets.mnist import CachedMNIST
+from py.callbacks import ae_train_callback, dec_train_callback, embed_train_callback
+from py.util import compute_centroid_np
 
 
 @click.command()
@@ -143,6 +139,30 @@ from py.datasets.mnist import CachedMNIST
 def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
          glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta,
          gaus_noise, ae_opt, lr):
+    # get configuration dict
+    config = {
+        'linears': 'dec',
+        'f_dim': 10,
+        'activation': ReLU(),
+        'final_activation': ReLU(),
+        'dropout': 0.0,
+        'epochs': 500,
+        'n_clusters': 10,
+        'ae_batch_size': 256,
+        'update_interval': 160,
+        'optimizer': 'yogi',
+        'lr': None,
+        'main_loss': 'mse',
+        'mod_loss': 'none',
+        'beta': 0.0,
+        'corruption': 0.0,
+        'noising': 0.0,
+        'train_dec': 'yes',
+        'alpha': 9,
+        'scaler': 'standard',
+        'use_emp_centroids': 'yes',
+    }
+
     # defining output folder
     if out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
@@ -153,58 +173,50 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     writer = SummaryWriter(
         logdir=str('runs/'+str(path_to_out)),
         flush_secs=5)  # create the TensorBoard object
-    
-    # if cuda:
-    #     torch.cuda.set_device(gpu_id)
+    # set device for PyTorch
     device = "cpu"
-    if cuda:#torch.cuda.is_available():
-        device = "cuda:0"#{}".format(gpu_id)
-    
-    torch.autograd.set_detect_anomaly(True)
-    # callback function to call during training, uses writer from the scope
-    def training_callback(name, epoch, lr, loss, validation_loss):
-        writer.add_scalars(
-            "data/autoencoder_{}".format(name),
-            {"lr": lr, "loss": loss, "validation_loss": validation_loss,},
-            epoch,
-        )
-    
+    if torch.cuda.is_available():
+        device = "cuda:{}".format(gpu_id)
+
     # set up loss(es) used in training the SDAE
-    ae_main_loss_fn = get_main_loss(ae_main_loss)
-    if ae_mod_loss is not None:
-        ae_mod_loss_fn = get_mod_loss(
-            name=ae_mod_loss,
-            beta=beta,
-            main_loss=ae_main_loss,
-            #cuda=cuda,
+    if config['mod_loss'] != 'none':
+        loss_fn = get_mod_loss(
+            name=config['mod_loss'],
+            beta=config['beta'],
+            main_loss=config['main_loss'],
             device=device,
             )
     else:
-        ae_mod_loss_fn = [get_main_loss(ae_main_loss)]
-        
-    # set up optimizer used in training the SDAE
-    ae_opt_fn = get_ae_opt(ae_opt, lr)
-        
-    # set noising to data        
-    if gaus_noise:
+        loss_fn = [get_main_loss(config['main_loss'])]
+    loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
+    # set noising to data  
+    noising = None
+    if config['noising'] > 0:
         noising = TruncatedGaussianNoise(
             shape=784,
-            stddev=input_do,
+            stddev=config['noising'],
             rate=1.0,
-            # cuda=cuda,
             device=device,
             )
-    else:
-        noising = None
-        
-    # features space dimension
-    z_dim = 10
-    # learning rate for Adam
-    adam_lr = lr
-    # AE layers' dimension
-    #linears = [28 * 28, 1000, 500, 250, z_dim]
-    linears = [28 * 28, 500, 500, 2000, z_dim]
-    
+    # set corruption to data
+    corruption = None
+    if config['corruption'] > 0:
+        corruption = config['corruption']
+    # set up SDAE
+    autoencoder = StackedDenoisingAutoEncoder(
+        get_linears(config['linears'], ds_train.n_features, config['f_dim']),
+        activation=config['activation'],
+        final_activation=config['final_activation'],
+        dropout=config['dropout'],
+        is_tied=is_tied,
+    )
+    # set learning rate scheduler
+    scheduler = lambda x: ReduceLROnPlateau(
+        x,
+        mode='min',
+        factor=0.5,
+        patience=20,
+    )
     # get datasets
     ds_train = CachedMNIST(
         train=True, cuda=cuda, testing_mode=testing_mode
@@ -212,303 +224,238 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     ds_val = CachedMNIST(
         train=False, cuda=cuda, testing_mode=testing_mode
     )  # evaluation dataset
-    
-    # set up SDAE
-    autoencoder = StackedDenoisingAutoEncoder(
-        linears,
-        #activation=torch.nn.ReLU(),
-        activation=torch.nn.Sigmoid(),
-        #final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-        final_activation=torch.nn.Sigmoid(),
-        dropout=hidden_do,
-        is_tied=is_tied,
+    # set dataloaders
+    dataloader = DataLoader(
+        ds_train,
+        batch_size=config['ae_batch_size'],
+        shuffle=False,
     )
-    # if cuda:
-    #     autoencoder.cuda()
-    if torch.cuda.device_count() > 1:
-        autoencoder = torch.nn.DataParallel(autoencoder)
-    autoencoder.to(device)
+    validation_loader = DataLoader(
+        ds_val,
+        batch_size=config['ae_batch_size'],
+        shuffle=False,
+    )
         
     if (path_to_out/'pretrain_ae').exists():
         print('Skipping pretraining since weights already exist.')
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
     else:
         print("Pretraining stage.")
-        if glw_pretraining:
-            # greedy layer-wise pretraining
-            lambda_ae_opt = lambda model: ae_opt_fn(params=model.parameters())#SGD(model.parameters(), lr=0.1, momentum=0.9)
-            lambda_scheduler = lambda x: StepLR(x, 100, gamma=0.1)
-            ae.pretrain(
-                ds_train,
-                autoencoder,
-                loss_fn=[ae_main_loss_fn],
-                final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-                # cuda=cuda,
-                device=device,
-                validation=ds_val,
-                epochs=pretrain_epochs,
-                batch_size=batch_size,
-                optimizer=lambda_ae_opt,
-                scheduler=lambda_scheduler,
-                corruption=input_do if noising is None else None,
-                noising=noising,
-                update_callback=training_callback,
-            )
-        else:
-            # pretraining with standard methods (may be apply some kind of noise to data that is not d/o)
-            # lambda_ae_opt = lambda model: Yogi(
-            #     model.parameters(),
-            #     lr=adam_lr,
-            #     betas=(0.9, 0.999),
-            #     eps=1e-3,
-            #     initial_accumulator=1e-6,
-            #     weight_decay=0)  
-            lambda_ae_opt = lambda model: ae_opt_fn(params=model.parameters())#Adam(model.parameters(), lr=adam_lr)
-            lambda_scheduler = lambda x: ReduceLROnPlateau(
-                x,
-                mode='min',
-                factor=0.5,
-                patience=20,)#None
-            ae.train(
-                ds_train,
-                autoencoder,
-                loss_fn=ae_mod_loss_fn,#[ae_main_loss_fn],#
-                # cuda=cuda,
-                device=device,
-                validation=ds_val,
-                epochs=pretrain_epochs,
-                batch_size=batch_size,
-                optimizer=lambda_ae_opt(autoencoder),
-                scheduler=lambda_scheduler(lambda_ae_opt(autoencoder)),
-                corruption=input_do if noising is None else None,
-                noising=noising,
-                update_callback=partial(training_callback, 'pretraining'),
-            )
+        autoencoder.to(device)
+        optimizer = get_ae_opt(config['optimizer'], config['lr'])(autoencoder.parameters())
+        scheduler = scheduler(optimizer)
+        autoencoder.train()
+        val_loss = -1
+        for epoch in range(config['epochs']):
+            running_loss = 0.0
+            if scheduler is not None:
+                scheduler.step(val_loss)
+                
+            for i, batch in enumerate(dataloader):
+                if (
+                    isinstance(batch, tuple)
+                    or isinstance(batch, list)
+                    and len(batch) in [1, 2]
+                ):
+                    batch = batch[0]
+                batch = batch.to(device)
+                input = batch
+                
+                if noising is not None:
+                    input = noising(input)
+                if corruption is not None:
+                    input = F.dropout(input, corruption)
+                output = autoencoder(input)
+                
+                losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
+                loss = sum(losses)/len(loss_fn)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step(closure=None)
+                # print statistics
+                running_loss += loss.item()
+                print("[%d, %5d] loss: %.3f" % \
+                    (epoch+1, i+1, running_loss / (i+1)))
+            running_loss = running_loss / (i+1)
+                    
+            val_loss = 0.0
+            criterion = MSELoss()
+            for i, val_batch in enumerate(validation_loader):
+                with torch.no_grad():
+                    if (
+                        isinstance(val_batch, tuple) or isinstance(val_batch, list)
+                    ) and len(val_batch) in [1, 2]:
+                        val_batch = val_batch[0]
+                    val_batch = val_batch.to(device)
+                    validation_output = autoencoder(val_batch)
+                    loss = criterion(validation_output, val_batch)
+                    val_loss += loss.cpu().numpy()
+            
+            val_loss = ae_train_callback(
+                writer,
+                'pretraining',
+                epoch,
+                optimizer.param_groups[0]["lr"],
+                running_loss,
+                ds_val,
+                config,
+                device,
+                autoencoder)
         torch.save(autoencoder.state_dict(), path_to_out/'pretrain_ae')
         print('Saving features after pretraining.')
-        autoencoder.eval()
-        if not testing_mode:
-            features = []
-            labels = []
-            images = []
-            r_images = []
-            dataloader = DataLoader(ds_train, batch_size=1024, shuffle=True)
-            for i, batch in enumerate(dataloader):
-                if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-                    batch, value = batch  # if we have a prediction label, separate it to actual
-                # if cuda:
-                #     batch = batch.cuda(non_blocking=True)
-                batch = batch.to(device, non_blocking=True)
-                features.append(autoencoder.encoder(batch).detach().cpu())
-                r_images.append(autoencoder(batch).detach().cpu())
-                labels.append(value.detach().cpu())
-                images.append(batch.detach().cpu())
-                if i > 9:
-                    break
-            np.savez(path_to_out/'pretrain_ae_features', torch.cat(features).numpy())
-            writer.add_embedding(
-                torch.cat(features).numpy(), # Encodings per image
-                metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
-                label_img=torch.cat(images).reshape((-1, 1, 28, 28)).numpy(),  # Adding the original images to the plot
-                global_step=0,
-                tag='pretraining',
-                )
-            writer.add_embedding(
-                torch.cat(features).numpy(), # Encodings per image
-                metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
-                label_img=torch.cat(r_images).reshape((-1, 1, 28, 28)).numpy(),  # Adding the original images to the plot
-                global_step=0,
-                tag='pretraining_r',
-                )
+        embed_train_callback(
+            writer,
+            0,
+            device,
+            (-1, 1, 28, 28),
+            config,
+            'pretraining',
+            (epoch+1),
+            ds_val,
+            autoencoder)
     if (path_to_out/'finetune_ae').exists():
         print('Skipping finetuning since weights already exist.')
         autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
-    else:
-        print("Training stage.")
-        # finetuning
-        autoencoder = StackedDenoisingAutoEncoder(
-            linears,
-            final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-            #dropout=hidden_do,
-            is_tied=is_tied,
-        )
+    elif noising is not None:
+        print("Finetuning stage.")
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
-        if cuda:
-            autoencoder.cuda()
-        if glw_pretraining:
-            ae_opt = ae_opt_fn(params=autoencoder.parameters())#SGD(autoencoder.parameters(), lr=0.1, momentum=0.9)
-            scheduler = StepLR(ae_opt, 100, gamma=0.1)
-        else:
-            # ae_opt = Yogi(
-            #     autoencoder.parameters(),
-            #     lr=adam_lr,
-            #     betas=(0.9, 0.999),
-            #     eps=1e-3,
-            #     initial_accumulator=1e-6,
-            #     weight_decay=0)
-            ae_opt = ae_opt_fn(params=autoencoder.parameters())#Adam(autoencoder.parameters(), lr=adam_lr)
-            scheduler = ReduceLROnPlateau(
-                ae_opt,
-                mode='min',
-                factor=0.5,
-                patience=20,)#None
-        ae.train(
-            ds_train,
-            autoencoder,
-            loss_fn=ae_mod_loss_fn,#[ae_main_loss_fn],
-            # cuda=cuda,
-            device=device,
-            validation=ds_val,
-            epochs=finetune_epochs,
-            batch_size=batch_size,
-            optimizer=ae_opt,
-            scheduler=scheduler,
-            #corruption=input_do,
-            noising=None,
-            update_callback=partial(training_callback, 'finetuning'),
-        )
+        autoencoder.to(device)
+        optimizer = get_ae_opt(config['optimizer'], config['lr'])(autoencoder.parameters())
+        scheduler = scheduler(optimizer)
+        autoencoder.train()
+        val_loss = -1
+        for epoch in range(config['epochs']):
+            running_loss = 0.0
+            if scheduler is not None:
+                scheduler.step(val_loss)
+
+            for i, batch in enumerate(dataloader):
+                if (
+                    isinstance(batch, tuple)
+                    or isinstance(batch, list)
+                    and len(batch) in [1, 2]
+                ):
+                    batch = batch[0]
+                batch = batch.to(device)
+                input = batch
+                
+                output = autoencoder(input)
+
+                losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
+                loss = sum(losses)/len(loss_fn)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step(closure=None)
+                # print statistics
+                running_loss += loss.item()
+                print("[%d, %5d] loss: %.3f" % \
+                    (epoch+1, i+1, running_loss / (i+1)))
+            running_loss = running_loss / (i+1)
+            
+            val_loss = ae_train_callback(
+                writer,
+                'pretraining',
+                epoch,
+                optimizer.param_groups[0]["lr"],
+                running_loss,
+                ds_val,
+                config,
+                device,
+                autoencoder)
         torch.save(autoencoder.state_dict(), path_to_out/'finetune_ae')
         print('Saving features after finetuning.')
-        autoencoder.eval()
-        if not testing_mode:
-            features = []
-            labels = []
-            images = []
-            r_images = []
-            dataloader = DataLoader(ds_train, batch_size=1024, shuffle=True)
-            for i, batch in enumerate(dataloader):
-                if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-                    batch, value = batch  # if we have a prediction label, separate it to actual
-                # if cuda:
-                #     batch = batch.cuda(non_blocking=True)
-                batch = batch.to(device, non_blocking=True)
-                features.append(autoencoder.encoder(batch).detach().cpu())
-                r_images.append(autoencoder(batch).detach().cpu())
-                labels.append(value.detach().cpu())
-                images.append(batch.detach().cpu())
-                if i > 9:
-                    break
-            np.savez(path_to_out/'finetune_ae_features', torch.cat(features).numpy())
-            writer.add_embedding(
-                torch.cat(features).numpy(), # Encodings per image
-                metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
-                label_img=torch.cat(images).reshape((-1, 1, 28, 28)).numpy(),  # Adding the original images to the plot
-                global_step=1,
-                tag='finetuning',
-                )
-            writer.add_embedding(
-                torch.cat(features).numpy(), # Encodings per image
-                metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
-                label_img=torch.cat(r_images).reshape((-1, 1, 28, 28)).numpy(),  # Adding the original images to the plot
-                global_step=1,
-                tag='finetuning_r',
-                )
-    print("DEC stage.")
-    # autoencoder = StackedDenoisingAutoEncoder(
-    #     linears,
-    #     final_activation=torch.nn.Sigmoid() if ae_main_loss == 'bce' else torch.nn.ReLU(),
-    #     dropout=hidden_do,
-    #     is_tied=is_tied,
-    # )
-    autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
-    # if cuda:
-    #     autoencoder.cuda()
-    autoencoder = autoencoder.to(device)
-    # callback function to call during training, uses writer from the scope
-    def training_callback1(alpha, epoch, lr, accuracy, loss, delta_label):
-        writer.add_scalars(
-            "data/clustering_alpha{}".format(alpha),
-            {"lr": lr, "accuracy": accuracy, "loss": loss, "delta_label": delta_label,},
-            epoch,
-        )
-    # callback function to call at eah epoch end
-    def epoch_callback1(epoch, model):
+        embed_train_callback(
+            writer,
+            0,
+            device,
+            (-1, 1, 28, 28),
+            config,
+            'pretraining',
+            (epoch+1),
+            ds_val,
+            autoencoder)
+    
+    if config['train_dec'] == 'yes':
+        print("DEC stage.")
+        autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
+        autoencoder = autoencoder.to(device)
+        model = DEC(cluster_number=config['n_clusters'],
+                    hidden_dimension=config['f_dim'],
+                    encoder=autoencoder.encoder,
+                    alpha=config['alpha'])
+        model = model.to(device)
+        optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
+        scaler = get_scaler(config['scaler']) if config['scaler'] != 'none' else None
+        kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
         features = []
-        labels = []
-        images = []
-        r_images = []
-        dataloader = DataLoader(ds_train, batch_size=1024, shuffle=True)
-        for i, batch in enumerate(dataloader):
+        actual = []
+        for batch in dataloader:
             if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-                batch, value = batch  # if we have a prediction label, separate it to actual
-            # if cuda:
-            #     batch = batch.cuda(non_blocking=True)
+                batch, value = batch
+                actual.append(value)
             batch = batch.to(device, non_blocking=True)
             features.append(model.encoder(batch).detach().cpu())
-            r_images.append(autoencoder(batch).detach().cpu())
-            labels.append(value.detach().cpu())
-            images.append(batch.detach().cpu())
-            if i > 9:
-                break
-        writer.add_embedding(
-            torch.cat(features).numpy(), # Encodings per image
-            metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
-            label_img=torch.cat(images).reshape((-1, 1, 28, 28)).numpy(),  # Adding the original images to the plot
-            global_step=2+epoch,
-            tag='clustering_alpha{}'.format(alpha),
+        actual = torch.cat(actual).long()
+
+        predicted = kmeans.fit_predict(
+            scaler.fit_transform(torch.cat(features).numpy()) if scaler is not None else torch.cat(features).numpy()
+        )
+        predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
+        _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
+        print("K-Means initial accuracy: %.3f" % (accuracy))
+
+        emp_centroids = []
+        for i in np.unique(predicted):
+            idx = (predicted == i)
+            emp_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
+
+        cluster_centers = torch.tensor(
+            np.array(emp_centroids) if config['use_emp_centroids'] == 'yes' else kmeans.cluster_centers_,# np.array(true_centroids)
+            dtype=torch.float,
+            requires_grad=True,
+        )
+        cluster_centers = cluster_centers.to(device, non_blocking=True)
+        with torch.no_grad():
+            model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
+
+        loss_function = KLDivLoss(size_average=False)
+        for epoch in range(20):
+            model.train()
+            for batch in dataloader:
+                if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
+                    batch
+                ) == 2:
+                    batch, _ = batch
+                batch = batch.to(device, non_blocking=True)
+                output = model(batch)
+                soft_labels = output
+                target = target_distribution(soft_labels).detach()
+                loss = loss_function(output.log(), target) / output.shape[0]
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step(closure=None)
+            
+            predicted_previous = dec_train_callback(
+                writer,
+                config,
+                ds_val,
+                model,
+                autoencoder,
+                device,
+                epoch,
+                predicted_previous,
             )
-        writer.add_embedding(
-            torch.cat(features).numpy(), # Encodings per image
-            metadata=torch.cat(labels).numpy(), # Adding the labels per image to the plot
-            label_img=torch.cat(r_images).reshape((-1, 1, 28, 28)).numpy(),  # Adding the original images to the plot
-            global_step=2+epoch,
-            tag='clustering_alpha{}_r'.format(alpha),
-            )
-    model = DEC(cluster_number=10,
-                hidden_dimension=z_dim,
-                encoder=autoencoder.encoder,
-                alpha=alpha)
-    # if cuda:
-    #     model.cuda()
-    model = model.to(device)
-    if glw_pretraining:
-        dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
-    else:
-        dec_optimizer = Adam(params=model.parameters(), lr=1e-3)
-    dec_optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
-    #dec_optimizer = Adam(params=model.parameters(), lr=1e-4)
-    train(
-        dataset=ds_train,
-        model=model,
-        epochs=20,#100,
-        batch_size=256,
-        optimizer=dec_optimizer,
-        stopping_delta=0.000001,
-        update_callback=partial(training_callback1, alpha),
-        epoch_callback=epoch_callback1,
-        #cuda=cuda,
-        device=device,
-    )
-    predicted, actual = predict(
-        ds_train, model, 1024, silent=True, return_actual=True, cuda=cuda
-    )
-    predicted = predicted.cpu().numpy()
-    reassignment, accuracy = cluster_accuracy(actual, predicted)
-    print('Saving features, predictions and true labels after clustering.')
-    autoencoder.eval()
-    features = []
-    actual = []
-    images = []
-    dataloader = DataLoader(ds_train, batch_size=1024, shuffle=False)
-    for batch in dataloader:
-        if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-            batch, value = batch  # if we have a prediction label, separate it to actual
-            actual.append(value)
-        # if cuda:
-        #     batch = batch.cuda(non_blocking=True)
-        batch = batch.to(device, non_blocking=True)
-        features.append(autoencoder.encoder(batch).detach().cpu())
-        images.append(batch.detach().cpu())
-    np.savez(path_to_out/'final_ae_features_alpha{}'.format(alpha), torch.cat(features).numpy())
-    print("Final DEC accuracy: %s" % accuracy)
-    torch.save(autoencoder.state_dict(), path_to_out/'final_ae_alpha{}'.format(alpha))
-    torch.save(model.state_dict(), path_to_out/'clustering_model_alpha{}'.format(alpha))
-    if not testing_mode:
-        predicted_reassigned = [
-            reassignment[item] for item in predicted
-        ]  # TODO numpify
-        np.savez(path_to_out/'final_assignments_alpha{}'.format(alpha), predicted_reassigned)
-        np.savez(path_to_out/'actual_labels_alpha{}'.format(alpha), torch.cat(actual).detach().cpu().numpy())
+            
+            embed_train_callback(
+                writer,
+                0,
+                device,
+                (-1, 1, 28, 28),
+                config,
+                'clustering',
+                (epoch+1),
+                ds_val,
+                autoencoder)
         writer.close()
 
 
