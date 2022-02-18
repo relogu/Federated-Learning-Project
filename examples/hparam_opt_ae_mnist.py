@@ -23,6 +23,7 @@ from py.datasets.mnist import CachedMNIST
 from py.dec.dec_torch.utils import get_ae_opt, get_main_loss, get_mod_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
+
 def train_ae(
     config: Dict,
     scheduler: Any = None,
@@ -36,15 +37,15 @@ def train_ae(
     :param device: TODO
     :return: None
     """
-    ## Instantiate DataLoaders
+    # Instantiate DataLoaders
     ds_train = CachedMNIST(
-        path= '~/Federated-Learning-Project/data',
+        path='~/Federated-Learning-Project/data',
         download=False,
         train=True,
         device=device
     )  # training dataset
     ds_val = CachedMNIST(
-        path= '~/Federated-Learning-Project/data',
+        path='~/Federated-Learning-Project/data',
         download=False,
         train=False,
         device=device
@@ -59,7 +60,7 @@ def train_ae(
         batch_size=config['ae_batch_size'],
         shuffle=False,
     )
-    ## SDAE Training Loop
+    # SDAE Training Loop
     # set up loss(es) used in training the SDAE
     if config['mod_loss'] != 'none':
         loss_fn = get_mod_loss(
@@ -67,10 +68,10 @@ def train_ae(
             beta=config['beta'],
             main_loss=config['main_loss'],
             device=device,
-            )
+        )
     else:
         loss_fn = [get_main_loss(config['main_loss'])]
-    
+
     noising = None
     if config['noising'] > 0:
         noising = TruncatedGaussianNoise(
@@ -78,14 +79,14 @@ def train_ae(
             stddev=config['noising'],
             rate=1.0,
             device=device,
-            )
-        
+        )
+
     corruption = None
     if config['corruption'] > 0:
         corruption = config['corruption']
-        
+
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
-    
+
     # set up SDAE
     autoencoder = StackedDenoisingAutoEncoder(
         get_linears(config['linears'], 784, config['f_dim']),
@@ -97,9 +98,10 @@ def train_ae(
     if torch.cuda.device_count() > 1:
         autoencoder = torch.nn.DataParallel(autoencoder)
     autoencoder.to(device)
-    optimizer = get_ae_opt(config['optimizer'], config['lr'])(autoencoder.parameters())
+    optimizer = get_ae_opt(config['optimizer'], config['lr'])(
+        autoencoder.parameters())
     scheduler = scheduler(optimizer)
-    
+
     autoencoder.train()
     last_loss = -1
     for epoch in range(config['epochs']):
@@ -107,7 +109,7 @@ def train_ae(
         epoch_steps = 0
         if scheduler is not None:
             scheduler.step(last_loss)
-            
+
         for i, batch in enumerate(dataloader):
             if (
                 isinstance(batch, tuple)
@@ -117,19 +119,19 @@ def train_ae(
                 batch = batch[0]
             batch = batch.to(device)
             input = batch
-            
+
             if noising is not None:
                 input = noising(input)
             if corruption is not None:
                 input = F.dropout(input, corruption)
             output = autoencoder(input)
-            
+
             losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
             loss = sum(losses)/len(loss_fn)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step(closure=None)
-            
+
             # print statistics
             running_loss += loss.item()
             epoch_steps += 1
@@ -137,7 +139,7 @@ def train_ae(
                 print("[%d, %5d] loss: %.3f" % (epoch + 1, i + 1,
                                                 running_loss / epoch_steps))
                 running_loss = 0.0
-                
+
         val_loss = 0.0
         val_steps = 0
         criterion = MSELoss()
@@ -155,7 +157,7 @@ def train_ae(
 
         last_loss = (val_loss / (i+1))
         tune.report(ae_loss=last_loss)
-        
+
     with tune.checkpoint_dir(epoch) as checkpoint_dir:
         path = os.path.join(checkpoint_dir, "SDAE_pretraining_checkpoint")
         torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
@@ -177,7 +179,7 @@ def train_ae(
                     batch = batch[0]
                 batch = batch.to(device)
                 input = batch
-                
+
                 output = autoencoder(input)
 
                 losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
@@ -200,7 +202,8 @@ def train_ae(
             for i, val_batch in enumerate(validation_loader):
                 with torch.no_grad():
                     if (
-                        isinstance(val_batch, tuple) or isinstance(val_batch, list)
+                        isinstance(val_batch, tuple) or isinstance(
+                            val_batch, list)
                     ) and len(val_batch) in [1, 2]:
                         val_batch = val_batch[0]
                     val_batch = val_batch.to(device)
@@ -210,13 +213,14 @@ def train_ae(
                     val_steps += 1
             last_loss = val_loss / (i+1)
             tune.report(ae_loss=last_loss)
-            
+
         with tune.checkpoint_dir(epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "SDAE_finetuning_checkpoint")
-            torch.save((autoencoder.state_dict(), optimizer.state_dict()), path)
-        
+            torch.save((autoencoder.state_dict(),
+                       optimizer.state_dict()), path)
+
     print("Finished SDAE Training")
-    
+
     if config['train_dec'] == 'yes':
         dataloader = DataLoader(
             ds_train,
@@ -232,7 +236,8 @@ def train_ae(
         model = model.to(device)
         optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
 
-        scaler = get_scaler(config['scaler']) if config['scaler'] != 'none' else None
+        scaler = get_scaler(
+            config['scaler']) if config['scaler'] != 'none' else None
         kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
         features = []
         actual = []
@@ -246,7 +251,8 @@ def train_ae(
         actual = torch.cat(actual).long()
 
         predicted = kmeans.fit_predict(
-            scaler.fit_transform(torch.cat(features).numpy()) if scaler is not None else torch.cat(features).numpy()
+            scaler.fit_transform(torch.cat(features).numpy(
+            )) if scaler is not None else torch.cat(features).numpy()
         )
         predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
         _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
@@ -255,17 +261,21 @@ def train_ae(
         emp_centroids = []
         for i in np.unique(predicted):
             idx = (predicted == i)
-            emp_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
+            emp_centroids.append(compute_centroid_np(
+                torch.cat(features).numpy()[idx, :]))
 
         cluster_centers = torch.tensor(
-            np.array(emp_centroids) if config['use_emp_centroids'] == 'yes' else kmeans.cluster_centers_,# np.array(true_centroids)
+            # np.array(true_centroids)
+            np.array(
+                emp_centroids) if config['use_emp_centroids'] == 'yes' else kmeans.cluster_centers_,
             dtype=torch.float,
             requires_grad=True,
         )
         cluster_centers = cluster_centers.to(device, non_blocking=True)
         with torch.no_grad():
             # initialise the cluster centers
-            model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
+            model.state_dict()["assignment.cluster_centers"].copy_(
+                cluster_centers)
 
         loss_function = KLDivLoss(size_average=False)
         delta_label = None
@@ -310,7 +320,7 @@ def train_ae(
                     cl_recon += loss.cpu().numpy()
                     prob_labels.append(model(batch).cpu())
                     r_prob_labels.append(model(r_batch).cpu())
-                    
+
             cl_recon = (cl_recon / (i+1))
             predicted = torch.cat(prob_labels).max(1)[1]
             r_predicted = torch.cat(r_prob_labels).max(1)[1]
@@ -333,7 +343,7 @@ def train_ae(
                 X=features,
                 labels=predicted,
                 metric='euclidean')
-            
+
             data_calinski_harabasz = calinski_harabasz_score(
                 X=data,
                 labels=predicted)
@@ -344,7 +354,8 @@ def train_ae(
 
             predicted_previous = predicted
             _, accuracy = cluster_accuracy(predicted.numpy(), actual.numpy())
-            _, cycle_accuracy = cluster_accuracy(r_predicted.numpy(), predicted.numpy())
+            _, cycle_accuracy = cluster_accuracy(
+                r_predicted.numpy(), predicted.numpy())
 
             tune.report(
                 accuracy=accuracy,
@@ -356,11 +367,11 @@ def train_ae(
                 eucl_sil_score=eucl_sil_score,
                 data_calinski_harabasz=data_calinski_harabasz,
                 feat_calinski_harabasz=feat_calinski_harabasz,
-                )
+            )
             # break loop procedure
             if delta_label <= 0.001:
                 break
-            
+
         with tune.checkpoint_dir(epoch) as checkpoint_dir:
             path = os.path.join(checkpoint_dir, "DEC_checkpoint")
             torch.save((model.state_dict(), optimizer.state_dict()), path)
@@ -369,42 +380,49 @@ def train_ae(
 
 
 def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
-    
+
     device = "cpu"
-    
+
     if torch.cuda.is_available():
         device = "cuda:0"
 
     config = {
-        'linears': 'dec',# tune.grid_search(['dec', 'google', 'curves']),
-        'f_dim': 10,# tune.choice([6,9,10,20,30]),# tune.randint(2, 30),# 10,# tune.grid_search([9,10,11,12,13]),# tune.grid_search([10, 30]),
-        'activation': ReLU(),# tune.grid_search([ReLU(), Sigmoid()]),
-        'final_activation': Sigmoid(),# tune.grid_search([ReLU(), Sigmoid()]),
-        'dropout': tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.2, 0.4, 0.5]),
+        'linears': 'dec',  # tune.grid_search(['dec', 'google', 'curves']),
+        # tune.choice([6,9,10,20,30]),# tune.randint(2, 30),# 10,# tune.grid_search([9,10,11,12,13]),# tune.grid_search([10, 30]),
+        'f_dim': 10,
+        'activation': ReLU(),  # tune.grid_search([ReLU(), Sigmoid()]),
+        # tune.grid_search([ReLU(), Sigmoid()]),
+        'final_activation': Sigmoid(),
+        # tune.grid_search([0.0, 0.2, 0.4, 0.5]),
+        'dropout': tune.uniform(0.0, 0.5),
         'epochs': max_num_epochs,
         'n_clusters': 10,
         'ae_batch_size': 256,
         'update_interval': 140,
-        'optimizer': 'yogi',# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
+        # tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
+        'optimizer': 'yogi',
         'lr': tune.loguniform(1e-5, 1e-1),
-        'main_loss': 'mse',# tune.grid_search(['mse', 'bce-wl']),
-        'mod_loss': 'none',# tune.grid_search(['none', 'gausk1', 'gausk3']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
-        'beta': 0.0,# tune.grid_search([0.1, 0.2]),
-        'corruption': tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
-        'noising': 0.0,# tune.grid_search([0.0, 0.1]),
+        'main_loss': 'mse',  # tune.grid_search(['mse', 'bce-wl']),
+        # tune.grid_search(['none', 'gausk1', 'gausk3']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
+        'mod_loss': 'none',
+        'beta': 0.0,  # tune.grid_search([0.1, 0.2]),
+        # tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
+        'corruption': tune.uniform(0.0, 0.5),
+        'noising': 0.0,  # tune.grid_search([0.0, 0.1]),
         'train_dec': 'yes',
-        'alpha': 9,# tune.grid_search([1, 9]),
-        'scaler': 'normal-l2',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'use_emp_centroids': 'yes',#tune.grid_search(['yes', 'no']),
+        'alpha': 9,  # tune.grid_search([1, 9]),
+        # tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
+        'scaler': 'normal-l2',
+        'use_emp_centroids': 'yes',  # tune.grid_search(['yes', 'no']),
     }
-    
+
     # scheduler = ASHAScheduler(
     #     metric="loss",
     #     mode="min",
     #     max_t=max_num_epochs,
     #     grace_period=1,
     #     reduction_factor=2)
-    
+
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
         metric_columns=[
@@ -418,17 +436,17 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
             "eucl_sil_score",
             "data_calinski_harabasz",
             "feat_calinski_harabasz"]
-        )
-    
-    lambda_scheduler = lambda x: ReduceLROnPlateau(
+    )
+
+    def lambda_scheduler(x): return ReduceLROnPlateau(
         x,
         mode='min',
         factor=0.5,
         patience=20,
     )
-    
+
     # bayesopt = BayesOptSearch(metric="loss", mode="min")
-                
+
     result = tune.run(
         partial(train_ae, scheduler=lambda_scheduler, device=device),
         resources_per_trial={"cpu": 6, "gpu": gpus_per_trial},
@@ -441,7 +459,7 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
         progress_reporter=reporter,
         name='mnist',
         # resume=True,
-        )
+    )
 
     # best reconstruction loss after weights initialization
     best_trial = result.get_best_trial("ae_loss", "min", "last")
@@ -458,31 +476,38 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
 
         # best reconstruction loss after clustering stage
         best_trial = result.get_best_trial("cl_recon", "min", "last")
-        print("Best reconstruction loss after clustering stage config: {}".format(best_trial.config))
+        print("Best reconstruction loss after clustering stage config: {}".format(
+            best_trial.config))
         print("Best reconstruction loss after clustering stage value: {}".format(
             best_trial.last_result["cl_recon"]))
-        
+
         # best euclidean silhouette after clustering stage
         best_trial = result.get_best_trial("eucl_sil_score", "max", "last")
-        print("Best euclidean silhouette after clustering stage config: {}".format(best_trial.config))
+        print("Best euclidean silhouette after clustering stage config: {}".format(
+            best_trial.config))
         print("Best euclidean silhouette after clustering stage value: {}".format(
             best_trial.last_result["eucl_sil_score"]))
-        
+
         # best cosine silhouette after clustering stage
         best_trial = result.get_best_trial("cos_sil_score", "max", "last")
-        print("Best cosine silhouette after clustering stage config: {}".format(best_trial.config))
+        print("Best cosine silhouette after clustering stage config: {}".format(
+            best_trial.config))
         print("Best cosine silhouette after clustering stage value: {}".format(
             best_trial.last_result["cos_sil_score"]))
-        
+
         # best calinski harabasz score of data after clustering stage
-        best_trial = result.get_best_trial("data_calinski_harabasz", "max", "last")
-        print("Best calinski harabasz score of data after clustering stage config: {}".format(best_trial.config))
+        best_trial = result.get_best_trial(
+            "data_calinski_harabasz", "max", "last")
+        print("Best calinski harabasz score of data after clustering stage config: {}".format(
+            best_trial.config))
         print("Best calinski harabasz score of data after clustering stage value: {}".format(
             best_trial.last_result["data_calinski_harabasz"]))
-        
+
         # best calinski harabasz score of features after clustering stage
-        best_trial = result.get_best_trial("feat_calinski_harabasz", "max", "last")
-        print("Best calinski harabasz score of features after clustering stage config: {}".format(best_trial.config))
+        best_trial = result.get_best_trial(
+            "feat_calinski_harabasz", "max", "last")
+        print("Best calinski harabasz score of features after clustering stage config: {}".format(
+            best_trial.config))
         print("Best calinski harabasz score of features after clustering stage value: {}".format(
             best_trial.last_result["feat_calinski_harabasz"]))
 
@@ -490,4 +515,3 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
 if __name__ == "__main__":
     # You can change the number of GPUs per trial here:
     main()
-    

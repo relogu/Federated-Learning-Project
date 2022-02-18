@@ -1,3 +1,21 @@
+from py.callbacks import ae_train_callback, dec_train_callback, embed_train_callback
+from py.util import get_square_image_repr, compute_centroid_np
+from py.datasets.euromds import CachedEUROMDS
+from py.dec.dec_torch.utils import (cluster_accuracy, get_main_loss, get_mod_binary_loss,
+                                    get_ae_opt, get_linears, get_scaler, target_distribution)
+from py.dec.layers.torch import TruncatedGaussianNoise
+from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.dec_torch.dec import DEC
+from tensorboardX import SummaryWriter
+from sklearn.cluster import KMeans
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim import SGD
+from torch.utils.data import DataLoader
+from torch.nn import ReLU, Sigmoid, KLDivLoss, MSELoss
+import torch.nn.functional as F
+import torch
+import tensorboard as tb
+import tensorflow as tf
 import os
 import pathlib
 import click
@@ -5,26 +23,7 @@ import numpy as np
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
-import tensorflow as tf
-import tensorboard as tb
 tf.io.gfile = tb.compat.tensorflow_stub.io.gfile
-import torch
-import torch.nn.functional as F
-from torch.nn import ReLU, Sigmoid, KLDivLoss, MSELoss
-from torch.utils.data import DataLoader
-from torch.optim import SGD
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from sklearn.cluster import KMeans
-from tensorboardX import SummaryWriter
-
-from py.dec.dec_torch.dec import DEC
-from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
-from py.dec.layers.torch import TruncatedGaussianNoise
-from py.dec.dec_torch.utils import (cluster_accuracy, get_main_loss, get_mod_binary_loss,
-                                    get_ae_opt, get_linears, get_scaler, target_distribution)
-from py.datasets.euromds import CachedEUROMDS
-from py.util import get_square_image_repr, compute_centroid_np
-from py.callbacks import ae_train_callback, dec_train_callback, embed_train_callback
 
 
 @click.command()
@@ -91,7 +90,7 @@ from py.callbacks import ae_train_callback, dec_train_callback, embed_train_call
 )
 @click.option(
     '--ae-mod-loss',
-    type=str,#click.Choice(['mse+dice', 'combo', 'bce+dice']),
+    type=str,  # click.Choice(['mse+dice', 'combo', 'bce+dice']),
     default=None,
     help='Modified loss function for autoencoder training (default None)'
 )
@@ -187,14 +186,15 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     if config['mod_loss'] != 'none':
         loss_fn = get_mod_binary_loss(
             name=config['mod_loss'],
-            )
+        )
         beta = [1.0-config['beta'], config['beta']]
     else:
         loss_fn = [get_main_loss(config['main_loss'])]
         beta = [1.0]
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
     # get datasets
-    path_to_data = pathlib.Path('/home/relogu/Desktop/OneDrive/UNIBO/Magistrale/Federated Learning Project/data/euromds') if path_to_data is None else pathlib.Path(path_to_data)
+    path_to_data = pathlib.Path(
+        '/home/relogu/Desktop/OneDrive/UNIBO/Magistrale/Federated Learning Project/data/euromds') if path_to_data is None else pathlib.Path(path_to_data)
     ds_train = CachedEUROMDS(
         exclude_cols=['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
         groups=['Genetics', 'CNA'],
@@ -219,10 +219,11 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     )
     ds_val = ds_train
     img_repr = get_square_image_repr(ds_train.n_features)
-    print("Square image representation for {} features is (x,y,add): {}".format(ds_train.n_features, img_repr))
+    print("Square image representation for {} features is (x,y,add): {}".format(
+        ds_train.n_features, img_repr))
     additions = img_repr[2]
     img_repr = (-1, 1, img_repr[0], img_repr[1])
-    # set noising to data   
+    # set noising to data
     noising = None
     if config['noising'] > 0:
         noising = TruncatedGaussianNoise(
@@ -230,7 +231,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             stddev=config['noising'],
             rate=1.0,
             device=device,
-            )
+        )
     # set corruption to data
     corruption = None
     if config['corruption'] > 0:
@@ -244,20 +245,22 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         is_tied=is_tied,
     )
     # set learning rate scheduler
-    scheduler = lambda x: ReduceLROnPlateau(
+
+    def scheduler(x): return ReduceLROnPlateau(
         x,
         mode='min',
         factor=0.5,
         patience=20,
     )
-    
+
     if (path_to_out/'pretrain_ae').exists():
         print('Skipping pretraining since weights already exist.')
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
     else:
         print("Pretraining stage.")
         autoencoder.to(device)
-        optimizer = get_ae_opt(config['optimizer'], config['lr'])(autoencoder.parameters())
+        optimizer = get_ae_opt(config['optimizer'], config['lr'])(
+            autoencoder.parameters())
         scheduler = scheduler(optimizer)
         autoencoder.train()
         val_loss = -1
@@ -265,7 +268,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             running_loss = 0.0
             if scheduler is not None:
                 scheduler.step(val_loss)
-                
+
             for i, batch in enumerate(dataloader):
                 if (
                     isinstance(batch, tuple)
@@ -275,37 +278,39 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                     batch = batch[0]
                 batch = batch.to(device)
                 input = batch
-                
+
                 if noising is not None:
                     input = noising(input)
                 if corruption is not None:
                     input = F.dropout(input, corruption)
                 output = autoencoder(input)
-                
-                losses = [beta*l_fn_i(output, batch) for beta, l_fn_i in zip(beta, loss_functions)]
+
+                losses = [beta*l_fn_i(output, batch)
+                          for beta, l_fn_i in zip(beta, loss_functions)]
                 loss = sum(losses)/len(loss_fn)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step(closure=None)
                 # print statistics
                 running_loss += loss.item()
-                print("[%d, %5d] loss: %.3f" % \
-                    (epoch+1, i+1, running_loss / (i+1)))
+                print("[%d, %5d] loss: %.3f" %
+                      (epoch+1, i+1, running_loss / (i+1)))
             running_loss = running_loss / (i+1)
-                    
+
             val_loss = 0.0
             criterion = MSELoss()
             for i, val_batch in enumerate(validation_loader):
                 with torch.no_grad():
                     if (
-                        isinstance(val_batch, tuple) or isinstance(val_batch, list)
+                        isinstance(val_batch, tuple) or isinstance(
+                            val_batch, list)
                     ) and len(val_batch) in [1, 2]:
                         val_batch = val_batch[0]
                     val_batch = val_batch.to(device)
                     validation_output = autoencoder(val_batch)
                     loss = criterion(validation_output, val_batch)
                     val_loss += loss.cpu().numpy()
-            
+
             val_loss = ae_train_callback(
                 writer,
                 'pretraining',
@@ -335,7 +340,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         print("Finetuning stage.")
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
         autoencoder.to(device)
-        optimizer = get_ae_opt(config['optimizer'], config['lr'])(autoencoder.parameters())
+        optimizer = get_ae_opt(config['optimizer'], config['lr'])(
+            autoencoder.parameters())
         scheduler = scheduler(optimizer)
         autoencoder.train()
         val_loss = -1
@@ -353,20 +359,21 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                     batch = batch[0]
                 batch = batch.to(device)
                 input = batch
-                
+
                 output = autoencoder(input)
 
-                losses = [beta*l_fn_i(output, batch) for beta, l_fn_i in zip(beta, loss_functions)]
+                losses = [beta*l_fn_i(output, batch)
+                          for beta, l_fn_i in zip(beta, loss_functions)]
                 loss = sum(losses)/len(loss_fn)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step(closure=None)
                 # print statistics
                 running_loss += loss.item()
-                print("[%d, %5d] loss: %.3f" % \
-                    (epoch+1, i+1, running_loss / (i+1)))
+                print("[%d, %5d] loss: %.3f" %
+                      (epoch+1, i+1, running_loss / (i+1)))
             running_loss = running_loss / (i+1)
-            
+
             val_loss = ae_train_callback(
                 writer,
                 'pretraining',
@@ -389,7 +396,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             (epoch+1),
             ds_val,
             autoencoder)
-    
+
     if config['train_dec'] == 'yes':
         print("DEC stage.")
         autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
@@ -400,7 +407,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                     alpha=config['alpha'])
         model = model.to(device)
         optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
-        scaler = get_scaler(config['scaler']) if config['scaler'] != 'none' else None
+        scaler = get_scaler(
+            config['scaler']) if config['scaler'] != 'none' else None
         kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
         features = []
         actual = []
@@ -413,7 +421,8 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         actual = torch.cat(actual).long()
 
         predicted = kmeans.fit_predict(
-            scaler.fit_transform(torch.cat(features).numpy()) if scaler is not None else torch.cat(features).numpy()
+            scaler.fit_transform(torch.cat(features).numpy(
+            )) if scaler is not None else torch.cat(features).numpy()
         )
         predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
         _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
@@ -422,16 +431,20 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         emp_centroids = []
         for i in np.unique(predicted):
             idx = (predicted == i)
-            emp_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
+            emp_centroids.append(compute_centroid_np(
+                torch.cat(features).numpy()[idx, :]))
 
         cluster_centers = torch.tensor(
-            np.array(emp_centroids) if config['use_emp_centroids'] == 'yes' else kmeans.cluster_centers_,# np.array(true_centroids)
+            # np.array(true_centroids)
+            np.array(
+                emp_centroids) if config['use_emp_centroids'] == 'yes' else kmeans.cluster_centers_,
             dtype=torch.float,
             requires_grad=True,
         )
         cluster_centers = cluster_centers.to(device, non_blocking=True)
         with torch.no_grad():
-            model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
+            model.state_dict()["assignment.cluster_centers"].copy_(
+                cluster_centers)
 
         loss_function = KLDivLoss(size_average=False)
         for epoch in range(20):
@@ -449,7 +462,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step(closure=None)
-            
+
             predicted_previous = dec_train_callback(
                 writer,
                 config,
@@ -460,7 +473,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 epoch,
                 predicted_previous,
             )
-            
+
             embed_train_callback(
                 writer,
                 additions,
