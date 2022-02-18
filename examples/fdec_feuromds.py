@@ -24,8 +24,8 @@ from py.clients.torch import AutoencoderClient, KMeansClient, DECClient
 from py.strategies import SaveModelStrategy, KMeansStrategy
 from py.datasets.feuromds import CachedfEUROMDS
 from py.datasets.euromds import CachedEUROMDS
-from py.dec.layers.torch import TruncatedGaussianNoise
-from py.dec.dec_torch.utils import get_main_loss, get_linears, get_ae_opt, get_scaler
+from py.dec.torch.layers import TruncatedGaussianNoise
+from py.dec.torch.utils import get_main_loss, get_linears, get_ae_opt, get_scaler
 from py.parsers.fdec_feuromds_parser import fdec_feuromds_parser as get_parser
 
 # os.environ["CUDA_VISIBLE_DEVICES"]="6,7"

@@ -17,10 +17,10 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.cluster import KMeans
 from tensorboardX import SummaryWriter
 
-from py.dec.dec_torch.dec import DEC
-from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
-from py.dec.layers.torch import TruncatedGaussianNoise
-from py.dec.dec_torch.utils import cluster_accuracy, get_main_loss, get_mod_loss, get_mod_binary_loss, get_ae_opt, get_linears, target_distribution, get_scaler
+from py.dec.torch.dec import DEC
+from py.dec.torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.torch.layers import TruncatedGaussianNoise
+from py.dec.torch.utils import cluster_accuracy, get_main_loss, get_mod_loss, get_mod_binary_loss, get_ae_opt, get_linears, target_distribution, get_scaler
 from py.datasets.mnist import CachedMNIST
 from py.datasets.bmnist import CachedBMNIST
 from py.callbacks import ae_train_callback, dec_train_callback, embed_train_callback

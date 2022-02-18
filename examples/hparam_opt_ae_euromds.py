@@ -17,11 +17,11 @@ from ray.tune.suggest.bayesopt import BayesOptSearch
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
 
-from py.dec.dec_torch.dec import DEC
-from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
-from py.dec.layers.torch import TruncatedGaussianNoise
+from py.dec.torch.dec import DEC
+from py.dec.torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.torch.layers import TruncatedGaussianNoise
 from py.datasets.euromds import CachedEUROMDS
-from py.dec.dec_torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
+from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"

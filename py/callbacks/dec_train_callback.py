@@ -2,7 +2,7 @@ import torch
 from torch.nn import MSELoss
 from torch.utils.data import DataLoader
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
-from py.dec.dec_torch.utils import cluster_accuracy
+from py.dec.torch.utils import cluster_accuracy
 
 
 def dec_train_callback(

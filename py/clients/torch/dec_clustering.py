@@ -18,9 +18,9 @@ from flwr.common.typing import Scalar
 from typing import Union, Dict, Any, OrderedDict
 from pathlib import Path
 
-from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
-from py.dec.dec_torch.dec import DEC
-from py.dec.dec_torch.utils import target_distribution, cluster_accuracy
+from py.dec.torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.torch.dec import DEC
+from py.dec.torch.utils import target_distribution, cluster_accuracy
 
 
 def dec_model_training_loop(
@@ -66,6 +66,7 @@ def dec_model_evaluating_loop(
     r_data = []
     features = []
     prob_labels = []
+    r_prob_labels = []
     actual = []
     model.eval()
     for i, batch in enumerate(validation_loader):
@@ -81,15 +82,14 @@ def dec_model_evaluating_loop(
             features.append(f_batch.cpu())
             loss = criterion(r_batch, batch)
             recon_loss += loss.cpu().numpy()
-            prob_labels.append(
-                model(batch).cpu()
-            )  # move to the CPU to prevent out of memory on the GPU
+            prob_labels.append(model(batch).cpu())
+            r_prob_labels.append(model(r_batch).cpu())
         recon_loss = recon_loss / (i+1)
-    predicted, actual = torch.cat(prob_labels).max(1)[1], torch.cat(actual).long()
     return (
         recon_loss,
-        predicted.cpu().numpy(),
-        actual.numpy(),
+        torch.cat(prob_labels).max(1)[1].cpu().numpy(),
+        torch.cat(r_prob_labels).max(1)[1].cpu().numpy(),
+        torch.cat(actual).long().numpy(),
         torch.cat(data).numpy(),
         torch.cat(r_data).numpy(),
         torch.cat(features).numpy(),
@@ -193,41 +193,36 @@ class DECClient(NumPyClient):
         # get DEC model parameter from server
         self.set_parameters(parameters)
         # valuate clustering
-        recon_loss, predicted, actual, data, r_data, features = dec_model_evaluating_loop(
+        recon_loss, predicted, r_predicted, actual, data, r_data, features = dec_model_evaluating_loop(
             autoencoder=self.autoencoder,
             device=device,
             model=self.dec_model,
             validation_loader=self.valloader,
         )
         # TODO: evaluate reconstruction
-        # TODO: manage metrics
-        # delta_label = (
-        #     float((predicted != predicted_previous).float().sum().item())
-        #     / predicted_previous.shape[0]
-        # )
-
-        # cos_sil_score = silhouette_score(
-        #     X=data,
-        #     labels=predicted,
-        #     metric='cosine')
-
-        # eucl_sil_score = silhouette_score(
-        #     X=features,
-        #     labels=predicted,
-        #     metric='euclidean')
-        
-        # data_calinski_harabasz = calinski_harabasz_score(
-        #     X=data,
-        #     labels=predicted)
-
-        # feat_calinski_harabasz = calinski_harabasz_score(
-        #     X=features,
-        #     labels=predicted)
-                
-        # cl_recon = (val_loss / val_steps)
-        
-        # _, accuracy = cluster_accuracy(predicted, actual)
-
+        # evaluate clustering
+        delta_label = (
+            float((predicted != self.predicted_previous).float().sum().item())
+            / self.predicted_previous.shape[0]
+        )
+        cos_sil_score = silhouette_score(
+            X=data,
+            labels=predicted,
+            metric='cosine')
+        eucl_sil_score = silhouette_score(
+            X=features,
+            labels=predicted,
+            metric='euclidean')
+        data_calinski_harabasz = calinski_harabasz_score(
+            X=data,
+            labels=predicted)
+        feat_calinski_harabasz = calinski_harabasz_score(
+            X=features,
+            labels=predicted)
+        reassignment, accuracy = cluster_accuracy(predicted, actual)
+        r_reassignment, cycle_accuracy = cluster_accuracy(r_predicted, predicted)
+        # TODO: save metrics
+        # save labels for predicted_previous of next step
         with open(self.out_dir/'predicted_previous.npz', 'w') as file:
             np.savez(file, *predicted)
         # returning the parameters necessary for evaluation

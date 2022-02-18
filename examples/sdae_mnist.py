@@ -10,9 +10,9 @@ from tensorboardX import SummaryWriter
 from sklearn.cluster import KMeans
 import uuid
 
-from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
-import py.dec.dec_torch.ae_loops as ae
-from py.dec.dec_torch.utils import cluster_accuracy
+from py.dec.torch.sdae import StackedDenoisingAutoEncoder
+import py.dec.torch.ae_loops as ae
+from py.dec.torch.utils import cluster_accuracy
 from py.datasets.mnist import CachedMNIST
 
 

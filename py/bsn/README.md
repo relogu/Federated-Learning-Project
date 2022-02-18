@@ -1,1 +1,0 @@
-https://r2rt.com/binary-stochastic-neurons-in-tensorflow.html

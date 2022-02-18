@@ -12,12 +12,14 @@ import torch
 from torch.nn import Module
 from torch.utils.data import DataLoader
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score, calinski_harabasz_score
 from flwr.client import NumPyClient
 from flwr.common.typing import Scalar
 from typing import Union, Dict, Any, OrderedDict
 from pathlib import Path
 
-from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.torch.utils import cluster_accuracy
 from py.util import compute_centroid_np
 
 def fit_kmeans_loop(
@@ -30,6 +32,8 @@ def fit_kmeans_loop(
 ):
     autoencoder.to(device)
     autoencoder.eval()
+    data = []
+    r_data = []
     features = []
     actual = []
     # form initial cluster centres
@@ -38,9 +42,12 @@ def fit_kmeans_loop(
             if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                 batch, value = batch  # if we have a prediction label, separate it to actual
                 actual.append(value)
+                data.append(batch.cpu())
             batch = batch.to(device, non_blocking=True)
-            features.append(autoencoder.encoder(batch).detach().cpu())
-    actual = torch.cat(actual).long()
+            r_batch = autoencoder(batch)
+            f_batch = autoencoder.encoder(batch)
+            r_data.append(r_batch.cpu())
+            features.append(f_batch.cpu())
     predicted = kmeans.fit_predict(
         scaler.fit_transform(torch.cat(features).numpy()) if scaler is not None else torch.cat(features).numpy()
     )
@@ -53,7 +60,14 @@ def fit_kmeans_loop(
             emp_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
         centroids = np.array(emp_centroids)
     # return predicted labels and centroids
-    return (predicted, centroids)
+    return (
+        predicted,
+        torch.cat(actual).long(),
+        centroids,
+        torch.cat(data).numpy(),
+        torch.cat(r_data).numpy(),
+        torch.cat(features).numpy(),
+        )
 
 class KMeansClient(NumPyClient):
     """Client object, to set client performed operations."""
@@ -119,7 +133,7 @@ class KMeansClient(NumPyClient):
         # parameter the final server parameters for the autoencoder
         self.set_parameters(parameters)
         # fit kmeans
-        predicted, self.clusters_centers = fit_kmeans_loop(
+        predicted, actual, self.clusters_centers, data, r_data, features = fit_kmeans_loop(
             kmeans=self.kmeans,
             autoencoder=self.autoencoder,
             dataloader=self.trainloader,
@@ -140,17 +154,34 @@ class KMeansClient(NumPyClient):
         self.kmeans_config['init'] = np.array(parameters)
         self.kmeans = KMeans(**self.kmeans_config)
         # fit kmeans
-        predicted, self.clusters_centers = fit_kmeans_loop(
+        predicted, actual, self.clusters_centers, data, r_data, features = fit_kmeans_loop(
             kmeans=self.kmeans,
             autoencoder=self.autoencoder,
             dataloader=self.trainloader,
             device=device,
             scaler=self.scaler,
         )
-        # TODO: evaluate clustering
+        # evaluate clustering
+        cos_sil_score = silhouette_score(
+            X=data,
+            labels=predicted,
+            metric='cosine')
+        eucl_sil_score = silhouette_score(
+            X=features,
+            labels=predicted,
+            metric='euclidean')
+        data_calinski_harabasz = calinski_harabasz_score(
+            X=data,
+            labels=predicted)
+        feat_calinski_harabasz = calinski_harabasz_score(
+            X=features,
+            labels=predicted)
+        reassignment, accuracy = cluster_accuracy(predicted, actual)
+        # TODO: save metrics
         # save labels for predicted_previous of next step
         with open(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), 'w') as file:
             np.savez(file, *predicted)
+        # save kmeans predictions for final studies
         with open(self.out_dir/'kmeans_predictions{}.npz'.format(self.client_id), 'w') as file:
             np.savez(file, *predicted)
         # returning the parameters necessary for evaluation

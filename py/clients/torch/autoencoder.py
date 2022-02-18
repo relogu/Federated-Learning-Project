@@ -16,7 +16,7 @@ from flwr.common.typing import Scalar
 from typing import Union, Dict, Any, OrderedDict, Iterable
 from pathlib import Path
 
-from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.torch.sdae import StackedDenoisingAutoEncoder
 
 def training_loop(
     n_epochs: int = 1, # number of epochs
