@@ -20,8 +20,9 @@ from tensorboardX import SummaryWriter
 from py.dec.dec_torch.dec import DEC
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
 from py.dec.layers.torch import TruncatedGaussianNoise
-from py.dec.dec_torch.utils import cluster_accuracy, get_main_loss, get_mod_loss, get_ae_opt, get_linears, target_distribution, get_scaler
+from py.dec.dec_torch.utils import cluster_accuracy, get_main_loss, get_mod_loss, get_mod_binary_loss, get_ae_opt, get_linears, target_distribution, get_scaler
 from py.datasets.mnist import CachedMNIST
+from py.datasets.bmnist import CachedBMNIST
 from py.callbacks import ae_train_callback, dec_train_callback, embed_train_callback
 from py.util import compute_centroid_np
 
@@ -161,6 +162,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         'alpha': 9,
         'scaler': 'standard',
         'use_emp_centroids': 'yes',
+        'binary': False,
     }
 
     # defining output folder
@@ -179,15 +181,25 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         device = "cuda:{}".format(gpu_id)
 
     # set up loss(es) used in training the SDAE
-    if config['mod_loss'] != 'none':
-        loss_fn = get_mod_loss(
-            name=config['mod_loss'],
-            beta=config['beta'],
-            main_loss=config['main_loss'],
-            device=device,
-            )
+    if config['binary']:
+        if config['mod_loss'] != 'none':
+            loss_fn = get_mod_binary_loss(
+                name=config['mod_loss'],
+                )
+            beta = [1.0-config['beta'], config['beta']]
+        else:
+            loss_fn = [get_main_loss(config['main_loss'])]
+            beta = [1.0]
     else:
-        loss_fn = [get_main_loss(config['main_loss'])]
+        if config['mod_loss'] != 'none':
+            loss_fn = get_mod_loss(
+                name=config['mod_loss'],
+                beta=config['beta'],
+                main_loss=config['main_loss'],
+                device=device,
+                )
+        else:
+            loss_fn = [get_main_loss(config['main_loss'])]
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
     # set noising to data  
     noising = None
@@ -218,12 +230,20 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         patience=20,
     )
     # get datasets
-    ds_train = CachedMNIST(
-        train=True, cuda=cuda, testing_mode=testing_mode
-    )  # training dataset
-    ds_val = CachedMNIST(
-        train=False, cuda=cuda, testing_mode=testing_mode
-    )  # evaluation dataset
+    if config['binary']:
+        ds_train = CachedBMNIST(
+            train=True, device=device, testing_mode=testing_mode
+        )  # training dataset
+        ds_val = CachedBMNIST(
+            train=False, device=device, testing_mode=testing_mode
+        )  # evaluation dataset
+    else:
+        ds_train = CachedMNIST(
+            train=True, device=device, testing_mode=testing_mode
+        )  # training dataset
+        ds_val = CachedMNIST(
+            train=False, device=device, testing_mode=testing_mode
+        )  # evaluation dataset
     # set dataloaders
     dataloader = DataLoader(
         ds_train,
@@ -267,7 +287,10 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                     input = F.dropout(input, corruption)
                 output = autoencoder(input)
                 
-                losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
+                if config['binary']:
+                    losses = [beta*l_fn_i(output, batch) for beta, l_fn_i in zip(beta, loss_functions)]
+                else:
+                    losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
                 loss = sum(losses)/len(loss_fn)
                 optimizer.zero_grad()
                 loss.backward()
@@ -340,8 +363,11 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 input = batch
                 
                 output = autoencoder(input)
-
-                losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
+                
+                if config['binary']:
+                    losses = [beta*l_fn_i(output, batch) for beta, l_fn_i in zip(beta, loss_functions)]
+                else:
+                    losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
                 loss = sum(losses)/len(loss_fn)
                 optimizer.zero_grad()
                 loss.backward()

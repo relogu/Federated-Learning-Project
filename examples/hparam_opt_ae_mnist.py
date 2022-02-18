@@ -8,7 +8,7 @@ from torch.nn import ReLU, Sigmoid, KLDivLoss
 from torch.nn.modules.loss import MSELoss
 from torch.optim import SGD
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import StepLR, ExponentialLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
@@ -20,7 +20,8 @@ from py.dec.dec_torch.dec import DEC
 from py.dec.dec_torch.sdae import StackedDenoisingAutoEncoder
 from py.dec.layers.torch import TruncatedGaussianNoise
 from py.datasets.mnist import CachedMNIST
-from py.dec.dec_torch.utils import get_ae_opt, get_main_loss, get_mod_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
+from py.datasets.bmnist import CachedBMNIST
+from py.dec.dec_torch.utils import get_ae_opt, get_main_loss, get_mod_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
 
@@ -38,18 +39,20 @@ def train_ae(
     :return: None
     """
     # Instantiate DataLoaders
-    ds_train = CachedMNIST(
-        path='~/Federated-Learning-Project/data',
-        download=False,
-        train=True,
-        device=device
-    )  # training dataset
-    ds_val = CachedMNIST(
-        path='~/Federated-Learning-Project/data',
-        download=False,
-        train=False,
-        device=device
-    )  # evaluation dataset
+    if config['binary']:
+        ds_train = CachedBMNIST(
+            train=True, device=device
+        )  # training dataset
+        ds_val = CachedBMNIST(
+            train=False, device=device
+        )  # evaluation dataset
+    else:
+        ds_train = CachedMNIST(
+            train=True, device=device
+        )  # training dataset
+        ds_val = CachedMNIST(
+            train=False, device=device
+        )  # evaluation dataset
     dataloader = DataLoader(
         ds_train,
         batch_size=config['ae_batch_size'],
@@ -62,15 +65,26 @@ def train_ae(
     )
     # SDAE Training Loop
     # set up loss(es) used in training the SDAE
-    if config['mod_loss'] != 'none':
-        loss_fn = get_mod_loss(
-            name=config['mod_loss'],
-            beta=config['beta'],
-            main_loss=config['main_loss'],
-            device=device,
-        )
+    if config['binary']:
+        if config['mod_loss'] != 'none':
+            loss_fn = get_mod_binary_loss(
+                name=config['mod_loss'],
+                )
+            beta = [1.0-config['beta'], config['beta']]
+        else:
+            loss_fn = [get_main_loss(config['main_loss'])]
+            beta = [1.0]
     else:
-        loss_fn = [get_main_loss(config['main_loss'])]
+        if config['mod_loss'] != 'none':
+            loss_fn = get_mod_loss(
+                name=config['mod_loss'],
+                beta=config['beta'],
+                main_loss=config['main_loss'],
+                device=device,
+                )
+        else:
+            loss_fn = [get_main_loss(config['main_loss'])]
+    loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
 
     noising = None
     if config['noising'] > 0:
@@ -84,8 +98,6 @@ def train_ae(
     corruption = None
     if config['corruption'] > 0:
         corruption = config['corruption']
-
-    loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
 
     # set up SDAE
     autoencoder = StackedDenoisingAutoEncoder(
@@ -125,8 +137,11 @@ def train_ae(
             if corruption is not None:
                 input = F.dropout(input, corruption)
             output = autoencoder(input)
-
-            losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
+                
+            if config['binary']:
+                losses = [beta*l_fn_i(output, batch) for beta, l_fn_i in zip(beta, loss_functions)]
+            else:
+                losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
             loss = sum(losses)/len(loss_fn)
             optimizer.zero_grad()
             loss.backward()
@@ -181,8 +196,11 @@ def train_ae(
                 input = batch
 
                 output = autoencoder(input)
-
-                losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
+                
+                if config['binary']:
+                    losses = [beta*l_fn_i(output, batch) for beta, l_fn_i in zip(beta, loss_functions)]
+                else:
+                    losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
                 loss = sum(losses)/len(loss_fn)
                 optimizer.zero_grad()
                 loss.backward()
@@ -414,6 +432,7 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
         # tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'scaler': 'normal-l2',
         'use_emp_centroids': 'yes',  # tune.grid_search(['yes', 'no']),
+        'binary': False,
     }
 
     # scheduler = ASHAScheduler(
