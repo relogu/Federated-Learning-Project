@@ -29,17 +29,32 @@ def get_scaler(name: str):
     }
     return scaler_dict[name]
 
-def get_ae_opt(name: str, lr: float = None):
+def get_ae_opt(name: str, dataset: str, lr: float = None):
+    lr_dataset_dict = {
+        'euromds': {
+            'sgd': 5e-2,
+            'adam': 3e-4,
+            'yogi': 3.5e-2,
+        },
+        'mnist': {
+            'sgd': 0.5,
+            'adam': 3.5e-4,
+            'yogi': 0.1,
+        },
+        'bmnist': {
+            'sgd': 1e-3,
+            'adam': 1e-4,
+            'yogi': 3e-2,
+        },
+    }
     ae_opt_dict = {
         'sgd': partial(SGD,
-                       # 1e-3 for mnist, 1e-1 for euromds
-                       lr=1e-1 if lr is None else lr,
+                       lr=lr_dataset_dict[dataset]['sgd'] if lr is None else lr,
                        momentum=0.9),
         'adam': partial(Adam,
-                        lr=1e-4 if lr is None else lr),
+                        lr=lr_dataset_dict[dataset]['adam'] if lr is None else lr),
         'yogi': partial(Yogi,
-                        # 3e-2 for mnist, 5e-3 for euromds
-                        lr=5e-3 if lr is None else lr,
+                        lr=lr_dataset_dict[dataset]['yogi'] if lr is None else lr,
                         eps=1e-3,
                         initial_accumulator=1e-6,),
     }

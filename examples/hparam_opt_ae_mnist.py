@@ -123,8 +123,10 @@ def train_ae(
     if torch.cuda.device_count() > 1:
         autoencoder = torch.nn.DataParallel(autoencoder)
     autoencoder.to(device)
-    optimizer = get_ae_opt(config['optimizer'], config['lr'])(
-        autoencoder.parameters())
+    optimizer = get_ae_opt(
+        name=config['optimizer'],
+        dataset='bmnist' if config['binary'] else 'mnist',
+        lr=config['lr'])(autoencoder.parameters())
     scheduler = scheduler(optimizer)
 
     autoencoder.train()
@@ -410,7 +412,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=30, max_num_epochs=500, gpus_per_trial=1):
+def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
 
     device = "cpu"
 
@@ -418,21 +420,17 @@ def main(num_samples=30, max_num_epochs=500, gpus_per_trial=1):
         device = "cuda:0"
 
     config = {
-        'linears': tune.grid_search(['dec', 'google', 'curves']),
+        'linears': tune.grid_search(['dec', 'google']),
         'f_dim': 10,
-        # tune.grid_search([ReLU(), Sigmoid()]),
-        'activation': ReLU(),
-        # tune.grid_search([ReLU(), Sigmoid()]),
-        'final_activation': ReLU(),
-        # tune.grid_search([0.0, 0.2, 0.4, 0.5]), tune.uniform(0.0, 0.5),
-        'dropout': 0.0,
+        'activation': tune.grid_search([ReLU(), Sigmoid()]),
+        'final_activation': tune.grid_search([ReLU(), Sigmoid()]),
+        'dropout': tune.grid_search([0.0, 0.1, 0.2, 0.4, 0.5]),
         'epochs': max_num_epochs,
         'n_clusters': 10,
         'ae_batch_size': 256,
         'update_interval': 140,
-        # tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
         'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),
-        'lr': tune.loguniform(1e-6, 1),
+        'lr': None,
         # tune.grid_search(['mse', 'bce-wl']),
         'main_loss': 'mse', 
         # tune.grid_search(['none', 'gausk1', 'gausk3']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
@@ -451,12 +449,12 @@ def main(num_samples=30, max_num_epochs=500, gpus_per_trial=1):
         'binary': False,
     }
 
-    # scheduler = ASHAScheduler(
-    #     metric="loss",
-    #     mode="min",
-    #     max_t=max_num_epochs,
-    #     grace_period=1,
-    #     reduction_factor=2)
+    scheduler = ASHAScheduler(
+        metric="ae_loss",
+        mode="min",
+        max_t=max_num_epochs,
+        grace_period=1,
+        reduction_factor=2)
 
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
@@ -489,10 +487,10 @@ def main(num_samples=30, max_num_epochs=500, gpus_per_trial=1):
         num_samples=num_samples,
         keep_checkpoints_num=2 if config['train_dec'] == 'no' else 3,
         checkpoint_at_end=True,
-        # scheduler=scheduler,
+        scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='mnist_arch_opt_lr',
+        name='mnist_arch_opt_acts_do',
         # resume=True,
     )
 
