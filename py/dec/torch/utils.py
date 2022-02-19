@@ -42,9 +42,9 @@ def get_ae_opt(name: str, dataset: str, lr: float = None):
             'yogi': 0.1,
         },
         'bmnist': {
-            'sgd': 1e-3,
-            'adam': 1e-4,
-            'yogi': 3e-2,
+            'sgd': 0.5,
+            'adam': 3e-4,
+            'yogi': 0.1,
         },
     }
     ae_opt_dict = {
