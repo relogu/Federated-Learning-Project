@@ -138,7 +138,7 @@ def get_mod_binary_loss(
         ],
         'bce+dice': [
             torch.nn.MSELoss,
-            DiceBCELoss
+            partial(DiceBCELoss, use_sigmoid=True)
         ],
     }
     return loss_dict[name]

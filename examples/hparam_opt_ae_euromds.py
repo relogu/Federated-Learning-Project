@@ -68,14 +68,13 @@ def train_ae(
     if config['mod_loss'] != 'none':
         loss_fn = get_mod_binary_loss(
             name=config['mod_loss'],
-            # beta=beta,
-            # main_loss=ae_main_loss,
-            # device=device,
         )
         beta = [1.0-config['beta'], config['beta']]
     else:
         loss_fn = [get_main_loss(config['main_loss'])]
         beta = [1.0]
+
+    loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
 
     noising = None
     if config['noising'] > 0:
@@ -89,8 +88,6 @@ def train_ae(
     corruption = None
     if config['corruption'] > 0:
         corruption = config['corruption']
-
-    loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
 
     # set up SDAE
     autoencoder = StackedDenoisingAutoEncoder(
@@ -395,7 +392,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         'linears': 'dec',# tune.grid_search(['dec', 'google']),
         'f_dim': 10,# tune.grid_search([2,3,4,5,6,7,8,9,10]),
         'activation': 'relu', #tune.grid_search(['relu', 'sigmoid']),
-        'final_activation': tune.grid_search(['relu', 'sigmoid']),
+        'final_activation': 'relu',
         # tune.grid_search([0.0, 0.25, 0.5]),# tune.uniform(0.0, 0.5),
         'dropout': 0.0,
         'epochs': max_num_epochs,
