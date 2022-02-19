@@ -96,7 +96,7 @@ def train_ae(
     autoencoder = StackedDenoisingAutoEncoder(
         get_linears(config['linears'], ds_train.n_features, config['f_dim']),
         activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
-        final_activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
+        final_activation=ReLU() if config['final_activation'] == 'relu' else Sigmoid(),
         dropout=config['dropout'],
         is_tied=True,
     )
@@ -272,7 +272,7 @@ def train_ae(
         cluster_centers = torch.tensor(
             # np.array(true_centroids)
             np.array(
-                emp_centroids) if config['use_emp_centroids'] == 'yes' else kmeans.cluster_centers_,
+                emp_centroids) if scaler is not None else kmeans.cluster_centers_,
             dtype=torch.float,
             requires_grad=True,
         )
@@ -392,37 +392,36 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         device = "cuda:0"
 
     config = {
-        'linears': tune.grid_search(['dec', 'google']),
-        'f_dim': tune.grid_search([2,3,4,5,6,7,8,9,10]),
-        'activation': tune.grid_search(['relu', 'sigmoid']),
+        'linears': 'dec',# tune.grid_search(['dec', 'google']),
+        'f_dim': 10,# tune.grid_search([2,3,4,5,6,7,8,9,10]),
+        'activation': 'relu', #tune.grid_search(['relu', 'sigmoid']),
         'final_activation': tune.grid_search(['relu', 'sigmoid']),
         # tune.grid_search([0.0, 0.25, 0.5]),# tune.uniform(0.0, 0.5),
         'dropout': 0.0,
         'epochs': max_num_epochs,
-        'n_clusters': 6,# tune.grid_search([6, 7, 8, 9, 10]),
+        'n_clusters': tune.grid_search([6, 7, 8, 9, 10]),
         'ae_batch_size': 8,
-        'update_interval': 50,  # tune.grid_search([20, 50, 100]),#,# 256,
+        'update_interval': tune.grid_search([20, 40, 80, 160]),
         'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),
         'lr': None,
         'main_loss': 'mse',  # tune.grid_search(['mse', 'bce-wl']),
         # tune.grid_search(['mix', 'gausk1', 'gausk3']),
-        'mod_loss': 'none', # tune.grid_search(['bce+dice', 'none']),
-        'beta': 0.0,  # tune.grid_search([0.1, 0.2, 0.3, 0.4]),
+        'mod_loss': 'bce+dice', # tune.grid_search(['bce+dice', 'none']),
+        'beta': tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
         # tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'corruption': 0.0,
         'noising': 0.0,  # tune.grid_search([0.0, 0.1]),
-        'train_dec': 'no',
+        'train_dec': 'yes',
         'alpha': 1,  # tune.grid_search([1, 9]),
-        'scaler': 'none', # tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'use_emp_centroids': 'no', # tune.grid_search(['yes', 'no']),
+        'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
     }
 
-    scheduler = ASHAScheduler(
-        metric="ae_loss",
-        mode="min",
-        max_t=max_num_epochs,
-        grace_period=1,
-        reduction_factor=2)
+    # scheduler = ASHAScheduler(
+    #     metric="ae_loss",
+    #     mode="min",
+    #     max_t=max_num_epochs,
+    #     grace_period=1,
+    #     reduction_factor=2)
 
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
@@ -455,10 +454,10 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         num_samples=num_samples,
         keep_checkpoints_num=2 if config['train_dec'] == 'no' else 3,
         checkpoint_at_end=True,
-        scheduler=scheduler,
+        # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='euromds_arch_opt_acts_fdim',
+        name='euromds_cl_ui_opt_modl_scaler',
         # resume=True,
     )
 
