@@ -342,8 +342,8 @@ def train_ae(
                 with torch.no_grad():
                     if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                         batch, value = batch  # unpack if we have a prediction label
-                        actual.append(value)
-                        data.append(batch)
+                        actual.append(value.cpu())
+                        data.append(batch.cpu())
                     batch = batch.to(device, non_blocking=True)
                     r_batch = autoencoder(batch)
                     f_batch = autoencoder.encoder(batch)
@@ -423,7 +423,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         'linears': 'dec', # tune.grid_search(['dec', 'google']),
         'f_dim': 10,
         'activation': 'relu', # tune.grid_search(['relu', 'sigmoid']),
-        'final_activation': 'sigmoid', # tune.grid_search(['relu', 'sigmoid']),
+        'final_activation': 'relu', # tune.grid_search(['relu', 'sigmoid']),
         'dropout': 0.0, # tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
         'epochs': max_num_epochs,
         'n_clusters': 10,
