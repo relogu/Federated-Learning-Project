@@ -41,17 +41,29 @@ def train_ae(
     # Instantiate DataLoaders
     if config['binary']:
         ds_train = CachedBMNIST(
-            train=True, device=device
+            train=True,
+            device=device,
+            download=False,
+            path='~/Federated-Learning-Project/data/MNIST',
         )  # training dataset
         ds_val = CachedBMNIST(
-            train=False, device=device
+            train=False,
+            device=device,
+            download=False,
+            path='~/Federated-Learning-Project/data/MNIST',
         )  # evaluation dataset
     else:
         ds_train = CachedMNIST(
-            train=True, device=device
+            train=True,
+            device=device,
+            download=False,
+            path='~/Federated-Learning-Project/data/MNIST',
         )  # training dataset
         ds_val = CachedMNIST(
-            train=False, device=device
+            train=False,
+            device=device,
+            download=False,
+            path='~/Federated-Learning-Project/data/MNIST',
         )  # evaluation dataset
     dataloader = DataLoader(
         ds_train,
