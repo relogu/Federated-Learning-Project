@@ -115,8 +115,8 @@ def train_ae(
     # set up SDAE
     autoencoder = StackedDenoisingAutoEncoder(
         get_linears(config['linears'], 784, config['f_dim']),
-        activation=config['activation'],
-        final_activation=config['final_activation'],
+        activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
+        final_activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
         dropout=config['dropout'],
         is_tied=True,
     )
@@ -422,9 +422,9 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
     config = {
         'linears': tune.grid_search(['dec', 'google']),
         'f_dim': 10,
-        'activation': tune.grid_search([ReLU(), Sigmoid()]),
-        'final_activation': tune.grid_search([ReLU(), Sigmoid()]),
-        'dropout': tune.grid_search([0.0, 0.1, 0.2, 0.4, 0.5]),
+        'activation': tune.grid_search(['relu', 'sigmoid']),
+        'final_activation': tune.grid_search(['relu', 'sigmoid']),
+        'dropout': tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
         'epochs': max_num_epochs,
         'n_clusters': 10,
         'ae_batch_size': 256,
