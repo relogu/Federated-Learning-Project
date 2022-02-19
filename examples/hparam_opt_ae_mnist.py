@@ -45,26 +45,26 @@ def train_ae(
             train=True,
             device=device,
             download=False,
-            path='~/Federated-Learning-Project/data/MNIST',
+            path='~/Federated-Learning-Project/data/mnist/MNIST/processed',
         )  # training dataset
         ds_val = CachedBMNIST(
             train=False,
             device=device,
             download=False,
-            path='~/Federated-Learning-Project/data/MNIST',
+            path='~/Federated-Learning-Project/data/mnist/MNIST/processed',
         )  # evaluation dataset
     else:
         ds_train = CachedMNIST(
             train=True,
             device=device,
             download=False,
-            path='~/Federated-Learning-Project/data/MNIST',
+            path='~/Federated-Learning-Project/data/mnist/MNIST/processed',
         )  # training dataset
         ds_val = CachedMNIST(
             train=False,
             device=device,
             download=False,
-            path='~/Federated-Learning-Project/data/MNIST',
+            path='~/Federated-Learning-Project/data/mnist/MNIST/processed',
         )  # evaluation dataset
     dataloader = DataLoader(
         ds_train,
