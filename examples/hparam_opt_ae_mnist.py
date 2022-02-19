@@ -445,15 +445,15 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         'alpha': tune.grid_search([1, 9]),
         # tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'binary': False,
+        'binary': True,
     }
 
-    scheduler = ASHAScheduler(
-        metric="accuracy",
-        mode="max",
-        max_t=max_num_epochs,
-        grace_period=10,
-        reduction_factor=2)
+    # scheduler = ASHAScheduler(
+    #     metric="accuracy",
+    #     mode="max",
+    #     max_t=max_num_epochs,
+    #     grace_period=10,
+    #     reduction_factor=2)
 
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
@@ -486,10 +486,10 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         num_samples=num_samples,
         keep_checkpoints_num=2 if config['train_dec'] == 'no' else 3,
         checkpoint_at_end=True,
-        scheduler=scheduler,
+        # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='mnist_opt_modl_alpha_scaler',
+        name='bmnist_opt_modl_alpha_scaler',
         # resume=True,
     )
 
