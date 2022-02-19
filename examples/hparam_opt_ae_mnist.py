@@ -397,7 +397,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
+def main(num_samples=30, max_num_epochs=500, gpus_per_trial=1):
 
     device = "cpu"
 
@@ -405,33 +405,36 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
         device = "cuda:0"
 
     config = {
-        'linears': 'dec',  # tune.grid_search(['dec', 'google', 'curves']),
-        # tune.choice([6,9,10,20,30]),# tune.randint(2, 30),# 10,# tune.grid_search([9,10,11,12,13]),# tune.grid_search([10, 30]),
+        'linears': tune.grid_search(['dec', 'google', 'curves']),
         'f_dim': 10,
-        'activation': ReLU(),  # tune.grid_search([ReLU(), Sigmoid()]),
         # tune.grid_search([ReLU(), Sigmoid()]),
-        'final_activation': Sigmoid(),
-        # tune.grid_search([0.0, 0.2, 0.4, 0.5]),
-        'dropout': tune.uniform(0.0, 0.5),
+        'activation': ReLU(),
+        # tune.grid_search([ReLU(), Sigmoid()]),
+        'final_activation': ReLU(),
+        # tune.grid_search([0.0, 0.2, 0.4, 0.5]), tune.uniform(0.0, 0.5),
+        'dropout': 0.0,
         'epochs': max_num_epochs,
         'n_clusters': 10,
         'ae_batch_size': 256,
         'update_interval': 140,
         # tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
-        'optimizer': 'yogi',
-        'lr': tune.loguniform(1e-5, 1e-1),
-        'main_loss': 'mse',  # tune.grid_search(['mse', 'bce-wl']),
+        'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),
+        'lr': tune.loguniform(1e-6, 1),
+        # tune.grid_search(['mse', 'bce-wl']),
+        'main_loss': 'mse', 
         # tune.grid_search(['none', 'gausk1', 'gausk3']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
         'mod_loss': 'none',
-        'beta': 0.0,  # tune.grid_search([0.1, 0.2]),
+        # tune.grid_search([0.1, 0.2]),
+        'beta': 0.0,
         # tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
-        'corruption': tune.uniform(0.0, 0.5),
-        'noising': 0.0,  # tune.grid_search([0.0, 0.1]),
-        'train_dec': 'yes',
-        'alpha': 9,  # tune.grid_search([1, 9]),
+        'corruption': 0.0,
+        # tune.grid_search([0.0, 0.1]),
+        'noising': 0.0, 
+        'train_dec': 'no',
+        'alpha': 1,  # tune.grid_search([1, 9]),
         # tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'scaler': 'normal-l2',
-        'use_emp_centroids': 'yes',  # tune.grid_search(['yes', 'no']),
+        'scaler': 'none',
+        'use_emp_centroids': 'no',  # tune.grid_search(['yes', 'no']),
         'binary': False,
     }
 
