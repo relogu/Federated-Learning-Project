@@ -24,7 +24,7 @@ from py.datasets.bmnist import CachedBMNIST
 from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
 def train_ae(
     config: Dict,
@@ -116,7 +116,7 @@ def train_ae(
     autoencoder = StackedDenoisingAutoEncoder(
         get_linears(config['linears'], 784, config['f_dim']),
         activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
-        final_activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
+        final_activation=ReLU() if config['final_activation'] == 'relu' else Sigmoid(),
         dropout=config['dropout'],
         is_tied=True,
     )
@@ -300,7 +300,7 @@ def train_ae(
         cluster_centers = torch.tensor(
             # np.array(true_centroids)
             np.array(
-                emp_centroids) if config['use_emp_centroids'] == 'yes' else kmeans.cluster_centers_,
+                emp_centroids) if scaler is not None else kmeans.cluster_centers_,
             dtype=torch.float,
             requires_grad=True,
         )
@@ -412,7 +412,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
+def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
 
     device = "cpu"
 
@@ -420,40 +420,39 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
         device = "cuda:0"
 
     config = {
-        'linears': tune.grid_search(['dec', 'google']),
+        'linears': 'dec', # tune.grid_search(['dec', 'google']),
         'f_dim': 10,
-        'activation': tune.grid_search(['relu', 'sigmoid']),
-        'final_activation': tune.grid_search(['relu', 'sigmoid']),
-        'dropout': tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
+        'activation': 'relu', # tune.grid_search(['relu', 'sigmoid']),
+        'final_activation': 'sigmoid', # tune.grid_search(['relu', 'sigmoid']),
+        'dropout': 0.0, # tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
         'epochs': max_num_epochs,
         'n_clusters': 10,
         'ae_batch_size': 256,
-        'update_interval': 140,
+        'update_interval': 160,
         'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),
         'lr': None,
         # tune.grid_search(['mse', 'bce-wl']),
         'main_loss': 'mse', 
         # tune.grid_search(['none', 'gausk1', 'gausk3']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
-        'mod_loss': 'none',
+        'mod_loss': 'bce+dice',
         # tune.grid_search([0.1, 0.2]),
-        'beta': 0.0,
+        'beta': tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
         # tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'corruption': 0.0,
         # tune.grid_search([0.0, 0.1]),
         'noising': 0.0, 
-        'train_dec': 'no',
-        'alpha': 1,  # tune.grid_search([1, 9]),
+        'train_dec': 'yes',
+        'alpha': tune.grid_search([1, 9]),
         # tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'scaler': 'none',
-        'use_emp_centroids': 'no',  # tune.grid_search(['yes', 'no']),
+        'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'binary': False,
     }
 
     scheduler = ASHAScheduler(
-        metric="ae_loss",
-        mode="min",
+        metric="accuracy",
+        mode="max",
         max_t=max_num_epochs,
-        grace_period=1,
+        grace_period=10,
         reduction_factor=2)
 
     reporter = CLIReporter(
@@ -490,7 +489,7 @@ def main(num_samples=1, max_num_epochs=500, gpus_per_trial=1):
         scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='mnist_arch_opt_acts_do',
+        name='mnist_opt_modl_alpha_scaler',
         # resume=True,
     )
 
