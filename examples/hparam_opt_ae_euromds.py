@@ -24,7 +24,7 @@ from py.datasets.euromds import CachedEUROMDS
 from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "5,6"
 
 
 def train_ae(
@@ -382,7 +382,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
+def main(num_samples=13, max_num_epochs=150, gpus_per_trial=0.5):
 
     device = "cpu"
 
@@ -390,34 +390,34 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         device = "cuda:0"
 
     config = {
-        # tune.grid_search(['dec', 'google']),# , 'curves']),
-        'linears': 'dec',
+        # tune.grid_search(['dec', 'google', 'curves']),
+        'linears': tune.grid_search(['dec', 'google', 'curves']),
         # tune.grid_search([2,3,4,5,6,7,8,9,10,11,12,13,14]),# tune.choice([6,9,10,20,30]),# tune.randint(2, 30),# 10,# tune.grid_search([9,10,11,12,13]),# tune.grid_search([10, 30]),
-        'f_dim': tune.grid_search([9, 10]),
+        'f_dim': 6,
         'activation': ReLU(),  # tune.grid_search([ReLU(), Sigmoid()]),
         # tune.grid_search([ReLU(), Sigmoid()]),
         'final_activation': Sigmoid(),
         # tune.grid_search([0.0, 0.25, 0.5]),# tune.uniform(0.0, 0.5),
         'dropout': 0.0,
         'epochs': max_num_epochs,
-        'n_clusters': tune.grid_search([6, 7, 8, 9, 10]),
-        'ae_batch_size': 8,  # tune.grid_search([8,16,32]),# 256,
+        'n_clusters': 6,# tune.grid_search([6, 7, 8, 9, 10]),
+        'ae_batch_size': tune.grid_search([8,16,32,64]),# 256,
         'update_interval': 50,  # tune.grid_search([20, 50, 100]),#,# 256,
-        # tune.grid_search(['adam', 'yogi', 'sgd']),# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
-        'optimizer': 'yogi',
+        # ,# tune.grid_search(['adam', 'yogi']),# tune.grid_search(['adam', 'yogi', 'sgd']),
+        'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),
         # tune.loguniform(1e-6, 1),# tune.grid_search([1e-5, 1e-4, 1e-3, 1e-2, 1e-1]),# tune.loguniform(1e-5, 1e-1),
-        'lr': None,
+        'lr': tune.loguniform(1e-6, 1),
         'main_loss': 'mse',  # tune.grid_search(['mse', 'bce-wl']),
         # tune.grid_search(['mix', 'gausk1', 'gausk3']),
-        'mod_loss': tune.grid_search(['bce+dice', 'none']),
-        'beta': 0.4,  # tune.grid_search([0.1, 0.2, 0.3, 0.4]),
+        'mod_loss': 'none', # tune.grid_search(['bce+dice', 'none']),
+        'beta': 0.0,  # tune.grid_search([0.1, 0.2, 0.3, 0.4]),
         # tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'corruption': 0.0,
         'noising': 0.0,  # tune.grid_search([0.0, 0.1]),
         'train_dec': 'yes',
         'alpha': 1,  # tune.grid_search([1, 9]),
-        'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'use_emp_centroids': tune.grid_search(['yes', 'no']),
+        'scaler': 'none', # tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
+        'use_emp_centroids': 'no', # tune.grid_search(['yes', 'no']),
     }
 
     # scheduler = ASHAScheduler(
@@ -461,7 +461,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='euromds_ae_mod_loss_scaler',
+        name='euromds_arch_opt_lr_batch',
         # resume=True,
     )
 
