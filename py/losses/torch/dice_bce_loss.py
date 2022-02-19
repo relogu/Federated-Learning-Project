@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -19,7 +20,7 @@ class DiceBCELoss(nn.Module):
         ):
         
         if self.use_sigmoid:
-            inputs = F.sigmoid(inputs)       
+            inputs = torch.sigmoid(inputs)       
         
         # flatten label and prediction tensors
         inputs = inputs.view(-1)
