@@ -259,7 +259,7 @@ def train_ae(
             ds_train,
             # change for including update interval procedure
             batch_size=int(config['ae_batch_size']*config['update_interval']),
-            shuffle=True,
+            shuffle=False,
         )
         model = DEC(cluster_number=10,
                     hidden_dimension=config['f_dim'],
