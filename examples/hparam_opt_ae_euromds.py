@@ -228,7 +228,7 @@ def train_ae(
             ds_train,
             # change for including update interval procedure
             batch_size=int(config['ae_batch_size']*config['update_interval']),
-            shuffle=True,
+            shuffle=False,
         )
         model = DEC(cluster_number=config['n_clusters'],
                     hidden_dimension=config['f_dim'],
@@ -410,7 +410,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         'noising': 0.0,  # tune.grid_search([0.0, 0.1]),
         'train_dec': 'yes',
         'alpha': 1,  # tune.grid_search([1, 9]),
-        'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
+        'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
     }
 
     # scheduler = ASHAScheduler(
@@ -454,7 +454,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='euromds_cl_ui_opt_modl_scaler',
+        name='euromds_cl_ui_opt_modl',
         # resume=True,
     )
 
