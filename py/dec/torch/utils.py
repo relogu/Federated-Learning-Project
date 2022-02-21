@@ -37,14 +37,14 @@ def get_ae_opt(name: str, dataset: str, lr: float = None):
             'yogi': 3.5e-2,
         },
         'mnist': {
-            'sgd': 0.5,
-            'adam': 3.5e-4,
-            'yogi': 0.1,
+            'sgd': 0.47,
+            'adam': 0.00035,
+            'yogi': 0.037,
         },
         'bmnist': {
-            'sgd': 0.5,
-            'adam': 3e-4,
-            'yogi': 0.1,
+            'sgd': 0.72,
+            'adam': 0.00015,
+            'yogi': 0.024,
         },
     }
     ae_opt_dict = {
