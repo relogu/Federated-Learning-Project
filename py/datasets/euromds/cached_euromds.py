@@ -22,14 +22,16 @@ class CachedEUROMDS(Dataset):
                  get_ids: bool = False,
                  verbose: bool = False,
                  device: str = 'cpu'):
-        self.ds = np.array(get_euromds_dataset(
+        self.ds = get_euromds_dataset(
             path_to_data=path_to_data,
             groups=groups,
             exclude_cols=exclude_cols,
             accept_nan=fill_nans,
             fill_fn=fillcolumn_prob,
-            verbose=verbose)).astype(np.float32)
+            verbose=verbose)
         self.n_features = self.ds.shape[1]
+        self.columns_names = self.ds.columns
+        self.ds = np.array(self.ds).astype(np.float32)
 
         self.hdp = np.array(get_euromds_dataset(
             path_to_data=path_to_data, groups=['HDP'])) if get_hdp else None
