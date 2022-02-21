@@ -26,7 +26,7 @@ def dec_train_callback(
     actual = []
     model.eval()
     autoencoder.eval()
-    dataloader = DataLoader(dataset, batch_size=config['ae_batch_size'], shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=config['ae_batch_size'], shuffle=False)
     for i, batch in enumerate(dataloader):
         with torch.no_grad():
             if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
