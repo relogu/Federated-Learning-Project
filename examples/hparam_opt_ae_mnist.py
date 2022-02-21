@@ -24,7 +24,7 @@ from py.datasets.bmnist import CachedBMNIST
 from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def train_ae(
     config: Dict,
@@ -429,7 +429,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         'n_clusters': 10,
         'ae_batch_size': 256,
         'update_interval': 160,
-        'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),
+        'optimizer': 'adam', # tune.grid_search(['adam', 'yogi', 'sgd']),
         'lr': tune.loguniform(1e-6, 1),
         # tune.grid_search(['mse', 'bce-wl']),
         'main_loss': 'mse', 
@@ -489,7 +489,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='mnist_opt_lr',
+        name='mnist_adam_lr',
         # resume=True,
     )
 
