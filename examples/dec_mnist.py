@@ -1,7 +1,7 @@
 import os
 import pathlib
-import click
 import numpy as np
+import json
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
@@ -23,135 +23,32 @@ from py.dec.torch.layers import TruncatedGaussianNoise
 from py.dec.torch.utils import cluster_accuracy, get_main_loss, get_mod_loss, get_mod_binary_loss, get_ae_opt, get_linears, target_distribution, get_scaler
 from py.datasets.mnist import CachedMNIST
 from py.datasets.bmnist import CachedBMNIST
-from py.callbacks import ae_train_callback, dec_train_callback, embed_train_callback
+from py.callbacks import ae_training_callback, dec_train_callback, embed_train_callback
 from py.util import compute_centroid_np
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-@click.command()
-@click.option(
-    "--cuda",
-    help="whether to use CUDA (default False).",
-    type=bool,
-    default=False
-)
-@click.option(
-    "--gpu-id",
-    help="id of the GPU to use",
-    type=int,
-    default=0,
-)
-@click.option(
-    "--batch-size",
-    help="training batch size (default 256).",
-    type=int,
-    default=256
-)
-@click.option(
-    "--pretrain-epochs",
-    help="number of pretraining epochs (default 300).",
-    type=int,
-    default=300,
-)
-@click.option(
-    "--finetune-epochs",
-    help="number of finetune epochs (default 500).",
-    type=int,
-    default=500,
-)
-@click.option(
-    "--testing-mode",
-    help="whether to run in testing mode (default False).",
-    type=bool,
-    default=False,
-)
-@click.option(
-    "--out-folder",
-    help="folder for dumping results (default None)",
-    type=str,
-    default=False,
-)
-# customized arguments
-@click.option(
-    "--glw-pretraining",
-    help="whether to use greedy layer-wise pretraining(default True)",
-    type=bool,
-    default=True
-)
-@click.option(
-    "--is-tied",
-    help="whether to use tied weights for the SDAE (default False)",
-    type=bool,
-    default=False
-)
-@click.option(
-    '--ae-main-loss',
-    type=click.Choice(['mse', 'bce', 'bce-wl']),
-    default='mse',
-    help='Main loss function for autoencoder training (default mse)'
-)
-@click.option(
-    '--ae-mod-loss',
-    type=click.Choice(['sobel', 'gausk1', 'gausk3', 'mix', 'mix-gk', 'mix-s-gk1', 'mix-s-gk3']),
-    default=None,
-    help='Modified loss function for autoencoder training (default None)'
-)
-@click.option(
-    "--alpha",
-    help="value for parameter alpha (d-o-f for auxiliary distr., default 1).",
-    type=int,
-    default=1,
-)
-@click.option(
-    "--input-do",
-    help="value for dropout of input in pretraining and finetuning (default 0.2).",
-    type=float,
-    default=0.2,
-)
-@click.option(
-    "--hidden-do",
-    help="value for dropout of hidden linear layers of AE (default 0.5).",
-    type=float,
-    default=0.5,
-)
-@click.option(
-    "--beta",
-    help="value for scaling multiple losses (default 0.5).",
-    type=float,
-    default=0.5,
-)
-@click.option(
-    "--gaus-noise",
-    help="whether to apply gaussian noise in input at pretraining stage (default False)",
-    type=bool,
-    default=False
-)
-@click.option(
-    '--ae-opt',
-    type=click.Choice(['sgd', 'adam', 'yogi']),
-    default='sgd',
-    help='Optimizer for AE training (default sgd)'
-)
-@click.option(
-    "--lr",
-    help="value for learning rate of AE opt (default 0.01).",
-    type=float,
-    default=0.01,
-)
-def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
-         glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta,
-         gaus_noise, ae_opt, lr):
+def main(
+    # cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
+    #      glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta,
+    #      gaus_noise, ae_opt, lr
+         ):
+    out_folder = None
+    is_tied = True
+    testing_mode = False
+    gpu_id = 0
     # get configuration dict
     config = {
         'linears': 'dec',
         'f_dim': 10,
-        'activation': ReLU(),
-        'final_activation': ReLU(),
+        'activation': 'relu',
+        'final_activation': 'relu',
         'dropout': 0.0,
         'epochs': 500,
         'n_clusters': 10,
         'ae_batch_size': 256,
         'update_interval': 160,
-        'optimizer': 'yogi',
+        'optimizer': 'adam',
         'lr': None,
         'main_loss': 'mse',
         'mod_loss': 'none',
@@ -160,8 +57,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         'noising': 0.0,
         'train_dec': 'yes',
         'alpha': 9,
-        'scaler': 'standard',
-        'use_emp_centroids': 'yes',
+        'scaler': 'none',
         'binary': False,
     }
 
@@ -172,8 +68,11 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         path_to_out = pathlib.Path(out_folder)
     os.makedirs(path_to_out, exist_ok=True)
     print('Output folder {}'.format(path_to_out))
+    # dumping current configuration
+    with open(path_to_out/'config.json', 'w') as file:
+        json.dump(config, file)
     writer = SummaryWriter(
-        logdir=str('runs/'+str(path_to_out)),
+        logdir=str(str(path_to_out)+'/runs/'),
         flush_secs=5)  # create the TensorBoard object
     # set device for PyTorch
     device = "cpu"
@@ -216,19 +115,20 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         corruption = config['corruption']
     # set up SDAE
     autoencoder = StackedDenoisingAutoEncoder(
-        get_linears(config['linears'], ds_train.n_features, config['f_dim']),
-        activation=config['activation'],
-        final_activation=config['final_activation'],
+        get_linears(config['linears'], 784, config['f_dim']),
+        activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
+        final_activation=ReLU() if config['final_activation'] == 'relu' else Sigmoid(),
         dropout=config['dropout'],
         is_tied=is_tied,
     )
-    # set learning rate scheduler
-    scheduler = lambda x: ReduceLROnPlateau(
-        x,
-        mode='min',
-        factor=0.5,
-        patience=20,
-    )
+    # # set learning rate scheduler
+    # scheduler = lambda x: ReduceLROnPlateau(
+    #     x,
+    #     mode='min',
+    #     factor=0.5,
+    #     patience=20,
+    # )
+    scheduler = None
     # get datasets
     if config['binary']:
         ds_train = CachedBMNIST(
@@ -262,8 +162,12 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     else:
         print("Pretraining stage.")
         autoencoder.to(device)
-        optimizer = get_ae_opt(config['optimizer'], config['lr'])(autoencoder.parameters())
-        scheduler = scheduler(optimizer)
+        optimizer = get_ae_opt(
+            name=config['optimizer'],
+            dataset='bmnist' if config['binary'] else 'mnist',
+            lr=config['lr'])(autoencoder.parameters())
+        if scheduler is not None:
+            scheduler = scheduler(optimizer)
         autoencoder.train()
         val_loss = -1
         for epoch in range(config['epochs']):
@@ -296,9 +200,9 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 loss.backward()
                 optimizer.step(closure=None)
                 # print statistics
-                running_loss += loss.item()
-                print("[%d, %5d] loss: %.3f" % \
-                    (epoch+1, i+1, running_loss / (i+1)))
+                # running_loss += loss.item()
+                # print("[%d, %5d] loss: %.3f" % \
+                #     (epoch+1, i+1, running_loss / (i+1)))
             running_loss = running_loss / (i+1)
                     
             val_loss = 0.0
@@ -314,7 +218,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                     loss = criterion(validation_output, val_batch)
                     val_loss += loss.cpu().numpy()
             
-            val_loss = ae_train_callback(
+            val_loss = ae_training_callback(
                 writer,
                 'pretraining',
                 epoch,
@@ -343,8 +247,12 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
         print("Finetuning stage.")
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
         autoencoder.to(device)
-        optimizer = get_ae_opt(config['optimizer'], config['lr'])(autoencoder.parameters())
-        scheduler = scheduler(optimizer)
+        optimizer = get_ae_opt(
+            name=config['optimizer'],
+            dataset='bmnist' if config['binary'] else 'mnist',
+            lr=config['lr'])(autoencoder.parameters())
+        if scheduler is not None:
+            scheduler = scheduler(optimizer)
         autoencoder.train()
         val_loss = -1
         for epoch in range(config['epochs']):
@@ -378,7 +286,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                     (epoch+1, i+1, running_loss / (i+1)))
             running_loss = running_loss / (i+1)
             
-            val_loss = ae_train_callback(
+            val_loss = ae_training_callback(
                 writer,
                 'pretraining',
                 epoch,
@@ -403,7 +311,12 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
     
     if config['train_dec'] == 'yes':
         print("DEC stage.")
-        autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
+        dataloader = DataLoader(
+            ds_train,
+            batch_size=config['ae_batch_size'],# *config['update_interval'],
+            shuffle=False,
+        )
+        # autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
         autoencoder = autoencoder.to(device)
         model = DEC(cluster_number=config['n_clusters'],
                     hidden_dimension=config['f_dim'],
@@ -436,7 +349,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             emp_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
 
         cluster_centers = torch.tensor(
-            np.array(emp_centroids) if config['use_emp_centroids'] == 'yes' else kmeans.cluster_centers_,# np.array(true_centroids)
+            np.array(emp_centroids) if scaler is not None else kmeans.cluster_centers_,
             dtype=torch.float,
             requires_grad=True,
         )
@@ -464,7 +377,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
             predicted_previous = dec_train_callback(
                 writer,
                 config,
-                ds_val,
+                ds_train,
                 model,
                 autoencoder,
                 device,
@@ -480,7 +393,7 @@ def main(cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mod
                 config,
                 'clustering',
                 (epoch+1),
-                ds_val,
+                ds_train,
                 autoencoder)
         writer.close()
 
