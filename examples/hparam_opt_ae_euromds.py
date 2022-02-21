@@ -24,7 +24,7 @@ from py.datasets.euromds import CachedEUROMDS
 from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "6,7"
 
 
 def train_ae(
@@ -111,8 +111,8 @@ def train_ae(
     for epoch in range(config['epochs']):
         running_loss = 0.0
         epoch_steps = 0
-        if scheduler is not None:
-            scheduler.step(last_loss)
+        # if scheduler is not None:
+        #     scheduler.step(last_loss)
 
         for i, batch in enumerate(dataloader):
             if (
@@ -405,7 +405,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
         # tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'corruption': 0.0,
         'noising': 0.0,  # tune.grid_search([0.0, 0.1]),
-        'train_dec': 'yes',
+        'train_dec': 'no',
         'alpha': 1,  # tune.grid_search([1, 9]),
         'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
     }
@@ -451,7 +451,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
         # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='euromds_opt_arch',
+        name='euromds_opt_arch_nosched',
         # resume=True,
     )
 
