@@ -164,7 +164,7 @@ def get_f_indices(
             'client_id must be in the range [0, (n_clients-1)], was given {} with n_clients {}'.
             format(client_id, n_clients))
     if balance < 0:
-        r = uniform.rvs(balance, size=n_samples, random_state=seed)
+        r = uniform.rvs(size=n_samples, random_state=seed)
         if verbose:
             print('Getting ids from uniform distribution')
     else:
