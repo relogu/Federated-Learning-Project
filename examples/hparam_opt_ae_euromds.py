@@ -24,7 +24,7 @@ from py.datasets.euromds import CachedEUROMDS
 from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "5,6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
 
 def train_ae(
@@ -243,10 +243,9 @@ def train_ae(
         kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
         features = []
         actual = []
-        # form initial cluster centres
         for batch in dataloader:
             if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-                batch, value = batch  # if we have a prediction label, separate it to actual
+                batch, value = batch
                 actual.append(value)
             batch = batch.to(device, non_blocking=True)
             features.append(model.encoder(batch).detach().cpu())
@@ -267,7 +266,6 @@ def train_ae(
                 torch.cat(features).numpy()[idx, :]))
 
         cluster_centers = torch.tensor(
-            # np.array(true_centroids)
             np.array(
                 emp_centroids) if scaler is not None else kmeans.cluster_centers_,
             dtype=torch.float,
@@ -275,7 +273,6 @@ def train_ae(
         )
         cluster_centers = cluster_centers.to(device, non_blocking=True)
         with torch.no_grad():
-            # initialise the cluster centers
             model.state_dict()["assignment.cluster_centers"].copy_(
                 cluster_centers)
 
@@ -381,7 +378,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
+def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
 
     device = "cpu"
 
@@ -389,22 +386,22 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         device = "cuda:0"
 
     config = {
-        'linears': 'dec',# tune.grid_search(['dec', 'google']),
+        'linears': tune.grid_search(['dec', 'google', 'curves']),
         'f_dim': 10,# tune.grid_search([2,3,4,5,6,7,8,9,10]),
         'activation': 'relu', #tune.grid_search(['relu', 'sigmoid']),
         'final_activation': 'relu',
         # tune.grid_search([0.0, 0.25, 0.5]),# tune.uniform(0.0, 0.5),
         'dropout': 0.0,
         'epochs': max_num_epochs,
-        'n_clusters': tune.grid_search([6, 7, 8, 9, 10]),
+        'n_clusters': 6,# tune.grid_search([6, 7, 8, 9, 10]),
         'ae_batch_size': 8,
-        'update_interval': tune.grid_search([20, 40, 80, 160]),
+        'update_interval': 20,# tune.grid_search([20, 40, 80, 160]),
         'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),
-        'lr': None,
+        'lr': tune.loguniform(1e-6, 1.0),
         'main_loss': 'mse',  # tune.grid_search(['mse', 'bce-wl']),
         # tune.grid_search(['mix', 'gausk1', 'gausk3']),
-        'mod_loss': 'bce+dice', # tune.grid_search(['bce+dice', 'none']),
-        'beta': tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
+        'mod_loss': 'none', # 'bce+dice', # tune.grid_search(['bce+dice', 'none']),
+        'beta': 0.0,# tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
         # tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'corruption': 0.0,
         'noising': 0.0,  # tune.grid_search([0.0, 0.1]),
@@ -454,7 +451,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='euromds_cl_ui_opt_modl',
+        name='euromds_opt_arch',
         # resume=True,
     )
 
