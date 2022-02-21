@@ -73,7 +73,8 @@ def default_initialise_weight_bias_(
     :param gain: gain for use in initialiser
     :return: None
     """
-    nn.init.xavier_uniform_(weight, gain)
+    # nn.init.xavier_uniform_(weight, gain)
+    nn.init.kaiming_uniform_(tensor=weight, nonlinearity='relu')
     nn.init.constant_(bias, 0)
 
 

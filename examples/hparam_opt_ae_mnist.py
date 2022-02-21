@@ -412,7 +412,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
+def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
 
     device = "cpu"
 
@@ -430,30 +430,30 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         'ae_batch_size': 256,
         'update_interval': 160,
         'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),
-        'lr': None,
+        'lr': tune.loguniform(1e-6, 1),
         # tune.grid_search(['mse', 'bce-wl']),
         'main_loss': 'mse', 
         # tune.grid_search(['none', 'gausk1', 'gausk3']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
-        'mod_loss': 'bce+dice',
+        'mod_loss': 'none', # bce+dice',
         # tune.grid_search([0.1, 0.2]),
-        'beta': tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
+        'beta': 0.0,# tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
         # tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'corruption': 0.0,
         # tune.grid_search([0.0, 0.1]),
         'noising': 0.0, 
-        'train_dec': 'yes',
-        'alpha': tune.grid_search([1, 9]),
+        'train_dec': 'no',
+        'alpha': 1,# tune.grid_search([1, 9]),
         # tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'binary': True,
+        'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
+        'binary': False,
     }
 
-    # scheduler = ASHAScheduler(
-    #     metric="accuracy",
-    #     mode="max",
-    #     max_t=max_num_epochs,
-    #     grace_period=10,
-    #     reduction_factor=2)
+    scheduler = ASHAScheduler(
+        metric="ae_loss",
+        mode="max",
+        max_t=max_num_epochs,
+        grace_period=10,
+        reduction_factor=2)
 
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
@@ -486,10 +486,10 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=1):
         num_samples=num_samples,
         keep_checkpoints_num=2 if config['train_dec'] == 'no' else 3,
         checkpoint_at_end=True,
-        # scheduler=scheduler,
+        scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='bmnist_opt_modl_alpha_scaler',
+        name='mnist_opt_lr',
         # resume=True,
     )
 
