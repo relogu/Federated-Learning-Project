@@ -350,7 +350,7 @@ def train_ae(
             model.state_dict()["assignment.cluster_centers"].copy_(
                 cluster_centers)
 
-        loss_function = KLDivLoss(size_average=False)
+        loss_function = KLDivLoss(reduction='sum')
         delta_label = None
         for epoch in range(20):
             training_iter+=1
@@ -545,7 +545,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         # search_alg=bayesopt,
         progress_reporter=reporter,
         name='mnist_dec_adam_lr',
-        # resume=True,
+        resume=True,
     )
 
     if config['input_weights'] is None:
