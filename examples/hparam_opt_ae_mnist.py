@@ -1,6 +1,8 @@
 from functools import partial
 import os
+from pathlib import Path
 from typing import Any, Dict
+from matplotlib.cbook import report_memory
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -25,6 +27,7 @@ from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_loss, get_mod_
 from py.util import compute_centroid_np
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3,6,7"
+os.environ["TUNE_DISABLE_STRICT_METRIC_CHECKING"] = 1
 
 def train_ae(
     config: Dict,
@@ -39,6 +42,7 @@ def train_ae(
     :param device: TODO
     :return: None
     """
+    training_iter = 0
     # Instantiate DataLoaders
     if config['binary']:
         ds_train = CachedBMNIST(
@@ -66,73 +70,74 @@ def train_ae(
             download=False,
             path='~/Federated-Learning-Project/data/mnist/',
         )  # evaluation dataset
-    dataloader = DataLoader(
-        ds_train,
-        batch_size=config['ae_batch_size'],
-        shuffle=False,
-    )
-    validation_loader = DataLoader(
-        ds_val,
-        batch_size=config['ae_batch_size'],
-        shuffle=False,
-    )
-    # SDAE Training Loop
-    # set up loss(es) used in training the SDAE
-    if config['binary']:
-        if config['mod_loss'] != 'none':
-            loss_fn = get_mod_binary_loss(
-                name=config['mod_loss'],
-                )
-            beta = [1.0-config['beta'], config['beta']]
-        else:
-            loss_fn = [get_main_loss(config['main_loss'])]
-            beta = [1.0]
-    else:
-        if config['mod_loss'] != 'none':
-            loss_fn = get_mod_loss(
-                name=config['mod_loss'],
-                beta=config['beta'],
-                main_loss=config['main_loss'],
-                device=device,
-                )
-        else:
-            loss_fn = [get_main_loss(config['main_loss'])]
-    loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
-
-    noising = None
-    if config['noising'] > 0:
-        noising = TruncatedGaussianNoise(
-            shape=784,
-            stddev=config['noising'],
-            rate=1.0,
-            device=device,
-        )
-
-    corruption = None
-    if config['corruption'] > 0:
-        corruption = config['corruption']
-
-    # set up SDAE
-    autoencoder = StackedDenoisingAutoEncoder(
-        get_linears(config['linears'], 784, config['f_dim']),
-        activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
-        final_activation=ReLU() if config['final_activation'] == 'relu' else Sigmoid(),
-        dropout=config['dropout'],
-        is_tied=True,
-    )
-    if torch.cuda.device_count() > 1:
-        autoencoder = torch.nn.DataParallel(autoencoder)
-    autoencoder.to(device)
-    optimizer = get_ae_opt(
-        name=config['optimizer'],
-        dataset='bmnist' if config['binary'] else 'mnist',
-        lr=config['lr'])(autoencoder.parameters())
-    scheduler = scheduler(optimizer)
     
     if config['input_weights'] is None:
+        dataloader = DataLoader(
+            ds_train,
+            batch_size=config['ae_batch_size'],
+            shuffle=False,
+        )
+        validation_loader = DataLoader(
+            ds_val,
+            batch_size=config['ae_batch_size'],
+            shuffle=False,
+        )
+        # SDAE Training Loop
+        # set up loss(es) used in training the SDAE
+        if config['binary']:
+            if config['mod_loss'] != 'none':
+                loss_fn = get_mod_binary_loss(
+                    name=config['mod_loss'],
+                    )
+                beta = [1.0-config['beta'], config['beta']]
+            else:
+                loss_fn = [get_main_loss(config['main_loss'])]
+                beta = [1.0]
+        else:
+            if config['mod_loss'] != 'none':
+                loss_fn = get_mod_loss(
+                    name=config['mod_loss'],
+                    beta=config['beta'],
+                    main_loss=config['main_loss'],
+                    device=device,
+                    )
+            else:
+                loss_fn = [get_main_loss(config['main_loss'])]
+        loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
+
+        noising = None
+        if config['noising'] > 0:
+            noising = TruncatedGaussianNoise(
+                shape=784,
+                stddev=config['noising'],
+                rate=1.0,
+                device=device,
+            )
+
+        corruption = None
+        if config['corruption'] > 0:
+            corruption = config['corruption']
+
+        # set up SDAE
+        autoencoder = StackedDenoisingAutoEncoder(
+            get_linears(config['linears'], 784, config['f_dim']),
+            activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
+            final_activation=ReLU() if config['final_activation'] == 'relu' else Sigmoid(),
+            dropout=config['dropout'],
+            is_tied=True,
+        )
+        if torch.cuda.device_count() > 1:
+            autoencoder = torch.nn.DataParallel(autoencoder)
+        autoencoder.to(device)
+        optimizer = get_ae_opt(
+            name=config['optimizer'],
+            dataset='bmnist' if config['binary'] else 'mnist',
+            lr=config['lr'])(autoencoder.parameters())
+        scheduler = scheduler(optimizer)
         autoencoder.train()
         last_loss = -1
         for epoch in range(config['epochs']):
+            training_iter+=1
             running_loss = 0.0
             epoch_steps = 0
             if scheduler is not None:
@@ -196,6 +201,7 @@ def train_ae(
         # N.B.: corruptions does not need finetuning
         if noising is not None:
             for epoch in range(config['epochs']):
+                training_iter+=1
                 running_loss = 0.0
                 epoch_steps = 0
                 if scheduler is not None:
@@ -256,7 +262,15 @@ def train_ae(
         print("Finished SDAE Training")
     else:
         print('Skipping pretraining since weights are given.')
-        autoencoder.load_state_dict(torch.load(config['input_weights']))
+        # set up SDAE
+        autoencoder = StackedDenoisingAutoEncoder(
+            get_linears(config['linears'], 784, config['f_dim']),
+            activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
+            final_activation=ReLU() if config['final_activation'] == 'relu' else Sigmoid(),
+            dropout=config['dropout'],
+            is_tied=True,
+        )
+        autoencoder.load_state_dict(config['input_weights'])
 
     if config['train_dec'] == 'yes':
         dataloader = DataLoader(
@@ -298,7 +312,21 @@ def train_ae(
         )
         predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
         _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
-        tune.report(accuracy=accuracy)
+        training_iter+=1
+        report_dict = {
+            'training_iteration': training_iter,
+            'accuracy': accuracy,
+            'cycle_accuracy': 0.0,
+            'cl_recon': 0.0,
+            'delta_label': 0.0,
+            'cos_sil_score': 0.0,
+            'eucl_sil_score': 0.0,
+            'data_calinski_harabasz': 0.0,
+            'feat_calinski_harabasz': 0.0,
+        }
+        if config['input_weights'] is None:
+            report_dict['ae_loss'] = last_loss
+        tune.report(**report_dict)
 
         emp_centroids = []
         for i in np.unique(predicted):
@@ -322,6 +350,7 @@ def train_ae(
         loss_function = KLDivLoss(size_average=False)
         delta_label = None
         for epoch in range(20):
+            training_iter+=1
             model.train()
             for batch in dataloader:
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
@@ -398,18 +427,20 @@ def train_ae(
             _, accuracy = cluster_accuracy(predicted.numpy(), actual.numpy())
             _, cycle_accuracy = cluster_accuracy(
                 r_predicted.numpy(), predicted.numpy())
-
-            tune.report(
-                accuracy=accuracy,
-                cycle_accuracy=cycle_accuracy,
-                cl_recon=cl_recon,
-                delta_label=delta_label,
-                ae_loss=last_loss,
-                cos_sil_score=cos_sil_score,
-                eucl_sil_score=eucl_sil_score,
-                data_calinski_harabasz=data_calinski_harabasz,
-                feat_calinski_harabasz=feat_calinski_harabasz,
-            )
+            report_dict = {
+                'training_iteration': training_iter,
+                'accuracy': accuracy,
+                'cycle_accuracy': cycle_accuracy,
+                'cl_recon': cl_recon,
+                'delta_label': delta_label,
+                'cos_sil_score': cos_sil_score,
+                'eucl_sil_score': eucl_sil_score,
+                'data_calinski_harabasz': data_calinski_harabasz,
+                'feat_calinski_harabasz': feat_calinski_harabasz,
+            }
+            if config['input_weights'] is None:
+                report_dict['ae_loss'] = last_loss
+            tune.report(**report_dict)
             # break loop procedure
             if delta_label <= 0.001:
                 break
@@ -429,7 +460,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         device = "cuda:0"
 
     config = {
-        'input_weights': '~/input_weights/ae_mnist_adam',
+        'input_weights': torch.load('input_weights/pretrain_ae'),
         'linears': 'dec', # tune.grid_search(['dec', 'google']),
         'f_dim': 10,
         'activation': 'relu', # tune.grid_search(['relu', 'sigmoid']),
@@ -452,13 +483,33 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         'corruption': 0.0,
         # tune.grid_search([0.0, 0.1]),
         'noising': 0.0, 
-        'train_dec': 'no',
+        'train_dec': 'yes',
         'dec_batch_size': tune.grid_search([64, 128, 256, 512]),
         'alpha': 1,# tune.grid_search([1, 9]),
         # tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'binary': False,
     }
+    num_checkpoints = 0
+    metric_columns = ['training_iteration']
+    if config['input_weights'] is None:
+        num_checkpoints += 1
+        metric_columns.append('ae_loss')
+    if config['noising'] > 0.0:
+        num_checkpoints += 1
+    if config['train_dec'] == 'yes':
+        num_checkpoints += 1 
+        metric_columns.append([
+            'cl_recon',
+            'accuracy',
+            'cycle_accuracy',
+            'delta_label',
+            'cos_sil_score',
+            'eucl_sil_score',
+            'data_calinski_harabasz',
+            'feat_calinski_harabasz'
+        ])
+
 
     scheduler = ASHAScheduler(
         metric="accuracy",
@@ -469,17 +520,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
 
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
-        metric_columns=[
-            "ae_loss",
-            "cl_recon",
-            "accuracy",
-            "cycle_accuracy",
-            "delta_label",
-            "training_iteration",
-            "cos_sil_score",
-            "eucl_sil_score",
-            "data_calinski_harabasz",
-            "feat_calinski_harabasz"]
+        metric_columns=metric_columns
     )
 
     def lambda_scheduler(x): return ReduceLROnPlateau(
@@ -488,7 +529,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         factor=0.5,
         patience=20,
     )
-
+    
     # bayesopt = BayesOptSearch(metric="loss", mode="min")
 
     result = tune.run(
@@ -498,7 +539,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         resources_per_trial={"cpu": 6, "gpu": gpus_per_trial},
         config=config,
         num_samples=num_samples,
-        keep_checkpoints_num=2 if config['train_dec'] == 'no' else 3,
+        keep_checkpoints_num=num_checkpoints,
         checkpoint_at_end=True,
         scheduler=scheduler,
         # search_alg=bayesopt,
@@ -506,7 +547,6 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         name='mnist_dec_adam_lr',
         # resume=True,
     )
-
 
     if config['input_weights'] is None:
         # best reconstruction loss after weights initialization
