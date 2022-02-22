@@ -50,6 +50,7 @@ def main(
         'update_interval': 160,
         'optimizer': 'adam',
         'lr': None,
+        'lr_scheduler': True,
         'main_loss': 'mse',
         'mod_loss': 'none',
         'beta': 0.0,
@@ -121,14 +122,16 @@ def main(
         dropout=config['dropout'],
         is_tied=is_tied,
     )
-    # # set learning rate scheduler
-    # scheduler = lambda x: ReduceLROnPlateau(
-    #     x,
-    #     mode='min',
-    #     factor=0.5,
-    #     patience=20,
-    # )
-    scheduler = None
+    # set learning rate scheduler
+    if config['lr_scheduler']:
+        scheduler = lambda x: ReduceLROnPlateau(
+            x,
+            mode='min',
+            factor=0.5,
+            patience=20,
+        )
+    else:
+        scheduler = None
     # get datasets
     if config['binary']:
         ds_train = CachedBMNIST(
@@ -281,9 +284,9 @@ def main(
                 loss.backward()
                 optimizer.step(closure=None)
                 # print statistics
-                running_loss += loss.item()
-                print("[%d, %5d] loss: %.3f" % \
-                    (epoch+1, i+1, running_loss / (i+1)))
+                # running_loss += loss.item()
+                # print("[%d, %5d] loss: %.3f" % \
+                #     (epoch+1, i+1, running_loss / (i+1)))
             running_loss = running_loss / (i+1)
             
             val_loss = ae_training_callback(
@@ -316,7 +319,6 @@ def main(
             batch_size=config['ae_batch_size'],# *config['update_interval'],
             shuffle=False,
         )
-        # autoencoder.load_state_dict(torch.load(path_to_out/'finetune_ae'))
         autoencoder = autoencoder.to(device)
         model = DEC(cluster_number=config['n_clusters'],
                     hidden_dimension=config['f_dim'],
@@ -395,7 +397,8 @@ def main(
                 (epoch+1),
                 ds_train,
                 autoencoder)
-        writer.close()
+        torch.save(model.state_dict(), path_to_out/'dec_model')
+    writer.close()
 
 
 if __name__ == "__main__":
