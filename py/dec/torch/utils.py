@@ -33,19 +33,19 @@ def get_ae_opt(name: str, dataset: str, linears: str = 'dec', lr: float = None):
     lr_dataset_dict = {
         'euromds': {
             'dec': {
-                'sgd': 4e-3,
-                'adam': 3.5e-3,
-                'yogi': 3.2e-3,
+                'sgd': 3.6e-3,
+                'adam': 1e-4,
+                'yogi': 9e-4,
                 },
             'curves': {
-                'sgd': 1e-2,
-                'adam': 8.5e-3,
-                'yogi': 9e-3,
+                'sgd': 4.1e-2,
+                'adam': 1.2e-4,
+                'yogi': 1e-3,
                 },
             'google': {
-                'sgd': 4e-3,
-                'adam': 4e-3,
-                'yogi': 4e-3,
+                'sgd': 6.5e-3,
+                'adam': 1.2e-4,
+                'yogi': 7.5e-4,
                 },
         },
         'mnist': {
