@@ -300,10 +300,9 @@ def train_ae(
         kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
         features = []
         actual = []
-        # form initial cluster centres
-        for index, batch in enumerate(dataloader):
+        for batch in dataloader:
             if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-                batch, value = batch  # if we have a prediction label, separate it to actual
+                batch, value = batch
                 actual.append(value)
             batch = batch.to(device, non_blocking=True)
             features.append(model.encoder(batch).detach().cpu())
@@ -338,7 +337,6 @@ def train_ae(
                 torch.cat(features).numpy()[idx, :]))
 
         cluster_centers = torch.tensor(
-            # np.array(true_centroids)
             np.array(
                 emp_centroids) if scaler is not None else kmeans.cluster_centers_,
             dtype=torch.float,
@@ -346,7 +344,6 @@ def train_ae(
         )
         cluster_centers = cluster_centers.to(device, non_blocking=True)
         with torch.no_grad():
-            # initialise the cluster centers
             model.state_dict()["assignment.cluster_centers"].copy_(
                 cluster_centers)
 
@@ -358,7 +355,7 @@ def train_ae(
             for batch in dataloader:
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
                     batch
-                ) == 2:  # if we have a prediction label, strip it away
+                ) == 2:
                     batch, _ = batch
                 batch = batch.to(device, non_blocking=True)
                 output = model(batch)
