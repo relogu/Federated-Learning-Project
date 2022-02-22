@@ -499,19 +499,14 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         num_checkpoints += 1
     if config['train_dec'] == 'yes':
         num_checkpoints += 1 
-        metric_columns.append([
-            'cl_recon',
-            'accuracy',
-            'cycle_accuracy',
-            'delta_label',
-            'cos_sil_score',
-            'eucl_sil_score',
-            'data_calinski_harabasz',
-            'feat_calinski_harabasz'
-        ])
-        
-    print(metric_columns)
-
+        metric_columns.append('cl_recon')
+        metric_columns.append('accuracy')
+        metric_columns.append('cycle_accuracy')
+        metric_columns.append('delta_label')
+        metric_columns.append('cos_sil_score')
+        metric_columns.append('eucl_sil_score')
+        metric_columns.append('data_calinski_harabasz')
+        metric_columns.append('feat_calinski_harabasz')
 
     scheduler = ASHAScheduler(
         metric="accuracy",
