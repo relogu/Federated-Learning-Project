@@ -31,7 +31,7 @@ def dec_model_training_loop(
     model: Module = None, # network
 ):
     model.to(device)
-    loss_function = KLDivLoss(size_average=False)
+    loss_function = KLDivLoss(reduction='sum')
     model.train()
     for _ in range(n_epochs):
         ret_loss = 0.0

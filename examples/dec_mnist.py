@@ -359,7 +359,7 @@ def main(
         with torch.no_grad():
             model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
 
-        loss_function = KLDivLoss(size_average=False)
+        loss_function = KLDivLoss(reduction='sum')
         for epoch in range(20):
             model.train()
             for batch in dataloader:

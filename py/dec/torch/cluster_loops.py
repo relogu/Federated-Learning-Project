@@ -82,7 +82,7 @@ def train(
         collate_fn=collate_fn,
         device=device,
     )
-    loss_function = KLDivLoss(size_average=False)
+    loss_function = KLDivLoss(reduction='sum')
     delta_label = None
     for epoch in range(epochs):
         # predicted_previous, accuracy = assign_cluster_centers(

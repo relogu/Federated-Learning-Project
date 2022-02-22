@@ -276,7 +276,7 @@ def train_ae(
             model.state_dict()["assignment.cluster_centers"].copy_(
                 cluster_centers)
 
-        loss_function = KLDivLoss(size_average=False)
+        loss_function = KLDivLoss(reduction='sum')
         delta_label = None
         for epoch in range(20):
             model.train()
