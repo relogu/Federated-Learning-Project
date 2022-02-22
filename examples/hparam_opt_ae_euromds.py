@@ -106,7 +106,8 @@ def train_ae(
             name=config['optimizer'],
             dataset='euromds',
             lr=config['lr'])(autoencoder.parameters())
-        scheduler = scheduler(optimizer)
+        if scheduler is not None:
+            scheduler = scheduler(optimizer)
 
         autoencoder.train()
         last_loss = -1
@@ -471,12 +472,12 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         metric_columns.append('data_calinski_harabasz')
         metric_columns.append('feat_calinski_harabasz')
 
-    # scheduler = ASHAScheduler(
-    #     metric="ae_loss",
-    #     mode="min",
-    #     max_t=max_num_epochs,
-    #     grace_period=1,
-    #     reduction_factor=2)
+    scheduler = ASHAScheduler(
+        metric="ae_loss",
+        mode="min",
+        max_t=max_num_epochs,
+        grace_period=1,
+        reduction_factor=2)
 
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
@@ -501,7 +502,7 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         num_samples=num_samples,
         keep_checkpoints_num=num_checkpoints,
         checkpoint_at_end=True,
-        # scheduler=scheduler,
+        scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
         # name='euromds_cl_{}_{}'.format(config['linears'], config['optimizer']),

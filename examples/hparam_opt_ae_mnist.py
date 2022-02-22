@@ -133,7 +133,8 @@ def train_ae(
             name=config['optimizer'],
             dataset='bmnist' if config['binary'] else 'mnist',
             lr=config['lr'])(autoencoder.parameters())
-        scheduler = scheduler(optimizer)
+        if scheduler is not None:
+            scheduler = scheduler(optimizer)
         autoencoder.train()
         last_loss = -1
         for epoch in range(config['epochs']):
