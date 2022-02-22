@@ -27,7 +27,7 @@ from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_loss, get_mod_
 from py.util import compute_centroid_np
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "3,6,7"
-os.environ["TUNE_DISABLE_STRICT_METRIC_CHECKING"] = 1
+os.environ["TUNE_DISABLE_STRICT_METRIC_CHECKING"] = "1"
 
 def train_ae(
     config: Dict,
@@ -509,6 +509,8 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
             'data_calinski_harabasz',
             'feat_calinski_harabasz'
         ])
+        
+    print(metric_columns)
 
 
     scheduler = ASHAScheduler(
