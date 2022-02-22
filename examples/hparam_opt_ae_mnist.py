@@ -270,6 +270,9 @@ def train_ae(
             dropout=config['dropout'],
             is_tied=True,
         )
+        if torch.cuda.device_count() > 1:
+            autoencoder = torch.nn.DataParallel(autoencoder)
+        autoencoder.to(device)
         autoencoder.load_state_dict(config['input_weights'])
 
     if config['train_dec'] == 'yes':
