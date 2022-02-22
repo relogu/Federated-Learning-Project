@@ -29,32 +29,48 @@ def get_scaler(name: str):
     }
     return scaler_dict[name]
 
-def get_ae_opt(name: str, dataset: str, lr: float = None):
+def get_ae_opt(name: str, dataset: str, linears: str = 'dec', lr: float = None):
     lr_dataset_dict = {
         'euromds': {
-            'sgd': 5e-2,
-            'adam': 3e-4,
-            'yogi': 3.5e-2,
+            'dec': {
+                'sgd': 4e-3,
+                'adam': 3.5e-3,
+                'yogi': 3.2e-3,
+                },
+            'curves': {
+                'sgd': 1e-2,
+                'adam': 8.5e-3,
+                'yogi': 9e-3,
+                },
+            'google': {
+                'sgd': 4e-3,
+                'adam': 4e-3,
+                'yogi': 4e-3,
+                },
         },
         'mnist': {
-            'sgd': 0.47,
-            'adam': 0.00035,
-            'yogi': 0.037,
+            'dec': {
+                'sgd': 0.47,
+                'adam': 0.00035,
+                'yogi': 0.037,
+            }
         },
         'bmnist': {
-            'sgd': 0.72,
-            'adam': 0.00015,
-            'yogi': 0.024,
+            'dec': {
+                'sgd': 0.72,
+                'adam': 0.00015,
+                'yogi': 0.024,
+            }
         },
     }
     ae_opt_dict = {
         'sgd': partial(SGD,
-                       lr=lr_dataset_dict[dataset]['sgd'] if lr is None else lr,
+                       lr=lr_dataset_dict[dataset][linears]['sgd'] if lr is None else lr,
                        momentum=0.9),
         'adam': partial(Adam,
-                        lr=lr_dataset_dict[dataset]['adam'] if lr is None else lr),
+                        lr=lr_dataset_dict[dataset][linears]['adam'] if lr is None else lr),
         'yogi': partial(Yogi,
-                        lr=lr_dataset_dict[dataset]['yogi'] if lr is None else lr,
+                        lr=lr_dataset_dict[dataset][linears]['yogi'] if lr is None else lr,
                         eps=1e-3,
                         initial_accumulator=1e-6,),
     }
