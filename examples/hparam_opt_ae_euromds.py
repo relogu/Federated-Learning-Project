@@ -24,13 +24,14 @@ from py.datasets.euromds import CachedEUROMDS
 from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "5,6"
 
 
 def train_ae(
     config: Dict,
     scheduler: Any = None,
     device: str = 'cpu',
+    initial_weights: Any = None,
 ) -> None:
     """
     TODO
@@ -244,8 +245,7 @@ def train_ae(
         # if torch.cuda.device_count() > 1:
         #     autoencoder = torch.nn.DataParallel(autoencoder)
         autoencoder.to(device)
-        autoencoder.load_state_dict(torch.load('input_weights/euromds_ae_{}_{}'. \
-        format(config['linears'], config['optimizer'])))
+        autoencoder.load_state_dict(initial_weights)
 
     if config['train_dec'] == 'yes':
         dataloader = DataLoader(
@@ -516,9 +516,13 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0
     # bayesopt = BayesOptSearch(metric="loss", mode="min")
 
     result = tune.run(
-        partial(train_ae,
-                scheduler=lambda_scheduler if config['lr_scheduler'] else None,
-                device=device),
+        tune.with_parameters(
+            partial(train_ae,
+                    scheduler=lambda_scheduler if config['lr_scheduler'] else None,
+                    device=device),
+            initial_weights=torch.load('input_weights/euromds_ae_{}_{}'. \
+        format(config['linears'], config['optimizer']))
+        ),
         resources_per_trial={"cpu": cpus_per_trial, "gpu": gpus_per_trial},
         config=config,
         num_samples=num_samples,
