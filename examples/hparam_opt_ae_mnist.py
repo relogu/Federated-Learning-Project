@@ -288,7 +288,8 @@ def train_ae(
                     hidden_dimension=config['f_dim'],
                     encoder=autoencoder.encoder,
                     alpha=config['alpha'])
-
+        if torch.cuda.device_count() > 1:
+            model = torch.nn.DataParallel(model)
         model = model.to(device)
         # optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
         optimizer = get_ae_opt(
@@ -550,7 +551,7 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=8, gpus_per_trial=0.
         scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='euromds_cl_{}_{}'.format(config['linears'], config['optimizer']),
+        name='mnist_cl_{}_{}'.format(config['linears'], config['optimizer']),
         # name='mnist_dec_adam_lr',
         # resume=True,
     )

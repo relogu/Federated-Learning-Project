@@ -265,7 +265,8 @@ def train_ae(
                     hidden_dimension=config['f_dim'],
                     encoder=autoencoder.encoder,
                     alpha=config['alpha'])
-
+        if torch.cuda.device_count() > 1:
+            model = torch.nn.DataParallel(model)
         model = model.to(device)
         # optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
         optimizer = get_ae_opt(
@@ -328,6 +329,7 @@ def train_ae(
         loss_function = KLDivLoss(reduction='sum')
         delta_label = None
         for epoch in range(20):
+            training_iter+=1
             model.train()
             for batch in dataloader:
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
