@@ -26,7 +26,7 @@ from py.datasets.bmnist import CachedBMNIST
 from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2"
 os.environ["TUNE_DISABLE_STRICT_METRIC_CHECKING"] = "1"
 
 def train_ae(
@@ -460,7 +460,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=50, max_num_epochs=150, cpus_per_trial=8, gpus_per_trial=0.5):
+def main(num_samples=50, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.2):
 
     device = "cpu"
 
@@ -498,8 +498,8 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=8, gpus_per_trial=0.
         'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'binary': False,
     }
-    config['input_weights'] = '../../../Federated-Learning-Project/input_weights/mnist_ae_{}_{}'. \
-        format(config['linears'], config['optimizer'])
+    config['input_weights'] = '../../../Federated-Learning-Project/input_weights/mnist_ae_{}'. \
+        format(config['optimizer'])
     num_checkpoints = 0
     metric_columns = ['training_iteration']
     if config['input_weights'] is None:
@@ -551,7 +551,7 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=8, gpus_per_trial=0.
         scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='mnist_cl_{}_{}'.format(config['linears'], config['optimizer']),
+        name='mnist_cl_{}'.format(config['optimizer']),
         # name='mnist_dec_adam_lr',
         # resume=True,
     )
