@@ -370,8 +370,8 @@ def train_ae(
                     r_prob_labels.append(model(r_batch))
 
             cl_recon = (cl_recon / (i+1))
-            predicted = torch.cat(prob_labels).cpu().max(1)[1].numpy()
-            r_predicted = torch.cat(r_prob_labels).cpu().max(1)[1].numpy()
+            predicted = torch.cat(prob_labels).cpu().max(1)[1]
+            r_predicted = torch.cat(r_prob_labels).cpu().max(1)[1]
             actual = torch.cat(actual).cpu().long()
             data = torch.cat(data).cpu().numpy()
             r_data = torch.cat(r_data).cpu().numpy()
@@ -387,24 +387,24 @@ def train_ae(
             data_calinski_harabasz = 0
             feat_calinski_harabasz = 0
             
-            if len(np.unique(predicted)) > 1:
+            if len(np.unique(predicted.numpy())) > 1:
                 cos_sil_score = silhouette_score(
                     X=data,
-                    labels=predicted,
+                    labels=predicted.numpy(),
                     metric='cosine')
 
                 eucl_sil_score = silhouette_score(
                     X=features,
-                    labels=predicted,
+                    labels=predicted.numpy(),
                     metric='euclidean')
 
                 data_calinski_harabasz = calinski_harabasz_score(
                     X=data,
-                    labels=predicted)
+                    labels=predicted.numpy())
 
                 feat_calinski_harabasz = calinski_harabasz_score(
                     X=features,
-                    labels=predicted)
+                    labels=predicted.numpy())
 
             predicted_previous = predicted
             _, accuracy = cluster_accuracy(predicted.numpy(), actual.numpy())
