@@ -1,4 +1,4 @@
-from py.callbacks import ae_train_callback, dec_train_callback, embed_train_callback
+from py.callbacks import ae_training_callback, dec_train_callback, embed_train_callback
 from py.util import get_square_image_repr, compute_centroid_np
 from py.datasets.euromds import CachedEUROMDS
 from py.dec.torch.utils import (cluster_accuracy, get_main_loss, get_mod_binary_loss,
@@ -19,6 +19,7 @@ import tensorflow as tf
 import os
 import pathlib
 import numpy as np
+import json
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
@@ -31,6 +32,7 @@ def main(
     #      glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta,
     #      gaus_noise, ae_opt, lr, path_to_data
          ):
+    path_to_data = None
     out_folder = None
     is_tied = True
     testing_mode = False
@@ -44,9 +46,9 @@ def main(
         'dropout': 0.0,
         'epochs': 150,
         'n_clusters': 6,
-        'ae_batch_size': 8,
+        'ae_batch_size': 16,
         'update_interval': 50,
-        'optimizer': 'yogi',
+        'optimizer': 'adam',
         'lr': None,
         'lr_scheduler': False,
         'main_loss': 'mse',
@@ -54,17 +56,20 @@ def main(
         'beta': 0.0,
         'corruption': 0.0,
         'noising': 0.0,
-        'train_dec': 'yes',
+        'train_dec': 'no',
         'alpha': 1,
         'scaler': 'standard',
     }
     # defining output folder
     if out_folder is None:
-        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'euromds_ae_dec_adam'
     else:
         path_to_out = pathlib.Path(out_folder)
     os.makedirs(path_to_out, exist_ok=True)
     print('Output folder {}'.format(path_to_out))
+    # dumping current configuration
+    with open(path_to_out/'config.json', 'w') as file:
+        json.dump(config, file)
     writer = SummaryWriter(
         logdir=str(str(path_to_out)+'/runs/'),
         flush_secs=5)  # create the TensorBoard object
@@ -85,6 +90,8 @@ def main(
     # get datasets
     path_to_data = pathlib.Path(
         '/home/relogu/Desktop/OneDrive/UNIBO/Magistrale/Federated Learning Project/data/euromds') if path_to_data is None else pathlib.Path(path_to_data)
+    # path_to_data = pathlib.Path(
+    #     '~/Federated-Learning-Project/data/euromds') if path_to_data is None else pathlib.Path(path_to_data)
     ds_train = CachedEUROMDS(
         exclude_cols=['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
         groups=['Genetics', 'CNA'],
@@ -96,6 +103,7 @@ def main(
         verbose=True,
         device=device,
     )  # training dataset
+    ds_val = ds_train
     # set dataloaders
     dataloader = DataLoader(
         ds_train,
@@ -107,7 +115,6 @@ def main(
         batch_size=config['ae_batch_size'],
         shuffle=False,
     )
-    ds_val = ds_train
     img_repr = get_square_image_repr(ds_train.n_features)
     print("Square image representation for {} features is (x,y,add): {}".format(
         ds_train.n_features, img_repr))
@@ -207,7 +214,7 @@ def main(
                     loss = criterion(validation_output, val_batch)
                     val_loss += loss.cpu().numpy()
 
-            val_loss = ae_train_callback(
+            val_loss = ae_training_callback(
                 writer,
                 'pretraining',
                 epoch,
@@ -274,7 +281,7 @@ def main(
                 #       (epoch+1, i+1, running_loss / (i+1)))
             running_loss = running_loss / (i+1)
 
-            val_loss = ae_train_callback(
+            val_loss = ae_training_callback(
                 writer,
                 'pretraining',
                 epoch,

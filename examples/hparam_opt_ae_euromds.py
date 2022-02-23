@@ -53,16 +53,19 @@ def train_ae(
         device=device,
     )  # training dataset
     ds_val = ds_train  # evaluation dataset
-    
+    # set batch size for traing TSDAE
+    batch_size = config['ae_batch_size']
+    if config['linears'] == 'dec' and (config['optimizer'] == 'adam' or config['optimizer'] == 'sgd'):
+        batch_size = 16
     if config['input_weights'] is None:
         dataloader = DataLoader(
             ds_train,
-            batch_size=config['ae_batch_size'],
+            batch_size=batch_size,
             shuffle=False,
         )
         validation_loader = DataLoader(
             ds_val,
-            batch_size=config['ae_batch_size'],
+            batch_size=batch_size,
             shuffle=False,
         )
         # SDAE Training Loop
@@ -245,7 +248,7 @@ def train_ae(
             ds_train,
             # change for including update interval procedure
             # batch_size=int(config['ae_batch_size']*config['update_interval']),
-            batch_size=config['ae_batch_size'],
+            batch_size=config['dec_batch_size'],
             shuffle=False,
         )
         model = DEC(cluster_number=config['n_clusters'],
@@ -257,7 +260,7 @@ def train_ae(
         # optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
         optimizer = get_ae_opt(
             name=config['optimizer'],
-            dataset='bmnist' if config['binary'] else 'mnist',
+            dataset='euromds',
             lr=config['lr'])(model.parameters())
 
         scaler = get_scaler(
@@ -416,7 +419,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
+def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
 
     device = "cpu"
 
@@ -425,18 +428,18 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
 
     config = {
         'input_weights': None,# torch.load('input_weights/pretrain_ae'),
-        'linears': tune.grid_search(['dec', 'google', 'curves']),
+        'linears': 'dec', #tune.grid_search(['dec', 'google', 'curves']),
         'f_dim': 10,# tune.grid_search([2,3,4,5,6,7,8,9,10]),
-        'activation': tune.grid_search(['relu', 'sigmoid']),
-        'final_activation': tune.grid_search(['relu', 'sigmoid']),
+        'activation': 'relu',
+        'final_activation': 'relu',
         # tune.grid_search([0.0, 0.25, 0.5]),# tune.uniform(0.0, 0.5),
         'dropout': 0.0,
         'epochs': max_num_epochs,
         'n_clusters': 6,# tune.grid_search([6, 7, 8, 9, 10]),
-        'ae_batch_size': tune.grid_search([8, 16, 32, 64]),
+        'ae_batch_size': 8,
         'update_interval': 20,# tune.grid_search([20, 40, 80, 160]),
-        'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),
-        'lr': None,# tune.loguniform(1e-6, 1.0),
+        'optimizer': 'adam',# tune.grid_search(['adam', 'yogi', 'sgd']),
+        'lr': tune.loguniform(1e-6, 1.0),
         'lr_scheduler': False,
         'main_loss': 'mse',  # tune.grid_search(['mse', 'bce-wl']),
         # tune.grid_search(['mix', 'gausk1', 'gausk3']),
@@ -445,13 +448,13 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         # tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'corruption': 0.0,
         'noising': 0.0,  # tune.grid_search([0.0, 0.1]),
-        'train_dec': 'no',
-        'dec_batch_size': 8,# tune.grid_search([8, 16, 32, 64]),
+        'train_dec': 'yes',
+        'dec_batch_size': tune.grid_search([8, 16, 32, 64]),
         'alpha': 1,  # tune.grid_search([1, 9]),
         'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
     }
-    # config['input_weights'] = torch.load('input_weights/euromds_{}_{}'. \
-    #     format(config['linears'], config['optimizer']))
+    config['input_weights'] = torch.load('input_weights/euromds_{}_{}'. \
+        format(config['linears'], config['optimizer']))
     if config['linears'] == 'curves':
         config['f_dim'] = 6
     num_checkpoints = 0
@@ -472,12 +475,12 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         metric_columns.append('data_calinski_harabasz')
         metric_columns.append('feat_calinski_harabasz')
 
-    scheduler = ASHAScheduler(
-        metric="ae_loss",
-        mode="min",
-        max_t=max_num_epochs,
-        grace_period=1,
-        reduction_factor=2)
+    # scheduler = ASHAScheduler(
+    #     metric="ae_loss",
+    #     mode="min",
+    #     max_t=max_num_epochs,
+    #     grace_period=1,
+    #     reduction_factor=2)
 
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
@@ -502,11 +505,11 @@ def main(num_samples=1, max_num_epochs=150, gpus_per_trial=0.5):
         num_samples=num_samples,
         keep_checkpoints_num=num_checkpoints,
         checkpoint_at_end=True,
-        scheduler=scheduler,
+        # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        # name='euromds_cl_{}_{}'.format(config['linears'], config['optimizer']),
-        name='euromds_ae_arch_acts_batch_opts',
+        name='euromds_cl_{}_{}'.format(config['linears'], config['optimizer']),
+        # name='euromds_ae_arch_acts_batch_opts',
         # resume=True,
     )
 
