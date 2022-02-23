@@ -419,7 +419,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
+def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.25):
 
     device = "cpu"
 
@@ -500,7 +500,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
         partial(train_ae,
                 scheduler=lambda_scheduler if config['lr_scheduler'] else None,
                 device=device),
-        resources_per_trial={"cpu": 6, "gpu": gpus_per_trial},
+        resources_per_trial={"cpu": 12, "gpu": gpus_per_trial},
         config=config,
         num_samples=num_samples,
         keep_checkpoints_num=num_checkpoints,
