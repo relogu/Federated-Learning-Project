@@ -126,8 +126,8 @@ def train_ae(
             dropout=config['dropout'],
             is_tied=True,
         )
-        if torch.cuda.device_count() > 1:
-            autoencoder = torch.nn.DataParallel(autoencoder)
+        # if torch.cuda.device_count() > 1:
+        #     autoencoder = torch.nn.DataParallel(autoencoder)
         autoencoder.to(device)
         optimizer = get_ae_opt(
             name=config['optimizer'],
@@ -271,8 +271,8 @@ def train_ae(
             dropout=config['dropout'],
             is_tied=True,
         )
-        if torch.cuda.device_count() > 1:
-            autoencoder = torch.nn.DataParallel(autoencoder)
+        # if torch.cuda.device_count() > 1:
+        #     autoencoder = torch.nn.DataParallel(autoencoder)
         autoencoder.to(device)
         autoencoder.load_state_dict(config['input_weights'])
 
@@ -288,8 +288,8 @@ def train_ae(
                     hidden_dimension=config['f_dim'],
                     encoder=autoencoder.encoder,
                     alpha=config['alpha'])
-        if torch.cuda.device_count() > 1:
-            model = torch.nn.DataParallel(model)
+        # if torch.cuda.device_count() > 1:
+        #     model = torch.nn.DataParallel(model)
         model = model.to(device)
         # optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
         optimizer = get_ae_opt(
