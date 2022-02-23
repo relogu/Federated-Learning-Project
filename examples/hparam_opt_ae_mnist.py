@@ -26,7 +26,7 @@ from py.datasets.bmnist import CachedBMNIST
 from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3,6,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "6,7"
 os.environ["TUNE_DISABLE_STRICT_METRIC_CHECKING"] = "1"
 
 def train_ae(
@@ -453,7 +453,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
+def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
 
     device = "cpu"
 
@@ -461,7 +461,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         device = "cuda:0"
 
     config = {
-        'input_weights': torch.load('input_weights/pretrain_ae'),
+        'input_weights': torch.load('input_weights/mnist_ae_sgd'),
         'linears': 'dec', # tune.grid_search(['dec', 'google']),
         'f_dim': 10,
         'activation': 'relu', # tune.grid_search(['relu', 'sigmoid']),
@@ -471,9 +471,9 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         'n_clusters': 10,
         'ae_batch_size': 256,
         'update_interval': 160,
-        'optimizer': 'adam', # tune.grid_search(['adam', 'yogi', 'sgd']),
+        'optimizer': 'sgd', # tune.grid_search(['adam', 'yogi', 'sgd']),
         'lr': tune.loguniform(1e-6, 1),
-        'lr_scheduler': True,
+        'lr_scheduler': False,
         # tune.grid_search(['mse', 'bce-wl']),
         'main_loss': 'mse', 
         # tune.grid_search(['none', 'gausk1', 'gausk3']),# tune.grid_search(['mix', 'gausk1', 'gausk3']),
@@ -534,7 +534,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         partial(train_ae,
                 scheduler=lambda_scheduler if config['lr_scheduler'] else None,
                 device=device),
-        resources_per_trial={"cpu": 6, "gpu": gpus_per_trial},
+        resources_per_trial={"cpu": 12, "gpu": gpus_per_trial},
         config=config,
         num_samples=num_samples,
         keep_checkpoints_num=num_checkpoints,
@@ -542,7 +542,8 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=1):
         scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='mnist_dec_adam_lr',
+        name='euromds_cl_{}_{}'.format(config['linears'], config['optimizer']),
+        # name='mnist_dec_adam_lr',
         resume=True,
     )
 
