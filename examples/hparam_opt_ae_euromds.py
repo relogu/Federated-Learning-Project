@@ -31,7 +31,7 @@ def train_ae(
     config: Dict,
     scheduler: Any = None,
     device: str = 'cpu',
-    initial_weights: Any = None,
+    # initial_weights: Any = None,
 ) -> None:
     """
     TODO
@@ -245,7 +245,7 @@ def train_ae(
         # if torch.cuda.device_count() > 1:
         #     autoencoder = torch.nn.DataParallel(autoencoder)
         autoencoder.to(device)
-        autoencoder.load_state_dict(initial_weights)
+        autoencoder.load_state_dict(config['input_weights'])
 
     if config['train_dec'] == 'yes':
         dataloader = DataLoader(
@@ -438,7 +438,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0.25):
+def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0.5):
 
     device = "cpu"
 
@@ -472,8 +472,8 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0
         'alpha': 1,  # tune.grid_search([1, 9]),
         'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
     }
-    # config['input_weights'] = torch.load('input_weights/euromds_ae_{}_{}'. \
-    #     format(config['linears'], config['optimizer']))
+    config['input_weights'] = torch.load('input_weights/euromds_ae_{}_{}'. \
+        format(config['linears'], config['optimizer']))
     if config['linears'] == 'curves':
         config['f_dim'] = 6
     num_checkpoints = 0
@@ -516,13 +516,16 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0
     # bayesopt = BayesOptSearch(metric="loss", mode="min")
 
     result = tune.run(
-        tune.with_parameters(
-            partial(train_ae,
-                    scheduler=lambda_scheduler if config['lr_scheduler'] else None,
-                    device=device),
-            initial_weights=torch.load('input_weights/euromds_ae_{}_{}'. \
-        format(config['linears'], config['optimizer']))
-        ),
+        # tune.with_parameters(
+        #     partial(train_ae,
+        #             scheduler=lambda_scheduler if config['lr_scheduler'] else None,
+        #             device=device),
+        #     initial_weights=torch.load('input_weights/euromds_ae_{}_{}'. \
+        # format(config['linears'], config['optimizer']))
+        # ),
+        partial(train_ae,
+                scheduler=lambda_scheduler if config['lr_scheduler'] else None,
+                device=device),
         resources_per_trial={"cpu": cpus_per_trial, "gpu": gpus_per_trial},
         config=config,
         num_samples=num_samples,
