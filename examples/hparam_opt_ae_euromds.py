@@ -25,13 +25,13 @@ from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, g
 from py.util import compute_centroid_np
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "5,6"
+os.environ["TUNE_DISABLE_STRICT_METRIC_CHECKING"] = "1"
 
 
 def train_ae(
     config: Dict,
     scheduler: Any = None,
     device: str = 'cpu',
-    # initial_weights: Any = None,
 ) -> None:
     """
     TODO
@@ -446,7 +446,7 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0
         device = "cuda:0"
 
     config = {
-        'input_weights': 'not_none',
+        'input_weights': None,
         'linears': 'dec', #tune.grid_search(['dec', 'google', 'curves']),
         'f_dim': 10,# tune.grid_search([2,3,4,5,6,7,8,9,10]),
         'activation': 'relu',
@@ -457,7 +457,7 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0
         'n_clusters': 6,# tune.grid_search([6, 7, 8, 9, 10]),
         'ae_batch_size': 8,
         'update_interval': 20,# tune.grid_search([20, 40, 80, 160]),
-        'optimizer': 'adam',# tune.grid_search(['adam', 'yogi', 'sgd']),
+        'optimizer': 'sgd',# tune.grid_search(['adam', 'yogi', 'sgd']),
         'lr': tune.loguniform(1e-6, 1.0),
         'lr_scheduler': False,
         'main_loss': 'mse',  # tune.grid_search(['mse', 'bce-wl']),
@@ -472,8 +472,8 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0
         'alpha': 1,  # tune.grid_search([1, 9]),
         'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
     }
-    config['input_weights'] = torch.load('input_weights/euromds_ae_{}_{}'. \
-        format(config['linears'], config['optimizer']))
+    config['input_weights'] = '../../../Federated-Learning-Project/input_weights/euromds_ae_{}_{}'. \
+        format(config['linears'], config['optimizer'])
     if config['linears'] == 'curves':
         config['f_dim'] = 6
     num_checkpoints = 0

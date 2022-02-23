@@ -274,8 +274,7 @@ def train_ae(
         # if torch.cuda.device_count() > 1:
         #     autoencoder = torch.nn.DataParallel(autoencoder)
         autoencoder.to(device)
-        autoencoder.load_state_dict(torch.load('input_weights/mnist_ae_{}'. \
-        format(config['optimizer'])))
+        autoencoder.load_state_dict(config['input_weights'])
 
     if config['train_dec'] == 'yes':
         dataloader = DataLoader(
@@ -469,7 +468,7 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=8, gpus_per_trial=0.
         device = "cuda:0"
 
     config = {
-        'input_weights': 'not_none',
+        'input_weights': None,
         'linears': 'dec',
         'f_dim': 10,
         'activation': 'relu',
@@ -479,7 +478,7 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=8, gpus_per_trial=0.
         'n_clusters': 10,
         'ae_batch_size': 256,
         'update_interval': 160,
-        'optimizer': 'sgd', # tune.grid_search(['adam', 'yogi', 'sgd']),
+        'optimizer': 'adam', # tune.grid_search(['adam', 'yogi', 'sgd']),
         'lr': tune.loguniform(1e-6, 1),
         'lr_scheduler': False,
         # tune.grid_search(['mse', 'bce-wl']),
@@ -499,8 +498,8 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=8, gpus_per_trial=0.
         'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'binary': False,
     }
-    # config['input_weights'] = torch.load('input_weights/mnist_ae_{}'. \
-    #     format(config['optimizer']))
+    config['input_weights'] = '../../../Federated-Learning-Project/input_weights/mnist_ae_{}_{}'. \
+        format(config['linears'], config['optimizer'])
     num_checkpoints = 0
     metric_columns = ['training_iteration']
     if config['input_weights'] is None:
