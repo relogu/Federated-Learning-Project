@@ -245,7 +245,7 @@ def train_ae(
         # if torch.cuda.device_count() > 1:
         #     autoencoder = torch.nn.DataParallel(autoencoder)
         autoencoder.to(device)
-        autoencoder.load_state_dict(config['input_weights'])
+        autoencoder.load_state_dict(torch.load(config['input_weights']))
 
     if config['train_dec'] == 'yes':
         dataloader = DataLoader(
