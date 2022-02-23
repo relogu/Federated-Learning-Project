@@ -24,7 +24,7 @@ from py.datasets.euromds import CachedEUROMDS
 from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "6,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2"
 
 
 def train_ae(
@@ -53,6 +53,7 @@ def train_ae(
         device=device,
     )  # training dataset
     ds_val = ds_train  # evaluation dataset
+    training_iter = 0
     # set batch size for traing TSDAE
     batch_size = config['ae_batch_size']
     if config['linears'] == 'dec' and (config['optimizer'] == 'adam' or config['optimizer'] == 'sgd'):
@@ -115,6 +116,7 @@ def train_ae(
         autoencoder.train()
         last_loss = -1
         for epoch in range(config['epochs']):
+            training_iter+=1
             running_loss = 0.0
             epoch_steps = 0
             # if scheduler is not None:
@@ -174,6 +176,7 @@ def train_ae(
         # N.B.: corruptions does not need finetuning
         if noising is not None:
             for epoch in range(config['epochs']):
+                training_iter+=1
                 running_loss = 0.0
                 epoch_steps = 0
                 if scheduler is not None:
@@ -246,6 +249,13 @@ def train_ae(
     if config['train_dec'] == 'yes':
         dataloader = DataLoader(
             ds_train,
+            # change for including update interval procedure
+            # batch_size=int(config['ae_batch_size']*config['update_interval']),
+            batch_size=config['dec_batch_size'],
+            shuffle=False,
+        )
+        validation_loader = DataLoader(
+            ds_val,
             # change for including update interval procedure
             # batch_size=int(config['ae_batch_size']*config['update_interval']),
             batch_size=config['dec_batch_size'],
@@ -360,8 +370,8 @@ def train_ae(
                     r_prob_labels.append(model(r_batch))
 
             cl_recon = (cl_recon / (i+1))
-            predicted = torch.cat(prob_labels).cpu().max(1)[1]
-            r_predicted = torch.cat(r_prob_labels).cpu().max(1)[1]
+            predicted = torch.cat(prob_labels).cpu().max(1)[1].numpy()
+            r_predicted = torch.cat(r_prob_labels).cpu().max(1)[1].numpy()
             actual = torch.cat(actual).cpu().long()
             data = torch.cat(data).cpu().numpy()
             r_data = torch.cat(r_data).cpu().numpy()
@@ -371,24 +381,30 @@ def train_ae(
                 float((predicted != predicted_previous).float().sum().item())
                 / predicted_previous.shape[0]
             )
+            
+            cos_sil_score = 0
+            eucl_sil_score = 0
+            data_calinski_harabasz = 0
+            feat_calinski_harabasz = 0
+            
+            if len(np.unique(predicted)) > 1:
+                cos_sil_score = silhouette_score(
+                    X=data,
+                    labels=predicted,
+                    metric='cosine')
 
-            cos_sil_score = silhouette_score(
-                X=data,
-                labels=predicted,
-                metric='cosine')
+                eucl_sil_score = silhouette_score(
+                    X=features,
+                    labels=predicted,
+                    metric='euclidean')
 
-            eucl_sil_score = silhouette_score(
-                X=features,
-                labels=predicted,
-                metric='euclidean')
+                data_calinski_harabasz = calinski_harabasz_score(
+                    X=data,
+                    labels=predicted)
 
-            data_calinski_harabasz = calinski_harabasz_score(
-                X=data,
-                labels=predicted)
-
-            feat_calinski_harabasz = calinski_harabasz_score(
-                X=features,
-                labels=predicted)
+                feat_calinski_harabasz = calinski_harabasz_score(
+                    X=features,
+                    labels=predicted)
 
             predicted_previous = predicted
             _, accuracy = cluster_accuracy(predicted.numpy(), actual.numpy())
@@ -419,7 +435,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.25):
+def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0.25):
 
     device = "cpu"
 
@@ -453,7 +469,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.25):
         'alpha': 1,  # tune.grid_search([1, 9]),
         'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
     }
-    config['input_weights'] = torch.load('input_weights/euromds_{}_{}'. \
+    config['input_weights'] = torch.load('input_weights/euromds_ae_{}_{}'. \
         format(config['linears'], config['optimizer']))
     if config['linears'] == 'curves':
         config['f_dim'] = 6
@@ -500,7 +516,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.25):
         partial(train_ae,
                 scheduler=lambda_scheduler if config['lr_scheduler'] else None,
                 device=device),
-        resources_per_trial={"cpu": 12, "gpu": gpus_per_trial},
+        resources_per_trial={"cpu": cpus_per_trial, "gpu": gpus_per_trial},
         config=config,
         num_samples=num_samples,
         keep_checkpoints_num=num_checkpoints,

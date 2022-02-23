@@ -26,7 +26,7 @@ from py.datasets.bmnist import CachedBMNIST
 from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "6,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 os.environ["TUNE_DISABLE_STRICT_METRIC_CHECKING"] = "1"
 
 def train_ae(
@@ -394,8 +394,8 @@ def train_ae(
                     r_prob_labels.append(model(r_batch).cpu())
 
             cl_recon = (cl_recon / (i+1))
-            predicted = torch.cat(prob_labels).max(1)[1]
-            r_predicted = torch.cat(r_prob_labels).max(1)[1]
+            predicted = torch.cat(prob_labels).max(1)[1].numpy()
+            r_predicted = torch.cat(r_prob_labels).max(1)[1].numpy()
             actual = torch.cat(actual).long()
             data = torch.cat(data).numpy()
             r_data = torch.cat(r_data).numpy()
@@ -405,24 +405,30 @@ def train_ae(
                 float((predicted != predicted_previous).float().sum().item())
                 / predicted_previous.shape[0]
             )
+            
+            cos_sil_score = 0
+            eucl_sil_score = 0
+            data_calinski_harabasz = 0
+            feat_calinski_harabasz = 0
+            
+            if len(np.unique(predicted)) > 1:
+                cos_sil_score = silhouette_score(
+                    X=data,
+                    labels=predicted,
+                    metric='cosine')
 
-            cos_sil_score = silhouette_score(
-                X=data,
-                labels=predicted,
-                metric='cosine')
+                eucl_sil_score = silhouette_score(
+                    X=features,
+                    labels=predicted,
+                    metric='euclidean')
 
-            eucl_sil_score = silhouette_score(
-                X=features,
-                labels=predicted,
-                metric='euclidean')
+                data_calinski_harabasz = calinski_harabasz_score(
+                    X=data,
+                    labels=predicted)
 
-            data_calinski_harabasz = calinski_harabasz_score(
-                X=data,
-                labels=predicted)
-
-            feat_calinski_harabasz = calinski_harabasz_score(
-                X=features,
-                labels=predicted)
+                feat_calinski_harabasz = calinski_harabasz_score(
+                    X=features,
+                    labels=predicted)
 
             predicted_previous = predicted
             _, accuracy = cluster_accuracy(predicted.numpy(), actual.numpy())
@@ -453,7 +459,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
+def main(num_samples=50, max_num_epochs=150, cpus_per_trial=8, gpus_per_trial=0.5):
 
     device = "cpu"
 
@@ -461,12 +467,12 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
         device = "cuda:0"
 
     config = {
-        'input_weights': torch.load('input_weights/mnist_ae_sgd'),
-        'linears': 'dec', # tune.grid_search(['dec', 'google']),
+        'input_weights': None,
+        'linears': 'dec',
         'f_dim': 10,
-        'activation': 'relu', # tune.grid_search(['relu', 'sigmoid']),
-        'final_activation': 'relu', # tune.grid_search(['relu', 'sigmoid']),
-        'dropout': 0.0, # tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
+        'activation': 'relu',
+        'final_activation': 'relu',
+        'dropout': 0.0,
         'epochs': max_num_epochs,
         'n_clusters': 10,
         'ae_batch_size': 256,
@@ -491,6 +497,8 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
         'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'binary': False,
     }
+    config['input_weights'] = torch.load('input_weights/mnist_ae_{}'. \
+        format(config['optimizer']))
     num_checkpoints = 0
     metric_columns = ['training_iteration']
     if config['input_weights'] is None:
@@ -534,7 +542,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
         partial(train_ae,
                 scheduler=lambda_scheduler if config['lr_scheduler'] else None,
                 device=device),
-        resources_per_trial={"cpu": 12, "gpu": gpus_per_trial},
+        resources_per_trial={"cpu": cpus_per_trial, "gpu": gpus_per_trial},
         config=config,
         num_samples=num_samples,
         keep_checkpoints_num=num_checkpoints,
@@ -544,7 +552,7 @@ def main(num_samples=50, max_num_epochs=150, gpus_per_trial=0.5):
         progress_reporter=reporter,
         name='euromds_cl_{}_{}'.format(config['linears'], config['optimizer']),
         # name='mnist_dec_adam_lr',
-        resume=True,
+        # resume=True,
     )
 
     if config['input_weights'] is None:
