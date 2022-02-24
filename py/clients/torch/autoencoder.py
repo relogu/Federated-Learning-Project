@@ -119,7 +119,9 @@ class AutoencoderClient(NumPyClient):
         self.autoencoder = StackedDenoisingAutoEncoder(**net_config)
         # get optimizer
         self.optimizer = opt_config['optimizer_fn'](
-            opt_config['optimizer'],
+            opt_config['name'],
+            opt_config['dataset'],
+            opt_config['linears'],
             opt_config['lr'])(self.autoencoder.parameters())
         # set output folder        
         if output_folder is None:

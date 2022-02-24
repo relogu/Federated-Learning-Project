@@ -59,9 +59,11 @@ if __name__ == "__main__":
     data_loader_config = {
         'get_train_fn': partial(
             CachedfEUROMDS,
-            exclude_cols=args.ex_col,# ['UTX', 'CSF3R', 'SETBP1', 'PPM1D']
-            groups=args.groups,# ['Genetics', 'CNA']
-            fill_nans=args.fill_nans,# 2044
+            # exclude_cols=args.ex_col,
+            # groups=args.groups,
+            exclude_cols=['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
+            groups=['Genetics', 'CNA'],
+            fill_nans=args.fill_nans,
             get_hdp=True,
             get_outcomes=True,
             get_ids=True,
@@ -72,8 +74,10 @@ if __name__ == "__main__":
             path_to_data=data_folder),
         'get_test_fn': partial(
             CachedfEUROMDS,
-            exclude_cols=args.ex_col,
-            groups=args.groups,
+            # exclude_cols=args.ex_col,
+            # groups=args.groups,
+            exclude_cols=['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
+            groups=['Genetics', 'CNA'],
             fill_nans=args.fill_nans,
             get_hdp=True,
             get_outcomes=True,
@@ -85,11 +89,11 @@ if __name__ == "__main__":
             path_to_data=data_folder),
         'trainloader_fn': partial(
             DataLoader,
-            batch_size=args.batch_size,
+            batch_size=args.ae_batch_size,
             shuffle=True),
         'valloader_fn': partial(
             DataLoader,
-            batch_size=args.batch_size,
+            batch_size=args.ae_batch_size,
             shuffle=False),
     }
     # Set loss configuration dict
@@ -110,6 +114,8 @@ if __name__ == "__main__":
         verbose=True,
     )
     n_features = dataset.n_features
+    print("Number of features is: {}".format(n_features))
+    print("Features are: {}".format(dataset.columns_names))
     del dataset
     net_config = {
         'noising': TruncatedGaussianNoise(
@@ -120,15 +126,17 @@ if __name__ == "__main__":
         'corruption': args.corruption,
         'dimensions': get_linears(args.linears, n_features, args.hidden_dimensions),
         'activation': ReLU(),
-        'final_activation': Sigmoid(),
+        'final_activation': ReLU(),
         'dropout': args.hidden_dropout,
         'is_tied': True,
     }
     # Set optimizer configuration dict
     ae_opt_config = {
         'optimizer_fn': get_ae_opt,
-        'optimizer': args.ae_opt,
+        'name': args.ae_opt,
+        'dataset': 'euromds',
         'lr': args.ae_lr,
+        'linears': args.linears,
     }
     # Define the client fn to pass ray simulation
     def pae_client_fn(cid: int):
@@ -230,6 +238,7 @@ if __name__ == "__main__":
             num_rounds=args.ae_epochs,
             strategy=current_strategy,
             ray_init_args=ray_config)
+    
     ## Prepare generalized KMeansClient for initializing clusters centers
     # Dataloader configuration dict is the same as before
     # Network configuration dict is the same as before
@@ -300,8 +309,8 @@ if __name__ == "__main__":
     # Dataloader configuration dict changes only here:
     data_loader_config['trainloader_fn'] = partial(
         DataLoader,
-        batch_size=args.batch_size*args.update_interval,
-        shuffle=True)
+        batch_size=args.dec_batch_size,
+        shuffle=False)
     # Network configuration dict is the same as before
     # Set DEC configuration dict
     dec_config = {
@@ -312,8 +321,10 @@ if __name__ == "__main__":
     # Set optimizer configuration dict
     dec_opt_config = {
         'optimizer_fn': get_ae_opt,
-        'optimizer': 'sgd',
-        'lr': 0.01,
+        'name': args.ae_opt,
+        'dataset': 'euromds',
+        'linears': args.linears,
+        'lr': 0.003,
     }
     # Define the client fn to pass ray simulation
     def dec_client_fn(cid: str):

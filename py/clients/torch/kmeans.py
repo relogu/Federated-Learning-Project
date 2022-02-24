@@ -107,7 +107,9 @@ class KMeansClient(NumPyClient):
         self.kmeans = KMeans(**self.kmeans_config)
         self.clusters_centers = []
         # get scaler
-        self.scaler = scaler_config['get_scaler_fn'](scaler_config['name']) if scaler_config['scaler'] != 'none' else None
+        self.scaler = None
+        if scaler_config['name'] is not None:
+            self.scaler = scaler_config['get_scaler_fn'](scaler_config['name']) if scaler_config['scaler'] != 'none' else None
         # general initializations
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
     

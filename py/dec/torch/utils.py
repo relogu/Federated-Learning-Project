@@ -65,6 +65,7 @@ def get_scaler(name: str):
         'standard': StandardScaler(),
         'normal-l1': Normalizer(norm='l1'),
         'normal-l2': Normalizer(norm='l2'),
+        'none': None,
     }
     return scaler_dict[name]
 

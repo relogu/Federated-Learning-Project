@@ -119,11 +119,18 @@ class DECClient(NumPyClient):
         self.trainloader = data_loader_config['trainloader_fn'](self.ds_train)
         self.valloader = data_loader_config['valloader_fn'](self.ds_test)
         # get network
+        noising = None
         if 'noising' in net_config.keys():
+            noising = net_config['noising']
             net_config.pop('noising')
         if 'corruption' in net_config.keys():
             net_config.pop('corruption')
         self.autoencoder = StackedDenoisingAutoEncoder(**net_config)
+        # Get SDAE parameters
+        ae_params_filename = 'agg_weights_finetune_ae.npz' if noising is not None else 'agg_weights_pretrain_ae.npz'
+        with open(self.out_dir/ae_params_filename, 'r') as file:
+            ae_parameters = np.load(file, allow_pickle=True)
+        self.set_ae_parameters(ae_parameters)
         # get DEC model
         self.dec_model = DEC(
             cluster_number=dec_config['n_clusters'],
@@ -162,6 +169,13 @@ class DECClient(NumPyClient):
     def get_parameters(self):
         """Get the model weights by model object."""
         return [val.cpu().numpy() for _, val in self.dec_mode.state_dict().items()]
+    
+
+    def set_ae_parameters(self, parameters):
+        """Set the model weights by parameters object."""
+        params_dict = zip(self.autoencoder.state_dict().keys(), parameters)
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        self.autoencoder.load_state_dict(state_dict, strict=True)
     
     def set_parameters(self, parameters):
         """Set the model weights by parameters object."""

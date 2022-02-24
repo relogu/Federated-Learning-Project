@@ -8,13 +8,13 @@ def fdec_feuromds_parser():
     parser.add_argument(
         '--groups',
         dest='groups',
-        required=True,
+        required=False,
         action='append',
         help='which groups of variables to use for EUROMDS dataset')
     parser.add_argument(
         '--ex_col',
         dest='ex_col',
-        required=True,
+        required=False,
         action='append',
         help='which columns to exclude for EUROMDS dataset')
     parser.add_argument(
@@ -39,8 +39,8 @@ def fdec_feuromds_parser():
         default=1,
         help='set the number of local epochs')
     parser.add_argument(
-        '--batch-size',
-        dest='batch_size',
+        '--ae-batch-size',
+        dest='ae_batch_size',
         required=False,
         type=int,
         default=8,
@@ -76,7 +76,7 @@ def fdec_feuromds_parser():
         dest='hidden_dimensions',
         required=False,
         type=int,
-        default=8,
+        default=10,
         help='number of hidden dimension of the feature space'
     )
     ## SDAE training
@@ -111,7 +111,7 @@ def fdec_feuromds_parser():
         dest='ae_epochs',
         required=False,
         type=int,
-        default=150,
+        default=200,
         help='federated epochs to run in SDAE training'
     )
     ## KMeans parameters
@@ -172,16 +172,16 @@ def fdec_feuromds_parser():
         dest='dec_epochs',
         required=False,
         type=int,
-        default=20,
+        default=25,
         help='number of federated epochs for DEC training'
     )
     parser.add_argument(
-        '--update-interval',
-        dest='update_interval',
+        '--dec-batch-size',
+        dest='dec_batch_size',
         required=False,
         type=int,
-        default=20,
-        help='number of batches before updating auxiliary distribution'
+        default=8,
+        help='batch size used for clustering step training'
     )
     ## general
     parser.add_argument(
@@ -197,7 +197,7 @@ def fdec_feuromds_parser():
         dest='n_cpus',
         required=False,
         type=int,
-        default=1,
+        default=6,
         help='set the number of cpus per client to set ray resources'
     )
     parser.add_argument(
@@ -237,7 +237,7 @@ def fdec_feuromds_parser():
         dest='dump_metrics',
         required=False,
         type=bool,
-        default=False,
+        default=True,
         help='flag to set whether to dump metrics or not along training'
     )
     parser.add_argument(
@@ -245,7 +245,7 @@ def fdec_feuromds_parser():
         dest='verbose',
         required=False,
         type=bool,
-        default=False,
+        default=True,
         help='flag to set verbosity'
     )
     return parser
