@@ -29,7 +29,7 @@ from py.dec.torch.utils import (get_ae_opt, get_main_loss, get_mod_loss,
                                 get_linears, get_cl_batch_size, get_cl_lr)
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3,4,5"
 os.environ["TUNE_DISABLE_STRICT_METRIC_CHECKING"] = "1"
 
 def train_ae(
@@ -129,8 +129,6 @@ def train_ae(
             dropout=config['dropout'],
             is_tied=True,
         )
-        # if torch.cuda.device_count() > 1:
-        #     autoencoder = torch.nn.DataParallel(autoencoder)
         autoencoder.to(device)
         optimizer = get_ae_opt(
             name=config['optimizer'],
@@ -274,11 +272,11 @@ def train_ae(
             dropout=config['dropout'],
             is_tied=True,
         )
-        # if torch.cuda.device_count() > 1:
-        #     autoencoder = torch.nn.DataParallel(autoencoder)
         autoencoder.to(device)
-        config['input_weights'] = '../../../Federated-Learning-Project/input_weights/mnist_ae_{}'. \
-            format(config['optimizer'])
+        config['input_weights'] = '../../../Federated-Learning-Project/input_weights/{}_ae_{}'. \
+            format(
+                'bmnist' if config['binary'] else 'mnist',
+                config['optimizer'])
         autoencoder.load_state_dict(torch.load(config['input_weights']))
 
     if config['train_dec'] == 'yes':
@@ -502,7 +500,7 @@ def main(num_samples=1, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.2
         'alpha': tune.grid_search([1, 9]),
         # tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'binary': False,
+        'binary': True,
     }
     # config['input_weights'] = '../../../Federated-Learning-Project/input_weights/mnist_ae_{}'. \
     #     format(config['optimizer'])
@@ -557,7 +555,10 @@ def main(num_samples=1, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.2
         # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='mnist_cl_arch_alpha_scaler',
+        name='{}_cl_arch_alpha_scaler'. \
+            format(
+                'bmnist' if config['binary'] else 'mnist',
+                ),
         # name='mnist_dec_adam_lr',
         # resume=True,
     )
