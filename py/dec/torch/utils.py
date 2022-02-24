@@ -13,6 +13,45 @@ from py.losses.torch import (SobelLoss, GaussianBlurredLoss, ComboLoss,
                              TverskyLoss, LovaszHingeLoss, IoULoss)
 
 
+def get_cl_batch_size(name, dataset, opt):
+    batch_size_dict = {
+        'mnist': {
+            'dec': {
+                'adam': 256,
+                'sgd': 64,
+                'yogi': 64,
+                },
+            },
+        'bmnist': {
+            'dec': {
+                'adam': 256,
+                'sgd': 64,
+                'yogi': 64,
+                },
+            },
+    }
+    return batch_size_dict[dataset][name][opt]
+
+
+def get_cl_lr(name, dataset, opt):
+    lr_dict = {
+        'mnist': {
+            'dec': {
+                'adam': 0.001,
+                'sgd': 0.043,
+                'yogi': 0.0015,
+                },
+            },
+        'bmnist': {
+            'dec': {
+                'adam': 0.001,
+                'sgd': 0.043,
+                'yogi': 0.0015,
+                },
+            },
+    }
+    return lr_dict[dataset][name][opt]
+
 def get_linears(name, input_dim, f_dim):
     linears_dict = {
         'dec': [input_dim, 500, 500, 2000, f_dim],
