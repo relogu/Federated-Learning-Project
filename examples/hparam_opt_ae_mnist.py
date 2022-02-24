@@ -23,7 +23,10 @@ from py.dec.torch.sdae import StackedDenoisingAutoEncoder
 from py.dec.torch.layers import TruncatedGaussianNoise
 from py.datasets.mnist import CachedMNIST
 from py.datasets.bmnist import CachedBMNIST
-from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
+from py.dec.torch.utils import (get_ae_opt, get_main_loss, get_mod_loss,
+                                get_mod_binary_loss, get_scaler,
+                                cluster_accuracy, target_distribution,
+                                get_linears, get_cl_batch_size, get_cl_lr)
 from py.util import compute_centroid_np
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2"
@@ -274,28 +277,32 @@ def train_ae(
         # if torch.cuda.device_count() > 1:
         #     autoencoder = torch.nn.DataParallel(autoencoder)
         autoencoder.to(device)
+        config['input_weights'] = '../../../Federated-Learning-Project/input_weights/mnist_ae_{}'. \
+            format(config['optimizer'])
         autoencoder.load_state_dict(torch.load(config['input_weights']))
 
     if config['train_dec'] == 'yes':
+        
         dataloader = DataLoader(
             ds_train,
-            # change for including update interval procedure
-            # batch_size=int(config['ae_batch_size']*config['update_interval']),
-            batch_size=config['dec_batch_size'],
+            batch_size=get_cl_batch_size(
+                name='dec',
+                dataset='bmnist' if config['binary'] else 'mnist',
+                opt=config['optimizer']),
             shuffle=False,
         )
         model = DEC(cluster_number=10,
                     hidden_dimension=config['f_dim'],
                     encoder=autoencoder.encoder,
                     alpha=config['alpha'])
-        # if torch.cuda.device_count() > 1:
-        #     model = torch.nn.DataParallel(model)
         model = model.to(device)
-        # optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
         optimizer = get_ae_opt(
             name=config['optimizer'],
             dataset='bmnist' if config['binary'] else 'mnist',
-            lr=config['lr'])(model.parameters())
+            lr=get_cl_lr(
+                name='dec',
+                dataset='bmnist' if config['binary'] else 'mnist',
+                opt=config['optimizer']))(model.parameters())
 
         scaler = get_scaler(
             config['scaler']) if config['scaler'] != 'none' else None
@@ -460,7 +467,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=50, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.2):
+def main(num_samples=1, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.2):
 
     device = "cpu"
 
@@ -468,7 +475,7 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.
         device = "cuda:0"
 
     config = {
-        'input_weights': None,
+        'input_weights': 'not_none',
         'linears': 'dec',
         'f_dim': 10,
         'activation': 'relu',
@@ -478,8 +485,8 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.
         'n_clusters': 10,
         'ae_batch_size': 256,
         'update_interval': 160,
-        'optimizer': 'adam', # tune.grid_search(['adam', 'yogi', 'sgd']),
-        'lr': tune.loguniform(1e-6, 1),
+        'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),
+        'lr': None,
         'lr_scheduler': False,
         # tune.grid_search(['mse', 'bce-wl']),
         'main_loss': 'mse', 
@@ -489,17 +496,16 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.
         'beta': 0.0,# tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
         # tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'corruption': 0.0,
-        # tune.grid_search([0.0, 0.1]),
         'noising': 0.0, 
         'train_dec': 'yes',
-        'dec_batch_size': tune.grid_search([64, 128, 256, 512]),
-        'alpha': 1,# tune.grid_search([1, 9]),
+        'dec_batch_size': 0,
+        'alpha': tune.grid_search([1, 9]),
         # tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
-        'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
+        'scaler': tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
         'binary': False,
     }
-    config['input_weights'] = '../../../Federated-Learning-Project/input_weights/mnist_ae_{}'. \
-        format(config['optimizer'])
+    # config['input_weights'] = '../../../Federated-Learning-Project/input_weights/mnist_ae_{}'. \
+    #     format(config['optimizer'])
     num_checkpoints = 0
     metric_columns = ['training_iteration']
     if config['input_weights'] is None:
@@ -518,12 +524,12 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.
         metric_columns.append('data_calinski_harabasz')
         metric_columns.append('feat_calinski_harabasz')
 
-    scheduler = ASHAScheduler(
-        metric="accuracy",
-        mode="max",
-        max_t=20,
-        grace_period=3,
-        reduction_factor=2)
+    # scheduler = ASHAScheduler(
+    #     metric="accuracy",
+    #     mode="max",
+    #     max_t=20,
+    #     grace_period=3,
+    #     reduction_factor=2)
 
     reporter = CLIReporter(
         # parameter_columns=["l1", "l2", "lr", "batch_size"],
@@ -548,10 +554,10 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.
         num_samples=num_samples,
         keep_checkpoints_num=num_checkpoints,
         checkpoint_at_end=True,
-        scheduler=scheduler,
+        # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='mnist_cl_{}'.format(config['optimizer']),
+        name='mnist_cl_arch_alpha_scaler',
         # name='mnist_dec_adam_lr',
         # resume=True,
     )
