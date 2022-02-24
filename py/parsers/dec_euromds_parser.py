@@ -1,8 +1,37 @@
 import argparse
-from py.losses import get_keras_loss_names
+# from py.losses import get_keras_loss_names
 
+"""
+cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
+         glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta,
+         gaus_noise, ae_opt, lr, path_to_data
+         
+    config = {
+        'linears': 'dec',
+        'f_dim': 10,
+        'activation': ReLU(),
+        'final_activation': Sigmoid(),
+        'dropout': 0.0,
+        'epochs': 150,
+        'n_clusters': 6,
+        'ae_batch_size': 8,
+        'update_interval': 50,
+        'optimizer': 'yogi',
+        'lr': None,
+        'main_loss': 'mse',
+        'mod_loss': 'bce+dice',
+        'beta': 0.4,
+        'corruption': 0.0,
+        'noising': 0.0,
+        'train_dec': 'yes',
+        'alpha': 1,
+        'scaler': 'standard',
+        'use_emp_centroids': 'yes',
+    }
+"""
 
 def dec_euromds_parser():
+    
     parser = argparse.ArgumentParser(description="UDE Training Script")
     parser.add_argument("--batch_size",
                         dest="batch_size",
@@ -57,7 +86,7 @@ def dec_euromds_parser():
                         required=True,
                         type=type(''),
                         default='mse',
-                        choices=get_keras_loss_names(),
+                        # choices=get_keras_loss_names(),
                         action='store',
                         help='Loss function for autoencoder training')
     parser.add_argument('--cl_epochs',
