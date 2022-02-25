@@ -438,7 +438,7 @@ def train_ae(
         print("Finished DEC Training")
 
 
-def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0.5):
+def main(num_samples=10, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.2):
 
     device = "cpu"
 
@@ -452,13 +452,13 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0
         'activation': 'relu',
         'final_activation': 'relu',
         # tune.grid_search([0.0, 0.25, 0.5]),# tune.uniform(0.0, 0.5),
-        'dropout': 0.0,
+        'dropout': tune.uniform(0.0, 0.5),
         'epochs': max_num_epochs,
         'n_clusters': 6,# tune.grid_search([6, 7, 8, 9, 10]),
         'ae_batch_size': 8,
         'update_interval': 20,# tune.grid_search([20, 40, 80, 160]),
         'optimizer': 'sgd',# tune.grid_search(['adam', 'yogi', 'sgd']),
-        'lr': tune.loguniform(1e-6, 1.0),
+        'lr': None,# tune.loguniform(1e-6, 1.0),
         'lr_scheduler': False,
         'main_loss': 'mse',  # tune.grid_search(['mse', 'bce-wl']),
         # tune.grid_search(['mix', 'gausk1', 'gausk3']),
@@ -467,13 +467,13 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0
         # tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
         'corruption': 0.0,
         'noising': 0.0,  # tune.grid_search([0.0, 0.1]),
-        'train_dec': 'yes',
-        'dec_batch_size': tune.grid_search([8, 16, 32, 64]),
+        'train_dec': 'no',
+        'dec_batch_size': 8,# tune.grid_search([8, 16, 32, 64]),
         'alpha': 1,  # tune.grid_search([1, 9]),
         'scaler': 'none',# tune.grid_search(['standard', 'normal-l1', 'normal-l2', 'none']),
     }
-    config['input_weights'] = '../../../Federated-Learning-Project/input_weights/euromds_ae_{}_{}'. \
-        format(config['linears'], config['optimizer'])
+    # config['input_weights'] = '../../../Federated-Learning-Project/input_weights/euromds_ae_{}_{}'. \
+    #     format(config['linears'], config['optimizer'])
     if config['linears'] == 'curves':
         config['f_dim'] = 6
     num_checkpoints = 0
@@ -534,8 +534,8 @@ def main(num_samples=50, max_num_epochs=150, cpus_per_trial=12, gpus_per_trial=0
         # scheduler=scheduler,
         # search_alg=bayesopt,
         progress_reporter=reporter,
-        name='euromds_cl_{}_{}'.format(config['linears'], config['optimizer']),
-        # name='euromds_ae_arch_acts_batch_opts',
+        # name='euromds_cl_{}_{}'.format(config['linears'], config['optimizer']),
+        name='euromds_ae_hiddo',
         # resume=True,
     )
 
