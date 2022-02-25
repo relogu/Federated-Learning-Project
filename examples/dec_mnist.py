@@ -20,7 +20,10 @@ from tensorboardX import SummaryWriter
 from py.dec.torch.dec import DEC
 from py.dec.torch.sdae import StackedDenoisingAutoEncoder
 from py.dec.torch.layers import TruncatedGaussianNoise
-from py.dec.torch.utils import cluster_accuracy, get_main_loss, get_mod_loss, get_mod_binary_loss, get_ae_opt, get_linears, target_distribution, get_scaler
+from py.dec.torch.utils import (cluster_accuracy, get_main_loss, get_mod_loss,
+                                get_mod_binary_loss, get_ae_opt, get_linears,
+                                target_distribution, get_scaler, get_cl_lr, 
+                                get_cl_batch_size)
 from py.datasets.mnist import CachedMNIST
 from py.datasets.bmnist import CachedBMNIST
 from py.callbacks import ae_training_callback, dec_train_callback, embed_train_callback
@@ -48,17 +51,18 @@ def main(
         'n_clusters': 10,
         'ae_batch_size': 256,
         'update_interval': 160,
-        'optimizer': 'adam',
+        'optimizer': 'yogi',
         'lr': None,
-        'lr_scheduler': True,
+        'lr_scheduler': False,
         'main_loss': 'mse',
         'mod_loss': 'none',
         'beta': 0.0,
         'corruption': 0.0,
         'noising': 0.0,
         'train_dec': 'yes',
+        'dec_batch_size': 0,
         'alpha': 9,
-        'scaler': 'none',
+        'scaler': 'normal-l1',
         'binary': False,
     }
 
@@ -316,7 +320,10 @@ def main(
         print("DEC stage.")
         dataloader = DataLoader(
             ds_train,
-            batch_size=config['ae_batch_size'],# *config['update_interval'],
+            batch_size=get_cl_batch_size(
+                name='dec',
+                dataset='bmnist' if config['binary'] else 'mnist',
+                opt=config['optimizer']),
             shuffle=False,
         )
         autoencoder = autoencoder.to(device)
@@ -326,6 +333,13 @@ def main(
                     alpha=config['alpha'])
         model = model.to(device)
         optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
+        optimizer = get_ae_opt(
+            name=config['optimizer'],
+            dataset='bmnist' if config['binary'] else 'mnist',
+            lr=get_cl_lr(
+                name='dec',
+                dataset='bmnist' if config['binary'] else 'mnist',
+                opt=config['optimizer']))(model.parameters())
         scaler = get_scaler(config['scaler']) if config['scaler'] != 'none' else None
         kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
         features = []
