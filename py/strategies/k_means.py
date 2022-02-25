@@ -96,13 +96,17 @@ class KMeansStrategy(FedAvg):
         #     basis_length = base_centroids.shape[0]
             
             
-        idx = self.rng.integers(0, all_centroids.shape[0], config['n_clusters'])
-        base_centroids = np.array(all_centroids[idx[0]])
-        print('Basis centroids\' starting shape: {}'.format(base_centroids.shape))
-        print('Indices: {}'.format(idx))
-        for i in idx[1:]:
-            base_centroids = np.concatenate(
-                (base_centroids, [all_centroids[i]]), axis=0)
+        # idx = self.rng.integers(0, all_centroids.shape[0], config['n_clusters'])
+        # base_centroids = np.array(all_centroids[idx[0]])
+        # print('Basis centroids\' starting shape: {}'.format(base_centroids.shape))
+        # print('Indices: {}'.format(idx))
+        # for i in idx[1:]:
+        #     base_centroids = np.concatenate(
+        #         (base_centroids, [all_centroids[i]]), axis=0)
+        
+        self.rng.shuffle(all_centroids)
+        base_centroids = all_centroids[:config['n_clusters']]
+        print('Basis centroids\' shape: {}'.format(base_centroids.shape))
         # Save base_centroids
         print(f"Saving base centroids...")
         # with open(self.out_dir/'agg_clusters_centers.npz', 'w') as file:
