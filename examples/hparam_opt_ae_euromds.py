@@ -535,7 +535,7 @@ def main(num_samples=10, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.
         # search_alg=bayesopt,
         progress_reporter=reporter,
         # name='euromds_cl_{}_{}'.format(config['linears'], config['optimizer']),
-        name='euromds_ae_gnoise',
+        name='euromds_ae_modloss',
         # resume=True,
     )
 
