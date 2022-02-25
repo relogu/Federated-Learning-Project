@@ -41,7 +41,7 @@ def fit_kmeans_loop(
         with torch.no_grad():
             if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
                 batch, value = batch  # if we have a prediction label, separate it to actual
-                actual.append(value)
+                actual.append(value.cpu())
                 data.append(batch.cpu())
             batch = batch.to(device, non_blocking=True)
             r_batch = autoencoder(batch)
@@ -49,7 +49,7 @@ def fit_kmeans_loop(
             r_data.append(r_batch.cpu())
             features.append(f_batch.cpu())
     predicted = kmeans.fit_predict(
-        scaler.fit_transform(torch.cat(features).numpy()) if scaler is not None else torch.cat(features).numpy()
+        scaler.fit_transform(torch.cat(features).cpu().numpy()) if scaler is not None else torch.cat(features).numpy()
     )
     centroids = kmeans.cluster_centers_
     # if choosing empirical centroids or kmeans centroids
@@ -62,7 +62,7 @@ def fit_kmeans_loop(
     # return predicted labels and centroids
     return (
         predicted,
-        torch.cat(actual).long(),
+        torch.cat(actual).numpy(),
         centroids,
         torch.cat(data).numpy(),
         torch.cat(r_data).numpy(),
@@ -93,11 +93,18 @@ class KMeansClient(NumPyClient):
         self.trainloader = data_loader_config['trainloader_fn'](self.ds_train)
         self.valloader = data_loader_config['valloader_fn'](self.ds_test)
         # get network
+        self.noising = None
         if 'noising' in net_config.keys():
+            self.noising = net_config['noising']
             net_config.pop('noising')
         if 'corruption' in net_config.keys():
             net_config.pop('corruption')
         self.autoencoder = StackedDenoisingAutoEncoder(**net_config)
+        ae_params_filename = 'agg_weights_finetune_ae.npz' if self.noising is not None else 'agg_weights_pretrain_ae.npz'
+        # with open(path_to_out/ae_params_filename, 'r') as file:
+        ae_parameters = np.load(self.out_dir/ae_params_filename, allow_pickle=True)
+        ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
+        self.set_parameters(ae_parameters)
         # kmeans initializations
         self.kmeans_config = kmeans_config
         self.use_emp_centroids = False
@@ -133,7 +140,7 @@ class KMeansClient(NumPyClient):
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # set model parameters from server: server must pass as initial 
         # parameter the final server parameters for the autoencoder
-        self.set_parameters(parameters)
+        # self.set_parameters(parameters)
         # fit kmeans
         predicted, actual, self.clusters_centers, data, r_data, features = fit_kmeans_loop(
             kmeans=self.kmeans,
@@ -144,16 +151,18 @@ class KMeansClient(NumPyClient):
             use_emp_centroids=self.use_emp_centroids,
         )
         # save clusters_centers
-        with open(self.out_dir/'kmeans_cluster_centers_{}.npz'.format(self.client_id), 'w') as file:
-            np.savez(file, *self.clusters_centers)
+        # with open(self.out_dir/'kmeans_cluster_centers_{}.npz'.format(self.client_id), 'w') as file:
+        # TODO: check why fails here
+        np.savez(self.out_dir/'kmeans_cluster_centers_{}.npz'.format(self.client_id), *self.clusters_centers)
         # returning the parameters necessary for FedAvg
-        return {self.clusters_centers}, {len(self.ds_train)}, {}
+        return self.clusters_centers, len(self.ds_train), 0.0
     
     def evaluate(self, parameters, config):
         # get device
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # set clusters centers from server
         self.kmeans_config['init'] = np.array(parameters)
+        self.kmeans_config['n_init'] = 1
         self.kmeans = KMeans(**self.kmeans_config)
         # fit kmeans
         predicted, actual, self.clusters_centers, data, r_data, features = fit_kmeans_loop(
@@ -164,27 +173,36 @@ class KMeansClient(NumPyClient):
             scaler=self.scaler,
         )
         # evaluate clustering
-        cos_sil_score = silhouette_score(
-            X=data,
-            labels=predicted,
-            metric='cosine')
-        eucl_sil_score = silhouette_score(
-            X=features,
-            labels=predicted,
-            metric='euclidean')
-        data_calinski_harabasz = calinski_harabasz_score(
-            X=data,
-            labels=predicted)
-        feat_calinski_harabasz = calinski_harabasz_score(
-            X=features,
-            labels=predicted)
+        cos_sil_score = 0
+        eucl_sil_score = 0
+        data_calinski_harabasz = 0
+        feat_calinski_harabasz = 0
+        
+        if len(np.unique(predicted)) > 1:
+            cos_sil_score = silhouette_score(
+                X=data,
+                labels=predicted,
+                metric='cosine')
+            eucl_sil_score = silhouette_score(
+                X=features,
+                labels=predicted,
+                metric='euclidean')
+            data_calinski_harabasz = calinski_harabasz_score(
+                X=data,
+                labels=predicted)
+            feat_calinski_harabasz = calinski_harabasz_score(
+                X=features,
+                labels=predicted)
         reassignment, accuracy = cluster_accuracy(predicted, actual)
         # TODO: save metrics
         # save labels for predicted_previous of next step
-        with open(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), 'w') as file:
-            np.savez(file, *predicted)
+        # with open(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), 'w') as file:
+        np.savez(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), *predicted)
         # save kmeans predictions for final studies
-        with open(self.out_dir/'kmeans_predictions{}.npz'.format(self.client_id), 'w') as file:
-            np.savez(file, *predicted)
+        # with open(self.out_dir/'kmeans_predictions{}.npz'.format(self.client_id), 'w') as file:
+        np.savez(self.out_dir/'kmeans_predictions{}.npz'.format(self.client_id), *predicted)
         # returning the parameters necessary for evaluation
-        return {}, {len(self.ds_test)}, {}
+        return float(accuracy), len(self.ds_test), {'cosine silhouette score': float(cos_sil_score),
+                                                    'euclidean silhouette score': float(eucl_sil_score),
+                                                    'data calinski harabasz score': float(data_calinski_harabasz),
+                                                    'features calinski harabasz score': float(feat_calinski_harabasz)}

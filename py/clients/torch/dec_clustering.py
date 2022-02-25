@@ -38,14 +38,14 @@ def dec_model_training_loop(
         for i, batch in enumerate(dataloader):
             if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
                 batch
-            ) == 2:  # if we have a prediction label, strip it away
+            ) == 2:
                 batch, _ = batch
             batch = batch.to(device, non_blocking=True)
             output = model(batch)
             soft_labels = output
             target = target_distribution(soft_labels).detach()
             loss = loss_function(output.log(), target) / output.shape[0]
-            ret_loss += loss.cpu().numpy()
+            ret_loss += loss.item()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step(closure=None)
@@ -81,7 +81,7 @@ def dec_model_evaluating_loop(
             r_data.append(r_batch.cpu())
             features.append(f_batch.cpu())
             loss = criterion(r_batch, batch)
-            recon_loss += loss.cpu().numpy()
+            recon_loss += loss.item()
             prob_labels.append(model(batch).cpu())
             r_prob_labels.append(model(r_batch).cpu())
         recon_loss = recon_loss / (i+1)
@@ -89,7 +89,7 @@ def dec_model_evaluating_loop(
         recon_loss,
         torch.cat(prob_labels).max(1)[1].cpu().numpy(),
         torch.cat(r_prob_labels).max(1)[1].cpu().numpy(),
-        torch.cat(actual).long().numpy(),
+        torch.cat(actual).numpy(),
         torch.cat(data).numpy(),
         torch.cat(r_data).numpy(),
         torch.cat(features).numpy(),
@@ -107,6 +107,7 @@ class DECClient(NumPyClient):
                  opt_config: Dict = None, # config of optimizer
                  output_folder: Union[Path, str] = None # output folder
                  ):
+        self.client_id = client_id
         # set output folder        
         if output_folder is None:
             self.out_dir = output_folder
@@ -128,8 +129,9 @@ class DECClient(NumPyClient):
         self.autoencoder = StackedDenoisingAutoEncoder(**net_config)
         # Get SDAE parameters
         ae_params_filename = 'agg_weights_finetune_ae.npz' if noising is not None else 'agg_weights_pretrain_ae.npz'
-        with open(self.out_dir/ae_params_filename, 'r') as file:
-            ae_parameters = np.load(file, allow_pickle=True)
+        # with open(self.out_dir/ae_params_filename, 'r') as file:
+        ae_parameters = np.load(self.out_dir/ae_params_filename, allow_pickle=True)
+        ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
         self.set_ae_parameters(ae_parameters)
         # get DEC model
         self.dec_model = DEC(
@@ -138,10 +140,9 @@ class DECClient(NumPyClient):
             encoder=self.autoencoder.encoder,
             alpha=dec_config['alpha'])
         # get initial centroids from server
-        with open(self.out_dir/'agg_clusters_centers.npz', 'r') as file:
-            npy_file = np.load(file, allow_pickle=True)
-        centroids = np.array([npy_file[a] for a in npy_file])
-        centroids = None
+        # with open(self.out_dir/'agg_clusters_centers.npz', 'r') as file:
+        npy_file = np.load(self.out_dir/'agg_clusters_centers.npz', allow_pickle=True)
+        centroids = [npy_file[a] for a in npy_file][0]
         # set initial centroids
         cluster_centers = torch.tensor(
             np.array(centroids),
@@ -153,11 +154,13 @@ class DECClient(NumPyClient):
             self.dec_model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
         # get optimizer
         self.optimizer = opt_config['optimizer_fn'](
-            opt_config['optimizer'],
+            opt_config['name'],
+            opt_config['dataset'],
+            opt_config['linears'],
             opt_config['lr'])(self.dec_model.parameters())
         # get previusly predicted labels
-        with open(self.out_dir/'predicted_previous.npz', 'r') as file:
-            npy_file = np.load(file, allow_pickle=True)
+        # with open(self.out_dir/'predicted_previous.npz', 'r') as file:
+        npy_file = np.load(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), allow_pickle=True)
         self.predicted_previous = np.array([npy_file[a] for a in npy_file])
         # general initializations
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
@@ -168,7 +171,7 @@ class DECClient(NumPyClient):
     
     def get_parameters(self):
         """Get the model weights by model object."""
-        return [val.cpu().numpy() for _, val in self.dec_mode.state_dict().items()]
+        return [val.cpu().numpy() for _, val in self.dec_model.state_dict().items()]
     
 
     def set_ae_parameters(self, parameters):
@@ -196,10 +199,9 @@ class DECClient(NumPyClient):
             device=device,
             model=self.dec_model,
             optimizer=self.optimizer,
-            predicted_previous=self.predicted_previous,
         )
         # returning the parameters necessary for FedAvg
-        return {self.get_parameters()}, {len(self.ds_train)}, {loss}
+        return self.get_parameters(), len(self.ds_train), loss
     
     def evaluate(self, parameters, config):
         # get device
@@ -216,28 +218,39 @@ class DECClient(NumPyClient):
         # TODO: evaluate reconstruction
         # evaluate clustering
         delta_label = (
-            float((predicted != self.predicted_previous).float().sum().item())
+            np.sum(predicted != self.predicted_previous)
             / self.predicted_previous.shape[0]
         )
-        cos_sil_score = silhouette_score(
-            X=data,
-            labels=predicted,
-            metric='cosine')
-        eucl_sil_score = silhouette_score(
-            X=features,
-            labels=predicted,
-            metric='euclidean')
-        data_calinski_harabasz = calinski_harabasz_score(
-            X=data,
-            labels=predicted)
-        feat_calinski_harabasz = calinski_harabasz_score(
-            X=features,
-            labels=predicted)
+        cos_sil_score = 0
+        eucl_sil_score = 0
+        data_calinski_harabasz = 0
+        feat_calinski_harabasz = 0
+        
+        if len(np.unique(predicted)) > 1:
+            cos_sil_score = silhouette_score(
+                X=data,
+                labels=predicted,
+                metric='cosine')
+            eucl_sil_score = silhouette_score(
+                X=features,
+                labels=predicted,
+                metric='euclidean')
+            data_calinski_harabasz = calinski_harabasz_score(
+                X=data,
+                labels=predicted)
+            feat_calinski_harabasz = calinski_harabasz_score(
+                X=features,
+                labels=predicted)
         reassignment, accuracy = cluster_accuracy(predicted, actual)
         r_reassignment, cycle_accuracy = cluster_accuracy(r_predicted, predicted)
         # TODO: save metrics
         # save labels for predicted_previous of next step
-        with open(self.out_dir/'predicted_previous.npz', 'w') as file:
-            np.savez(file, *predicted)
+        # with open(self.out_dir/'predicted_previous.npz', 'w') as file:
+        np.savez(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), *predicted)
         # returning the parameters necessary for evaluation
-        return {}, {len(self.ds_test)}, {}
+        return float(accuracy), len(self.ds_test), {'cycle accuracy': float(cycle_accuracy),
+                                                    'delta label': float(delta_label),
+                                                    'cosine silhouette score': float(cos_sil_score),
+                                                    'euclidean silhouette score': float(eucl_sil_score),
+                                                    'data calinski harabasz score': float(data_calinski_harabasz),
+                                                    'features calinski harabasz score': float(feat_calinski_harabasz)}

@@ -30,11 +30,13 @@ def training_loop(
     corruption: float = 0.0, # input corruption percentage
 ):
     autoencoder.to(device)
-    noising.to(device)
+    if noising is not None:
+        noising.to(device)
     autoencoder.train()
     if scheduler_config['scheduler_fn'] is not None:
         scheduler = scheduler_config['scheduler_fn'](optimizer)
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
+    
     for _ in range(n_epochs):
         ret_loss = 0.0
         for i, batch in enumerate(dataloader):
@@ -60,7 +62,7 @@ def training_loop(
             loss.backward()
             optimizer.step(closure=None)
         ret_loss = ret_loss / (i+1)
-            # TODO: print statistics?
+        # TODO: print statistics?
         if scheduler_config['scheduler_fn'] is not None:
             scheduler.step(scheduler_config['last_loss'])
     return ret_loss
@@ -98,7 +100,6 @@ class AutoencoderClient(NumPyClient):
                  opt_config: Dict = None, # config of optimizer
                  output_folder: Union[Path, str] = None # output folder
                  ):
-        print("Client {}".format(client_id))
         # get datasets
         self.ds_train = data_loader_config['get_train_fn'](client_id=eval(client_id))
         self.ds_test = data_loader_config['get_test_fn'](client_id=eval(client_id))

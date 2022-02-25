@@ -90,7 +90,7 @@ if __name__ == "__main__":
         'trainloader_fn': partial(
             DataLoader,
             batch_size=args.ae_batch_size,
-            shuffle=True),
+            shuffle=False),
         'valloader_fn': partial(
             DataLoader,
             batch_size=args.ae_batch_size,
@@ -105,20 +105,21 @@ if __name__ == "__main__":
             },
     }
     # Set network configuration dict
-    dataset = CachedEUROMDS(
-        exclude_cols=args.ex_col,
-        groups=args.groups,
-        path_to_data=data_folder,
-        fill_nans=args.fill_nans,
-        get_hdp=False,
-        verbose=True,
-    )
-    n_features = dataset.n_features
-    print("Number of features is: {}".format(n_features))
-    print("Features are: {}".format(dataset.columns_names))
-    del dataset
+    # dataset = CachedEUROMDS(
+    #     exclude_cols=args.ex_col,
+    #     groups=args.groups,
+    #     path_to_data=data_folder,
+    #     fill_nans=args.fill_nans,
+    #     get_hdp=False,
+    #     verbose=True,
+    # )
+    # TODO: correct issue, is setting 1047
+    n_features = 54#dataset.n_features
+    # print("Number of features is: {}".format(n_features))
+    # print("Features are: {}".format(dataset.columns_names))
+    # del dataset
     net_config = {
-        'noising': TruncatedGaussianNoise(
+        'noising': None if args.noising == 0 else TruncatedGaussianNoise(
             shape=n_features,
             stddev=args.noising,
             rate=1.0,
@@ -283,10 +284,10 @@ if __name__ == "__main__":
                 'verbose': args.verbose,
                 'actual_round': rnd,
                 'total_rounds': 1}
-    # Get SDAE parameters
-    ae_params_filename = 'agg_weights_finetune_ae.npz' if args.noising > 0 else 'agg_weights_pretrain_ae.npz'
-    with open(path_to_out/ae_params_filename, 'r') as file:
-        ae_parameters = np.load(file, allow_pickle=True)
+    # TODO: issue of intial evaluate --> Get SDAE parameters
+    # ae_params_filename = 'agg_weights_finetune_ae.npz' if args.noising > 0 else 'agg_weights_pretrain_ae.npz'
+    # # with open(path_to_out/ae_params_filename, 'r') as file:
+    # ae_parameters = np.load(path_to_out/ae_params_filename, allow_pickle=True)
     # Configure the strategy
     current_strategy = KMeansStrategy(
         out_dir=path_to_out,
@@ -295,7 +296,7 @@ if __name__ == "__main__":
         min_available_clients=args.n_clients,
         min_fit_clients=args.n_clients,
         min_eval_clients=args.n_clients,
-        initial_parameters=ae_parameters,
+        # initial_parameters=ae_parameters,
     )
     # Launch the simulation
     fl.simulation.start_simulation(
@@ -337,7 +338,7 @@ if __name__ == "__main__":
             opt_config=dec_opt_config,
             output_folder=path_to_out)
     # Define on_fit_config_fn
-    def on_fit_config_dec_fn(train: bool, rnd: int):
+    def on_fit_config_dec_fn(rnd: int, train: bool = True):
         # Must have 'last', 'model' for server necessities; 
         # 'actual_round', 'total_rounds', 'update_interval', 
         # 'train_or_not_param' for client necessities
