@@ -99,6 +99,7 @@ class KMeansStrategy(FedAvg):
         idx = self.rng.integers(0, all_centroids.shape[0], config['n_clusters'])
         base_centroids = np.array(all_centroids[idx[0]])
         print('Basis centroids\' starting shape: {}'.format(base_centroids.shape))
+        print('Indices: {}'.format(idx))
         for i in idx[1:]:
             base_centroids = np.concatenate(
                 (base_centroids, [all_centroids[i]]), axis=0)
