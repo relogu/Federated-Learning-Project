@@ -86,8 +86,8 @@ class KMeansStrategy(FedAvg):
             distances = [distance_from_centroids(
                 base_centroids, c) for c in all_centroids]
             # get the index of the maximum distance
-            # idx = np.argmax(distances)
-            idx = np.argmin(distances)
+            idx = np.argmax(distances)
+            # idx = np.argmin(distances)
             # add the new centroid --> (n_centroids, n_dimensions)
             base_centroids = np.concatenate(
                 (base_centroids, [all_centroids[idx]]), axis=0)
