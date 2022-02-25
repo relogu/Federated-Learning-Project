@@ -73,25 +73,34 @@ class KMeansStrategy(FedAvg):
         # all the centroids in one list
         all_centroids = all_centroids.reshape((all_centroids.shape[0]*all_centroids.shape[1], all_centroids.shape[2]))
         print('All centroids\' shape: {}'.format(all_centroids.shape))
-        # pick, randomly, one client's first centroids
-        idx = self.rng.integers(0, all_centroids.shape[0], 1)
-        # basis to be completed
+        
+        
+        # # pick, randomly, one client's first centroids
+        # idx = self.rng.integers(0, all_centroids.shape[0], 1)
+        # # basis to be completed
+        # base_centroids = np.array(all_centroids[idx])
+        # print('Basis centroids\' starting shape: {}'.format(base_centroids.shape))
+        # # basis initial length
+        # basis_length = 1
+        # # loop for completing the basis
+        # while basis_length < config['n_clusters']:
+        #     # all distances from the basis of centroids
+        #     distances = [distance_from_centroids(
+        #         base_centroids, c) for c in all_centroids]
+        #     # get the index of the maximum distance
+        #     idx = np.argmax(distances)
+        #     # idx = np.argmin(distances)
+        #     # add the new centroid --> (n_centroids, n_dimensions)
+        #     base_centroids = np.concatenate(
+        #         (base_centroids, [all_centroids[idx]]), axis=0)
+        #     basis_length = base_centroids.shape[0]
+            
+            
+        idx = self.rng.integers(0, all_centroids.shape[0], config['n_clusters'])
         base_centroids = np.array(all_centroids[idx])
-        print('Basis centroids\' starting shape: {}'.format(base_centroids.shape))
-        # basis initial length
-        basis_length = 1
-        # loop for completing the basis
-        while basis_length < config['n_clusters']:
-            # all distances from the basis of centroids
-            distances = [distance_from_centroids(
-                base_centroids, c) for c in all_centroids]
-            # get the index of the maximum distance
-            idx = np.argmax(distances)
-            # idx = np.argmin(distances)
-            # add the new centroid --> (n_centroids, n_dimensions)
+        for i in idx[1:]:
             base_centroids = np.concatenate(
                 (base_centroids, [all_centroids[idx]]), axis=0)
-            basis_length = base_centroids.shape[0]
         # Save base_centroids
         print(f"Saving base centroids...")
         # with open(self.out_dir/'agg_clusters_centers.npz', 'w') as file:
