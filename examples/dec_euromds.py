@@ -46,23 +46,24 @@ def main(
         'dropout': 0.0,
         'epochs': 150,
         'n_clusters': 6,
-        'ae_batch_size': 16,
+        'ae_batch_size': 8,
         'update_interval': 50,
-        'optimizer': 'adam',
+        'optimizer': 'yogi',
         'lr': None,
         'lr_scheduler': False,
         'main_loss': 'mse',
-        'mod_loss': 'none',# 'bce+dice',
-        'beta': 0.0,
+        'mod_loss': 'bce+dice',
+        'beta': 0.4,
         'corruption': 0.0,
         'noising': 0.0,
-        'train_dec': 'no',
+        'train_dec': 'yes',
+        'dec_batch_size': 64,
         'alpha': 1,
-        'scaler': 'standard',
+        'scaler': 'none',
     }
     # defining output folder
     if out_folder is None:
-        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'euromds_ae_dec_adam'
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'euromds_cl_best_modloss'
     else:
         path_to_out = pathlib.Path(out_folder)
     os.makedirs(path_to_out, exist_ok=True)
@@ -308,7 +309,7 @@ def main(
         print("DEC stage.")
         dataloader = DataLoader(
             ds_train,
-            batch_size=config['ae_batch_size'],# *config['update_interval'],
+            batch_size=config['dec_batch_size'],# *config['update_interval'],
             shuffle=False,
         )
         autoencoder = autoencoder.to(device)
@@ -317,7 +318,11 @@ def main(
                     encoder=autoencoder.encoder,
                     alpha=config['alpha'])
         model = model.to(device)
-        optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
+        # optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
+        optimizer = get_ae_opt(
+            name=config['optimizer'],
+            dataset='euromds',
+            lr=0.003)(model.parameters())
         scaler = get_scaler(
             config['scaler']) if config['scaler'] != 'none' else None
         kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
