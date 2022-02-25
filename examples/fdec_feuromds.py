@@ -6,6 +6,7 @@ Created on Fri Oct 29 13:55:15 2021
 @author: relogu
 """
 import flwr as fl
+from flwr.common import Parameters
 import numpy as np
 import os
 import pathlib
@@ -168,6 +169,10 @@ if __name__ == "__main__":
                 'verbose': args.verbose,
                 'actual_round': rnd,
                 'total_rounds': args.ae_epochs}
+    ae_parameters = np.load(
+        '~/Federated-Learning-Project/input_weights/agg_weights_pretrain_ae.npz',
+        allow_pickle=True)
+    ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
     # Configure the strategy
     current_strategy = SaveModelStrategy(
         out_dir=path_to_out,
@@ -176,6 +181,7 @@ if __name__ == "__main__":
         min_available_clients=args.n_clients,
         min_fit_clients=args.n_clients,
         min_eval_clients=args.n_clients,
+        initial_parameters=fl.common.weights_to_parameters(ae_parameters),
     )
     # Launch the simulation
     fl.simulation.start_simulation(
@@ -325,7 +331,7 @@ if __name__ == "__main__":
         'name': args.ae_opt,
         'dataset': 'euromds',
         'linears': args.linears,
-        'lr': 0.003,
+        'lr': 0.01,#0.003,
     }
     # Define the client fn to pass ray simulation
     def dec_client_fn(cid: str):
