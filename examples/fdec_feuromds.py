@@ -347,7 +347,7 @@ if __name__ == "__main__":
                 'actual_round': rnd,
                 'total_rounds': args.dec_epochs,
                 'train': train,
-                'n_epochs': args.n_local_epochs}
+                'n_epochs': 10}#args.n_local_epochs}
     # Define on_evaluate_config_fn
     def on_eval_config_dec_fn(rnd: int):
         # Must have 'dump_metrics', 'verbose', 'actual_round'
