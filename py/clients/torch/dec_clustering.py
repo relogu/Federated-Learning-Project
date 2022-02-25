@@ -248,7 +248,7 @@ class DECClient(NumPyClient):
         # with open(self.out_dir/'predicted_previous.npz', 'w') as file:
         np.savez(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), *predicted)
         # returning the parameters necessary for evaluation
-        return float(accuracy), len(self.ds_test), {'cycle accuracy': float(cycle_accuracy),
+        return float(recon_loss), len(self.ds_test), {'cycle accuracy': float(cycle_accuracy),
                                                     'delta label': float(delta_label),
                                                     'cosine silhouette score': float(cos_sil_score),
                                                     'euclidean silhouette score': float(eucl_sil_score),

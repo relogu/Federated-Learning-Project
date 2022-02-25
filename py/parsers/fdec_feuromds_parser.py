@@ -163,7 +163,7 @@ def fdec_feuromds_parser():
         dest='alpha',
         required=False,
         type=int,
-        default=1,
+        default=5,
         help='alpha parameter of DEC model'
     )
     ## DEC training
