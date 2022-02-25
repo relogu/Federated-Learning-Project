@@ -481,7 +481,7 @@ def main(num_samples=10, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.
     if config['input_weights'] is None:
         num_checkpoints += 1
         metric_columns.append('ae_loss')
-    if config['noising'] > 0.0:
+    if config['noising'] != 0.0:
         num_checkpoints += 1
     if config['train_dec'] == 'yes':
         num_checkpoints += 1 
