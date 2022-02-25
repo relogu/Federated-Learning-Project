@@ -77,7 +77,7 @@ class KMeansStrategy(FedAvg):
         idx = self.rng.integers(0, all_centroids.shape[0], 1)
         # basis to be completed
         base_centroids = [all_centroids[idx]]
-        print('Basis centroids\' starting shape: {}'.format(all_centroids.shape))
+        print('Basis centroids\' starting shape: {}'.format(base_centroids.shape))
         # basis initial length
         basis_length = 1
         # loop for completing the basis
