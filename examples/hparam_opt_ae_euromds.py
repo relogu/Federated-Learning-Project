@@ -447,7 +447,7 @@ def main(num_samples=10, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.
 
     config = {
         'input_weights': None,
-        'linears': 'dec', #tune.grid_search(['dec', 'google', 'curves']),
+        'linears': tune.grid_search(['dec', 'google', 'curves']),
         'f_dim': 10,# tune.grid_search([2,3,4,5,6,7,8,9,10]),
         'activation': 'relu',
         'final_activation': 'relu',
@@ -457,7 +457,7 @@ def main(num_samples=10, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.
         'n_clusters': 6,# tune.grid_search([6, 7, 8, 9, 10]),
         'ae_batch_size': 8,
         'update_interval': 20,# tune.grid_search([20, 40, 80, 160]),
-        'optimizer': 'sgd',# tune.grid_search(['adam', 'yogi', 'sgd']),
+        'optimizer': tune.grid_search(['adam', 'yogi', 'sgd']),
         'lr': None,# tune.loguniform(1e-6, 1.0),
         'lr_scheduler': False,
         'main_loss': 'mse',  # tune.grid_search(['mse', 'bce-wl']),
