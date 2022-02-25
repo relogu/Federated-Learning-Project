@@ -170,7 +170,7 @@ if __name__ == "__main__":
                 'actual_round': rnd,
                 'total_rounds': args.ae_epochs}
     ae_parameters = np.load(
-        '~/Federated-Learning-Project/input_weights/agg_weights_pretrain_ae.npz',
+        pathlib.Path(__file__).parent.parent.absolute()/'input_weights'/'agg_weights_pretrain_ae.npz',
         allow_pickle=True)
     ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
     # Configure the strategy
