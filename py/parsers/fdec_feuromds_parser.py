@@ -111,7 +111,7 @@ def fdec_feuromds_parser():
         dest='ae_epochs',
         required=False,
         type=int,
-        default=200,
+        default=400,
         help='federated epochs to run in SDAE training'
     )
     ## KMeans parameters
