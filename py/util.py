@@ -23,7 +23,8 @@ def distance_from_centroids(centroids_array, vector):
         # append the distance
         distances = np.append(distances, d)
     # returning the lower distance between all the centroids
-    return min(distances)
+    # return min(distances)
+    return max(distances)
 
 
 # TODO: give by argument the distance function
