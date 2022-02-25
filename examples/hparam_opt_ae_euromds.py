@@ -24,7 +24,7 @@ from py.datasets.euromds import CachedEUROMDS
 from py.dec.torch.utils import get_ae_opt, get_main_loss, get_mod_binary_loss, get_scaler, cluster_accuracy, target_distribution, get_linears
 from py.util import compute_centroid_np
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 os.environ["TUNE_DISABLE_STRICT_METRIC_CHECKING"] = "1"
 
 
@@ -465,8 +465,8 @@ def main(num_samples=10, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.
         'mod_loss': 'none', # 'bce+dice', # tune.grid_search(['bce+dice', 'none']),
         'beta': 0.0,# tune.grid_search([0.0, 0.1, 0.2, 0.3, 0.4, 0.5]),
         # tune.grid_search([0.0, 0.1, 0.2, 0.3]),# tune.uniform(0.0, 0.5),# tune.grid_search([0.0, 0.1, 0.2, 0.3,]),
-        'corruption': tune.uniform(0.0, 0.5),
-        'noising': 0.0,  # tune.grid_search([0.0, 0.1]),
+        'corruption': 0.0,
+        'noising': tune.uniform(0.0, 0.2),
         'train_dec': 'no',
         'dec_batch_size': 8,# tune.grid_search([8, 16, 32, 64]),
         'alpha': 1,  # tune.grid_search([1, 9]),
@@ -535,7 +535,7 @@ def main(num_samples=10, max_num_epochs=150, cpus_per_trial=4, gpus_per_trial=0.
         # search_alg=bayesopt,
         progress_reporter=reporter,
         # name='euromds_cl_{}_{}'.format(config['linears'], config['optimizer']),
-        name='euromds_ae_corr',
+        name='euromds_ae_gnoise',
         # resume=True,
     )
 
