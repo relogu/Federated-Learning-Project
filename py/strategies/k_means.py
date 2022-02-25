@@ -70,25 +70,24 @@ class KMeansStrategy(FedAvg):
         all_centroids = np.array([parameters_to_weights(
             fit_res.parameters) for _, fit_res in results])
         print('All centroids\' shape: {}'.format(all_centroids.shape))
+        # all the centroids in one list
+        all_centroids = all_centroids.reshape((all_centroids.shape[0]*all_centroids.shape[1], all_centroids.shape[2]))
         # pick, randomly, one client's first centroids
         idx = self.rng.integers(0, all_centroids.shape[0], 1)
         # basis to be completed
-        base_centroids = [all_centroids[idx][0][0]]
-        # all the centroids
-        all_centroids = np.concatenate(all_centroids, axis=0)
-        # all other (not chosen already) centroids
-        other_centroids = all_centroids[1:]
+        base_centroids = [all_centroids[idx]]
+        # basis initial length
         basis_length = 1
         # loop for completing the basis
         while basis_length < config['n_clusters']:
             # all distances from the basis of centroids
             distances = [distance_from_centroids(
-                base_centroids, c) for c in other_centroids]
+                base_centroids, c) for c in all_centroids]
             # get the index of the maximum distance
             idx = np.argmax(distances)
             # add the new centroid --> (n_centroids, n_dimensions)
             base_centroids = np.concatenate(
-                (base_centroids, [other_centroids[idx]]), axis=0)
+                (base_centroids, [all_centroids[idx]]), axis=0)
             basis_length = base_centroids.shape[0]
         # Save base_centroids
         print(f"Saving base centroids...")
