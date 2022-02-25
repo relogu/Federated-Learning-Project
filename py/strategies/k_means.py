@@ -72,10 +72,12 @@ class KMeansStrategy(FedAvg):
         print('All centroids\' shape: {}'.format(all_centroids.shape))
         # all the centroids in one list
         all_centroids = all_centroids.reshape((all_centroids.shape[0]*all_centroids.shape[1], all_centroids.shape[2]))
+        print('All centroids\' shape: {}'.format(all_centroids.shape))
         # pick, randomly, one client's first centroids
         idx = self.rng.integers(0, all_centroids.shape[0], 1)
         # basis to be completed
         base_centroids = [all_centroids[idx]]
+        print('Basis centroids\' starting shape: {}'.format(all_centroids.shape))
         # basis initial length
         basis_length = 1
         # loop for completing the basis
