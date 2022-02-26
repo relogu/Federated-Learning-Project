@@ -150,8 +150,8 @@ class SaveModelStrategyFedAdam(FedAdam):
         on_evaluate_config_fn: Optional[Callable[[
             int], Dict[str, Scalar]]] = None,
         accept_failures: bool = True,
-        eta: float = 1e-1,
-        eta_l: float = 1e-1,
+        eta: float = 1e-2,
+        eta_l: float = 0.0316,
         beta_1: float = 0.9,
         beta_2: float = 0.99,
         tau: float = 1e-9,
