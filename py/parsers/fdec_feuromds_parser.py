@@ -111,7 +111,7 @@ def fdec_feuromds_parser():
         dest='ae_epochs',
         required=False,
         type=int,
-        default=5,
+        default=500,
         help='federated epochs to run in SDAE training'
     )
     ## KMeans parameters
@@ -182,6 +182,14 @@ def fdec_feuromds_parser():
         type=int,
         default=64,
         help='batch size used for clustering step training'
+    )
+    parser.add_argument(
+        '--dec-lr',
+        dest='dec_lr',
+        required=False,
+        type=float,
+        default=1e-2,
+        help='local learning rate used for clustering step training'
     )
     ## general
     parser.add_argument(
