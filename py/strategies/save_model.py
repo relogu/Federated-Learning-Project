@@ -71,7 +71,6 @@ class SaveModelStrategyFedYogi(FedYogi):
     def __init__(
         self,
         out_dir: Union[Path, str] = None,
-        *,
         fraction_fit: float = 0.1,
         fraction_eval: float = 0.1,
         min_fit_clients: int = 2,
@@ -84,7 +83,7 @@ class SaveModelStrategyFedYogi(FedYogi):
         on_evaluate_config_fn: Optional[Callable[[
             int], Dict[str, Scalar]]] = None,
         accept_failures: bool = True,
-        initial_parameters: Parameters,
+        initial_parameters: Parameters = None,
         eta: float = 1e-2,
         eta_l: float = 0.0316,
         beta_1: float = 0.9,
@@ -135,7 +134,6 @@ class SaveModelStrategyFedAdam(FedAdam):
     def __init__(
         self,
         out_dir: Union[Path, str] = None,
-        *,
         fraction_fit: float = 0.1,
         fraction_eval: float = 0.1,
         min_fit_clients: int = 2,
@@ -149,7 +147,7 @@ class SaveModelStrategyFedAdam(FedAdam):
         on_evaluate_config_fn: Optional[Callable[[
             int], Dict[str, Scalar]]] = None,
         accept_failures: bool = True,
-        initial_parameters: Parameters,
+        initial_parameters: Parameters = None,
         eta: float = 1e-1,
         eta_l: float = 1e-1,
         beta_1: float = 0.9,
