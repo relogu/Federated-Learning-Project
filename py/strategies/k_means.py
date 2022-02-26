@@ -70,7 +70,7 @@ class KMeansStrategy(FedAvg):
         all_centroids = np.array([parameters_to_weights(
             fit_res.parameters) for _, fit_res in results])
         print('All centroids\' shape: {}'.format(all_centroids.shape))
-        print(all_centroids)
+        # print(all_centroids)
         # all the centroids in one list
         all_centroids = all_centroids.reshape((all_centroids.shape[0]*all_centroids.shape[1], all_centroids.shape[2]))
         print('All centroids\' shape: {}'.format(all_centroids.shape))
