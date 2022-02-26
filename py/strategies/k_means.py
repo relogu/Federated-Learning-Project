@@ -11,6 +11,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 from pathlib import Path
 import numpy as np
 import pandas as pd
+from sklearn.cluster import KMeans
 from flwr.common import (FitRes, Parameters, Scalar, Weights, FitRes,
                          parameters_to_weights, weights_to_parameters)
 from flwr.server.client_proxy import ClientProxy
@@ -78,16 +79,14 @@ class KMeansStrategy(FedAvg):
                 for _ in range(f_r[int(2*i+1)]):
                     all_centroids_multi.append(f_r[2*i])
                 n_samples.append(f_r[int(2*i+1)])
-        # all_centroids = np.array([parameters_to_weights(
-        #     fit_res.parameters) for _, fit_res in results])
-        print('All centroids\' shape: {}'.format(np.array(all_centroids).shape))
-        print('N samples shape: {}'.format(np.array(n_samples).shape))
-        pd.DataFrame(np.array(all_centroids)).to_csv(self.out_dir/'centroids.csv')
-        # print(all_centroids)
-        # all the centroids in one list
-        all_centroids = all_centroids.reshape((all_centroids.shape[0]*all_centroids.shape[1], all_centroids.shape[2]))
+        all_centroids = np.array(all_centroids)
+        all_centroids_multi = np.array(all_centroids_multi)
+        n_samples = np.array(n_samples)
+        print('All centroids\' multi shape: {}'.format(all_centroids_multi.shape))
         print('All centroids\' shape: {}'.format(all_centroids.shape))
-        
+        print('N samples shape: {}'.format(n_samples.shape))
+        pd.DataFrame(np.array(all_centroids_multi)).to_csv(self.out_dir/'centroids_multi.csv')
+        kmeans = KMeans(n_clusters=config['n_clusters'], n_init=20)  
         
         # # pick, randomly, one client's first centroids
         # idx = self.rng.integers(0, all_centroids.shape[0], 1)
