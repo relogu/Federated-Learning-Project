@@ -316,8 +316,9 @@ if __name__ == "__main__":
                 'actual_round': rnd,
                 'total_rounds': 1}
     # Get SDAE parameters
+    filename = 'agg_weights_pretrain_ae.npz' if net_config['noising'] is None else 'agg_weights_finetune_ae.npz'
     ae_parameters = np.load(
-        path_to_out/'agg_weights_pretrain_ae.npz',
+        path_to_out/filename,
         allow_pickle=True)
     ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
     initial_param = fl.common.weights_to_parameters(ae_parameters)
