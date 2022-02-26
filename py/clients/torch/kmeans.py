@@ -151,6 +151,7 @@ class KMeansClient(NumPyClient):
             use_emp_centroids=self.use_emp_centroids,
         )
         couples = []
+        print(np.unique(predicted))
         for i in np.unique(predicted):
             idx = (predicted == i)
             couples.append(self.clusters_centers[i])
