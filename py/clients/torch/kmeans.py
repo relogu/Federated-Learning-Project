@@ -153,7 +153,8 @@ class KMeansClient(NumPyClient):
         couples = []
         for i in np.unique(predicted):
             idx = (predicted == i)
-            couples.append((self.clusters_centers[i], np.sum(idx)))
+            couples.append(self.clusters_centers[i])
+            couples.append(np.sum(idx))
         # save clusters_centers
         np.savez(self.out_dir/'kmeans_cluster_centers_{}.npz'.format(self.client_id), *self.clusters_centers)
         # returning the parameters necessary for FedAvg
