@@ -67,9 +67,16 @@ class KMeansStrategy(FedAvg):
         if not self.accept_failures and failures:
             return None, {}
         # getting all centroids --> (n_clients, n_centroids, n_dimensions)
-        all_centroids = np.array([parameters_to_weights(
-            fit_res.parameters) for _, fit_res in results])
-        print('All centroids\' shape: {}'.format(all_centroids.shape))
+        all_centroids = []
+        n_samples = []
+        for _, fit_res in results:
+            f_r = parameters_to_weights(fit_res.parameters)
+            all_centroids.append(f_r[0])
+            n_samples.append(f_r[1])
+        # all_centroids = np.array([parameters_to_weights(
+        #     fit_res.parameters) for _, fit_res in results])
+        print('All centroids\' shape: {}'.format(np.array(all_centroids).shape))
+        print('N samples shape: {}'.format(np.array(n_samples).shape))
         # print(all_centroids)
         # all the centroids in one list
         all_centroids = all_centroids.reshape((all_centroids.shape[0]*all_centroids.shape[1], all_centroids.shape[2]))
