@@ -22,7 +22,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["RAY_DISABLE_IMPORT_WARNING"] = "1"
 
 from py.clients.torch import AutoencoderClient, KMeansClient, DECClient
-from py.strategies import SaveModelStrategy, KMeansStrategy
+from py.strategies import (SaveModelStrategyFedAdam, SaveModelStrategyFedAvg,
+                           SaveModelStrategyFedYogi, KMeansStrategy)
 from py.datasets.feuromds import CachedfEUROMDS
 from py.datasets.euromds import CachedEUROMDS
 from py.dec.torch.layers import TruncatedGaussianNoise
@@ -140,6 +141,12 @@ if __name__ == "__main__":
         'lr': args.ae_lr,
         'linears': args.linears,
     }
+    if args.ae_opt == 'sgd':
+        main_strategy = partial(SaveModelStrategyFedAvg)
+    elif args.ae_opt == 'adam':
+        main_strategy = partial(SaveModelStrategyFedAdam)
+    elif args.ae_opt == 'yogi':
+        main_strategy = partial(SaveModelStrategyFedYogi)
     # Define the client fn to pass ray simulation
     def pae_client_fn(cid: int):
         # Create a single client instance from client id
@@ -173,15 +180,17 @@ if __name__ == "__main__":
         pathlib.Path(__file__).parent.parent.absolute()/'input_weights'/'pretrain_ae.npz',
         allow_pickle=True)
     ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
+    ae_parameters = None
+    initial_param = fl.common.weights_to_parameters(ae_parameters) if ae_parameters is not None else None
     # Configure the strategy
-    current_strategy = SaveModelStrategy(
+    current_strategy = main_strategy(
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_pae_fn,
         on_evaluate_config_fn=on_eval_config_pae_fn,
         min_available_clients=args.n_clients,
         min_fit_clients=args.n_clients,
         min_eval_clients=args.n_clients,
-        initial_parameters=fl.common.weights_to_parameters(ae_parameters),
+        initial_parameters=initial_param,
     )
     # Launch the simulation
     fl.simulation.start_simulation(
@@ -229,7 +238,7 @@ if __name__ == "__main__":
                     'actual_round': rnd,
                     'total_rounds': args.ae_epochs}
         # Configure the strategy
-        current_strategy = SaveModelStrategy(
+        current_strategy = main_strategy(
             out_dir=path_to_out,
             on_fit_config_fn=on_fit_config_ftae_fn,
             on_evaluate_config_fn=on_eval_config_ftae_fn,
@@ -332,7 +341,7 @@ if __name__ == "__main__":
         'name': args.ae_opt,
         'dataset': 'euromds',
         'linears': args.linears,
-        'lr': 0.1,# 0.003,
+        'lr': args.dec_lr,
     }
     # Define the client fn to pass ray simulation
     def dec_client_fn(cid: str):
@@ -354,7 +363,7 @@ if __name__ == "__main__":
                 'actual_round': rnd,
                 'total_rounds': args.dec_epochs,
                 'train': train,
-                'n_epochs': 1}#args.n_local_epochs}
+                'n_epochs': args.n_local_epochs}
     # Define on_evaluate_config_fn
     def on_eval_config_dec_fn(rnd: int):
         # Must have 'dump_metrics', 'verbose', 'actual_round'
@@ -369,15 +378,16 @@ if __name__ == "__main__":
         allow_pickle=True)
     dec_parameters = [dec_parameters[a] for a in dec_parameters][0]
     dec_parameters = None
+    initial_param = fl.common.weights_to_parameters(dec_parameters) if dec_parameters is not None else None
     # Configure the strategy
-    current_strategy = SaveModelStrategy(
+    current_strategy = main_strategy(
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_dec_fn,
         on_evaluate_config_fn=on_eval_config_dec_fn,
         min_available_clients=args.n_clients,
         min_fit_clients=args.n_clients,
         min_eval_clients=args.n_clients,
-        initial_parameters=fl.common.weights_to_parameters(dec_parameters) if dec_parameters is not None else None,
+        initial_parameters=initial_param,
     )
     # Launch the simulation
     fl.simulation.start_simulation(
