@@ -46,7 +46,7 @@ if __name__ == "__main__":
     foldername = 'feuromds_{}_{}_{}'. \
         format(
             'unif' if args.balance < 0 else 'skew{}'.format(args.balance),
-            'fedavg' if args.args.ae_opt == 'sgd' else 'fed{}'.format(args.args.ae_opt),
+            'fedavg' if args.args.ae_opt == 'sgd' else 'fed{}'.format(args.ae_opt),
             args.kmeans_agg
         )
     if args.out_folder is None:
