@@ -70,6 +70,7 @@ class SaveModelStrategyFedYogi(FedYogi):
 
     def __init__(
         self,
+        *,
         out_dir: Union[Path, str] = None,
         fraction_fit: float = 0.1,
         fraction_eval: float = 0.1,
@@ -105,7 +106,7 @@ class SaveModelStrategyFedYogi(FedYogi):
             eta_l,
             beta_1,
             beta_2,
-            tau,)
+            tau)
         if out_dir is None:
             self.out_dir = Path('')
         else:
@@ -133,6 +134,7 @@ class SaveModelStrategyFedAdam(FedAdam):
     
     def __init__(
         self,
+        *,
         out_dir: Union[Path, str] = None,
         fraction_fit: float = 0.1,
         fraction_eval: float = 0.1,
