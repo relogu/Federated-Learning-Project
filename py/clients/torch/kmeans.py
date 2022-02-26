@@ -150,12 +150,15 @@ class KMeansClient(NumPyClient):
             scaler=self.scaler,
             use_emp_centroids=self.use_emp_centroids,
         )
+        couples = []
+        for i in np.unique(predicted):
+            idx = (predicted == i)
+            couples.append([self.clusters_centers[i], np.sum(idx)])
         # save clusters_centers
-        # with open(self.out_dir/'kmeans_cluster_centers_{}.npz'.format(self.client_id), 'w') as file:
-        # TODO: check why fails here
         np.savez(self.out_dir/'kmeans_cluster_centers_{}.npz'.format(self.client_id), *self.clusters_centers)
         # returning the parameters necessary for FedAvg
-        return self.clusters_centers, len(self.ds_train), 0.0
+        # return self.clusters_centers, len(self.ds_train), 0.0
+        return couples, len(self.ds_train), 0.0
     
     def evaluate(self, parameters, config):
         # get device

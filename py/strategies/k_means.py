@@ -70,6 +70,7 @@ class KMeansStrategy(FedAvg):
         all_centroids = np.array([parameters_to_weights(
             fit_res.parameters) for _, fit_res in results])
         print('All centroids\' shape: {}'.format(all_centroids.shape))
+        print(all_centroids)
         # all the centroids in one list
         all_centroids = all_centroids.reshape((all_centroids.shape[0]*all_centroids.shape[1], all_centroids.shape[2]))
         print('All centroids\' shape: {}'.format(all_centroids.shape))
@@ -104,6 +105,7 @@ class KMeansStrategy(FedAvg):
         #     base_centroids = np.concatenate(
         #         (base_centroids, [all_centroids[i]]), axis=0)
         
+        ## weight by n samples the centroids set!!!
         self.rng.shuffle(all_centroids)
         base_centroids = all_centroids[:config['n_clusters']]
         print('Basis centroids\' shape: {}'.format(base_centroids.shape))
