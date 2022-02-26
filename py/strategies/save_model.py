@@ -70,8 +70,9 @@ class SaveModelStrategyFedYogi(FedYogi):
 
     def __init__(
         self,
-        *,
         out_dir: Union[Path, str] = None,
+        *,
+        initial_parameters: Optional[Parameters],
         fraction_fit: float = 0.1,
         fraction_eval: float = 0.1,
         min_fit_clients: int = 2,
@@ -84,7 +85,6 @@ class SaveModelStrategyFedYogi(FedYogi):
         on_evaluate_config_fn: Optional[Callable[[
             int], Dict[str, Scalar]]] = None,
         accept_failures: bool = True,
-        initial_parameters: Parameters = None,
         eta: float = 1e-2,
         eta_l: float = 0.0316,
         beta_1: float = 0.9,
@@ -92,21 +92,21 @@ class SaveModelStrategyFedYogi(FedYogi):
         tau: float = 1e-3,
     ):
         super().__init__(
-            fraction_fit,
-            fraction_eval,
-            min_fit_clients,
-            min_eval_clients,
-            min_available_clients,
-            eval_fn,
-            on_fit_config_fn,
-            on_evaluate_config_fn,
-            accept_failures,
-            initial_parameters,
-            eta,
-            eta_l,
-            beta_1,
-            beta_2,
-            tau)
+            fraction_fit=fraction_fit,
+            fraction_eval=fraction_eval,
+            min_fit_clients=min_fit_clients,
+            min_eval_clients=min_eval_clients,
+            min_available_clients=min_available_clients,
+            eval_fn=eval_fn,
+            on_fit_config_fn=on_fit_config_fn,
+            on_evaluate_config_fn=on_evaluate_config_fn,
+            accept_failures=accept_failures,
+            initial_parameters=initial_parameters,
+            eta=eta,
+            eta_l=eta_l,
+            beta_1=beta_1,
+            beta_2=beta_2,
+            tau=tau)
         if out_dir is None:
             self.out_dir = Path('')
         else:
@@ -134,8 +134,9 @@ class SaveModelStrategyFedAdam(FedAdam):
     
     def __init__(
         self,
-        *,
         out_dir: Union[Path, str] = None,
+        *,
+        initial_parameters: Optional[Parameters],
         fraction_fit: float = 0.1,
         fraction_eval: float = 0.1,
         min_fit_clients: int = 2,
@@ -149,7 +150,6 @@ class SaveModelStrategyFedAdam(FedAdam):
         on_evaluate_config_fn: Optional[Callable[[
             int], Dict[str, Scalar]]] = None,
         accept_failures: bool = True,
-        initial_parameters: Parameters = None,
         eta: float = 1e-1,
         eta_l: float = 1e-1,
         beta_1: float = 0.9,
@@ -157,21 +157,21 @@ class SaveModelStrategyFedAdam(FedAdam):
         tau: float = 1e-9,
     ):
         super().__init__(
-            fraction_fit,
-            fraction_eval,
-            min_fit_clients,
-            min_eval_clients,
-            min_available_clients,
-            eval_fn,
-            on_fit_config_fn,
-            on_evaluate_config_fn,
-            accept_failures,
-            initial_parameters,
-            eta,
-            eta_l,
-            beta_1,
-            beta_2,
-            tau,)
+            fraction_fit=fraction_fit,
+            fraction_eval=fraction_eval,
+            min_fit_clients=min_fit_clients,
+            min_eval_clients=min_eval_clients,
+            min_available_clients=min_available_clients,
+            eval_fn=eval_fn,
+            on_fit_config_fn=on_fit_config_fn,
+            on_evaluate_config_fn=on_evaluate_config_fn,
+            accept_failures=accept_failures,
+            initial_parameters=initial_parameters,
+            eta=eta,
+            eta_l=eta_l,
+            beta_1=beta_1,
+            beta_2=beta_2,
+            tau=tau,)
         if out_dir is None:
             self.out_dir = Path('')
         else:
