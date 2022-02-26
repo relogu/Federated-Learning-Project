@@ -71,11 +71,10 @@ class KMeansStrategy(FedAvg):
         n_samples = []
         for _, fit_res in results:
             f_r = parameters_to_weights(fit_res.parameters)
-            print(f_r)
-            break
-            for _ in range(f_r[1]):
-                all_centroids.append(f_r[0])
-            n_samples.append(f_r[1])
+            for i in range(config['n_clusters']):
+                for _ in range(f_r[int(2*i+1)]):
+                    all_centroids.append(f_r[2*i])
+                n_samples.append(f_r[int(2*i+1)])
         # all_centroids = np.array([parameters_to_weights(
         #     fit_res.parameters) for _, fit_res in results])
         print('All centroids\' shape: {}'.format(np.array(all_centroids).shape))
