@@ -23,6 +23,7 @@ class KMeansStrategy(FedAvg):
     def __init__(self,
                  out_dir: Union[Path, str] = None,
                  seed: int = 51550,
+                 method: str = 'max_min',
                  fraction_fit: float = 0.1,
                  fraction_eval: float = 0.1,
                  min_fit_clients: int = 2,
@@ -50,6 +51,7 @@ class KMeansStrategy(FedAvg):
             accept_failures,
             initial_parameters)
         self.rng = np.random.default_rng(seed)
+        self.method = method
         if out_dir is None:
             self.out_dir = Path('')
         else:
@@ -86,42 +88,41 @@ class KMeansStrategy(FedAvg):
         print('All centroids\' shape: {}'.format(all_centroids.shape))
         print('N samples shape: {}'.format(n_samples.shape))
         pd.DataFrame(all_centroids_multi).to_csv(self.out_dir/'centroids_multi.csv')
-        kmeans = KMeans(n_clusters=config['n_clusters'], n_init=20)
-        predicted = kmeans.fit_predict(all_centroids_multi)
-        base_centroids = kmeans.cluster_centers_
         
-        # # pick, randomly, one client's first centroids
-        # idx = self.rng.integers(0, all_centroids.shape[0], 1)
-        # # basis to be completed
-        # base_centroids = np.array(all_centroids[idx])
-        # print('Basis centroids\' starting shape: {}'.format(base_centroids.shape))
-        # # basis initial length
-        # basis_length = 1
-        # # loop for completing the basis
-        # while basis_length < config['n_clusters']:
-        #     # all distances from the basis of centroids
-        #     distances = [distance_from_centroids(
-        #         base_centroids, c) for c in all_centroids]
-        #     # get the index of the maximum distance
-        #     idx = np.argmax(distances)
-        #     # idx = np.argmin(distances)
-        #     # add the new centroid --> (n_centroids, n_dimensions)
-        #     base_centroids = np.concatenate(
-        #         (base_centroids, [all_centroids[idx]]), axis=0)
-        #     basis_length = base_centroids.shape[0]
-            
-            
-        # idx = self.rng.integers(0, all_centroids.shape[0], config['n_clusters'])
-        # base_centroids = np.array(all_centroids[idx[0]])
-        # print('Basis centroids\' starting shape: {}'.format(base_centroids.shape))
-        # print('Indices: {}'.format(idx))
-        # for i in idx[1:]:
-        #     base_centroids = np.concatenate(
-        #         (base_centroids, [all_centroids[i]]), axis=0)
+        if self.method == 'double_kmeans':
+            kmeans = KMeans(n_clusters=config['n_clusters'], n_init=20)
+            predicted = kmeans.fit_predict(all_centroids_multi)
+            base_centroids = kmeans.cluster_centers_
         
-        # ## weight by n samples the centroids set!!!
-        # self.rng.shuffle(all_centroids)
-        # base_centroids = all_centroids[:config['n_clusters']]
+        if self.method == 'max_min':
+            # pick, randomly, one client's first centroids
+            idx = self.rng.integers(0, all_centroids.shape[0], 1)
+            # basis to be completed
+            base_centroids = np.array(all_centroids[idx])
+            print('Basis centroids\' starting shape: {}'.format(base_centroids.shape))
+            # basis initial length
+            basis_length = 1
+            # loop for completing the basis
+            while basis_length < config['n_clusters']:
+                # all distances from the basis of centroids
+                distances = [distance_from_centroids(
+                    base_centroids, c) for c in all_centroids]
+                # get the index of the maximum distance
+                idx = np.argmax(distances)
+                # add the new centroid --> (n_centroids, n_dimensions)
+                base_centroids = np.concatenate(
+                    (base_centroids, [all_centroids[idx]]), axis=0)
+                basis_length = base_centroids.shape[0]
+        
+        if self.method == 'random':            
+            ## weight by n samples the centroids set!!!
+            self.rng.shuffle(all_centroids)
+            base_centroids = all_centroids[:config['n_clusters']]
+        
+        if self.method == 'random_weighted':            
+            ## weight by n samples the centroids set!!!
+            self.rng.shuffle(all_centroids_multi)
+            base_centroids = all_centroids_multi[:config['n_clusters']]
         
         print('Basis centroids\' shape: {}'.format(base_centroids.shape))
         # Save base_centroids
