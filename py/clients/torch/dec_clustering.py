@@ -143,7 +143,6 @@ class DECClient(NumPyClient):
         # with open(self.out_dir/'agg_clusters_centers.npz', 'r') as file:
         npy_file = np.load(self.out_dir/'agg_clusters_centers.npz', allow_pickle=True)
         centroids = [npy_file[a] for a in npy_file]
-        print(np.array(centroids).shape)
         # set initial centroids
         cluster_centers = torch.tensor(
             np.array(centroids),
