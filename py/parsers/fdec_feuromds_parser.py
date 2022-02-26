@@ -147,6 +147,15 @@ def fdec_feuromds_parser():
         default=False,
         help='flag to set whether to use or not empirical centroids'
     )
+    parser.add_argument(
+        '--kmeans-agg',
+        dest='kmeans_agg',
+        required=False,
+        type=str,
+        default='max_min',
+        choices=['max_min', 'double_kmeans', 'random', 'random_weighted'],
+        help='aggregation method for centroids'
+    )
     ## scaler
     parser.add_argument(
         '--scaler',

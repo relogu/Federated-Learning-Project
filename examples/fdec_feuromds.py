@@ -325,7 +325,7 @@ if __name__ == "__main__":
     # Configure the strategy
     current_strategy = KMeansStrategy(
         out_dir=path_to_out,
-        method='max_min', # 'double_kmeans', 'random', 'random_weighted'
+        method=args.kmeans_agg,
         on_fit_config_fn=on_fit_config_kmeans_fn,
         on_evaluate_config_fn=on_eval_config_kmeans_fn,
         min_available_clients=args.n_clients,
