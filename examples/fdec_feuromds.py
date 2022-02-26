@@ -331,7 +331,7 @@ if __name__ == "__main__":
         'name': args.ae_opt,
         'dataset': 'euromds',
         'linears': args.linears,
-        'lr': 0.003,
+        'lr': 0.1,# 0.003,
     }
     # Define the client fn to pass ray simulation
     def dec_client_fn(cid: str):
@@ -367,6 +367,7 @@ if __name__ == "__main__":
         pathlib.Path(__file__).parent.parent.absolute()/'input_weights'/'dec_model.npz',
         allow_pickle=True)
     dec_parameters = [dec_parameters[a] for a in dec_parameters][0]
+    dec_parameters = None
     # Configure the strategy
     current_strategy = SaveModelStrategy(
         out_dir=path_to_out,
@@ -375,7 +376,7 @@ if __name__ == "__main__":
         min_available_clients=args.n_clients,
         min_fit_clients=args.n_clients,
         min_eval_clients=args.n_clients,
-        initial_parameters=fl.common.weights_to_parameters(dec_parameters),
+        initial_parameters=fl.common.weights_to_parameters(dec_parameters) if dec_parameters is not None else None,
     )
     # Launch the simulation
     fl.simulation.start_simulation(

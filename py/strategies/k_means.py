@@ -85,8 +85,10 @@ class KMeansStrategy(FedAvg):
         print('All centroids\' multi shape: {}'.format(all_centroids_multi.shape))
         print('All centroids\' shape: {}'.format(all_centroids.shape))
         print('N samples shape: {}'.format(n_samples.shape))
-        pd.DataFrame(np.array(all_centroids_multi)).to_csv(self.out_dir/'centroids_multi.csv')
-        kmeans = KMeans(n_clusters=config['n_clusters'], n_init=20)  
+        pd.DataFrame(all_centroids_multi).to_csv(self.out_dir/'centroids_multi.csv')
+        kmeans = KMeans(n_clusters=config['n_clusters'], n_init=20)
+        predicted = kmeans.fit_predict(all_centroids_multi)
+        base_centroids = kmeans.cluster_centers_
         
         # # pick, randomly, one client's first centroids
         # idx = self.rng.integers(0, all_centroids.shape[0], 1)
@@ -117,9 +119,10 @@ class KMeansStrategy(FedAvg):
         #     base_centroids = np.concatenate(
         #         (base_centroids, [all_centroids[i]]), axis=0)
         
-        ## weight by n samples the centroids set!!!
-        self.rng.shuffle(all_centroids)
-        base_centroids = all_centroids[:config['n_clusters']]
+        # ## weight by n samples the centroids set!!!
+        # self.rng.shuffle(all_centroids)
+        # base_centroids = all_centroids[:config['n_clusters']]
+        
         print('Basis centroids\' shape: {}'.format(base_centroids.shape))
         # Save base_centroids
         print(f"Saving base centroids...")
