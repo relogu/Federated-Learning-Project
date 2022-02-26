@@ -43,8 +43,14 @@ if __name__ == "__main__":
     # Set the seed for reproducibility
     np.random.seed(args.seed)
     # Define output folder
+    foldername = 'feuromds_{}_{}_{}'. \
+        format(
+            'unif' if args.balance < 0 else 'skew{}'.format(args.balance),
+            'fedavg' if args.args.ae_opt == 'sgd' else 'fed{}'.format(args.args.ae_opt),
+            args.kmeans_agg
+        )
     if args.out_folder is None:
-        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'feuromds_unif_fedadam_maxmin'
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/foldername
     else:
         path_to_out = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
