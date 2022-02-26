@@ -40,7 +40,7 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
     # Define output folder
     if args.out_folder is None:
-        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
+        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'feuromds_unif_fedadam_maxmin'
     else:
         path_to_out = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
@@ -142,11 +142,11 @@ if __name__ == "__main__":
         'linears': args.linears,
     }
     if args.ae_opt == 'sgd':
-        main_strategy = partial(SaveModelStrategyFedAvg)
+        main_strategy = SaveModelStrategyFedAvg()
     elif args.ae_opt == 'adam':
-        main_strategy = partial(SaveModelStrategyFedAdam)
+        main_strategy = SaveModelStrategyFedAdam()
     elif args.ae_opt == 'yogi':
-        main_strategy = partial(SaveModelStrategyFedYogi)
+        main_strategy = SaveModelStrategyFedYogi()
     # Define the client fn to pass ray simulation
     def pae_client_fn(cid: int):
         # Create a single client instance from client id
@@ -183,7 +183,7 @@ if __name__ == "__main__":
     ae_parameters = None
     initial_param = fl.common.weights_to_parameters(ae_parameters) if ae_parameters is not None else None
     # Configure the strategy
-    current_strategy = main_strategy(
+    current_strategy = main_strategy.__init__(
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_pae_fn,
         on_evaluate_config_fn=on_eval_config_pae_fn,
@@ -238,7 +238,7 @@ if __name__ == "__main__":
                     'actual_round': rnd,
                     'total_rounds': args.ae_epochs}
         # Configure the strategy
-        current_strategy = main_strategy(
+        current_strategy = main_strategy.__init__(
             out_dir=path_to_out,
             on_fit_config_fn=on_fit_config_ftae_fn,
             on_evaluate_config_fn=on_eval_config_ftae_fn,
@@ -380,7 +380,7 @@ if __name__ == "__main__":
     dec_parameters = None
     initial_param = fl.common.weights_to_parameters(dec_parameters) if dec_parameters is not None else None
     # Configure the strategy
-    current_strategy = main_strategy(
+    current_strategy = main_strategy.__init__(
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_dec_fn,
         on_evaluate_config_fn=on_eval_config_dec_fn,
