@@ -170,7 +170,7 @@ if __name__ == "__main__":
                 'actual_round': rnd,
                 'total_rounds': args.ae_epochs}
     ae_parameters = np.load(
-        pathlib.Path(__file__).parent.parent.absolute()/'input_weights'/'agg_weights_pretrain_ae.npz',
+        pathlib.Path(__file__).parent.parent.absolute()/'input_weights'/'pretrain_ae.npz',
         allow_pickle=True)
     ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
     # Configure the strategy
@@ -363,6 +363,10 @@ if __name__ == "__main__":
                 'actual_round': rnd,
                 'total_rounds': args.dec_epochs,
                 'model': 'dec'}
+    dec_parameters = np.load(
+        pathlib.Path(__file__).parent.parent.absolute()/'input_weights'/'dec_model.npz',
+        allow_pickle=True)
+    dec_parameters = [dec_parameters[a] for a in dec_parameters][0]
     # Configure the strategy
     current_strategy = SaveModelStrategy(
         out_dir=path_to_out,
@@ -371,6 +375,7 @@ if __name__ == "__main__":
         min_available_clients=args.n_clients,
         min_fit_clients=args.n_clients,
         min_eval_clients=args.n_clients,
+        initial_parameters=fl.common.weights_to_parameters(dec_parameters),
     )
     # Launch the simulation
     fl.simulation.start_simulation(
