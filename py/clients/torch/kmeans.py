@@ -100,11 +100,6 @@ class KMeansClient(NumPyClient):
         if 'corruption' in net_config.keys():
             net_config.pop('corruption')
         self.autoencoder = StackedDenoisingAutoEncoder(**net_config)
-        ae_params_filename = 'agg_weights_finetune_ae.npz' if self.noising is not None else 'agg_weights_pretrain_ae.npz'
-        # with open(path_to_out/ae_params_filename, 'r') as file:
-        ae_parameters = np.load(self.out_dir/ae_params_filename, allow_pickle=True)
-        ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
-        self.set_parameters(ae_parameters)
         # kmeans initializations
         self.kmeans_config = kmeans_config
         self.use_emp_centroids = False
@@ -139,8 +134,7 @@ class KMeansClient(NumPyClient):
         # get device
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
         # set model parameters from server: server must pass as initial 
-        # parameter the final server parameters for the autoencoder
-        # self.set_parameters(parameters)
+        self.set_parameters(parameters)
         # fit kmeans
         predicted, actual, self.clusters_centers, data, r_data, features = fit_kmeans_loop(
             kmeans=self.kmeans,
@@ -158,7 +152,6 @@ class KMeansClient(NumPyClient):
         # save clusters_centers
         np.savez(self.out_dir/'kmeans_cluster_centers_{}.npz'.format(self.client_id), *self.clusters_centers)
         # returning the parameters necessary for FedAvg
-        # return self.clusters_centers, len(self.ds_train), 0.0
         return couples, len(self.ds_train), 0.0
     
     def evaluate(self, parameters, config):
@@ -200,10 +193,8 @@ class KMeansClient(NumPyClient):
         reassignment, accuracy = cluster_accuracy(predicted, actual)
         # TODO: save metrics
         # save labels for predicted_previous of next step
-        # with open(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), 'w') as file:
         np.savez(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), *predicted)
         # save kmeans predictions for final studies
-        # with open(self.out_dir/'kmeans_predictions{}.npz'.format(self.client_id), 'w') as file:
         np.savez(self.out_dir/'kmeans_predictions{}.npz'.format(self.client_id), *predicted)
         # returning the parameters necessary for evaluation
         return float(accuracy), len(self.ds_test), {'cosine silhouette score': float(cos_sil_score),

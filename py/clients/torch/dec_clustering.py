@@ -120,38 +120,17 @@ class DECClient(NumPyClient):
         self.trainloader = data_loader_config['trainloader_fn'](self.ds_train)
         self.valloader = data_loader_config['valloader_fn'](self.ds_test)
         # get network
-        noising = None
         if 'noising' in net_config.keys():
-            noising = net_config['noising']
             net_config.pop('noising')
         if 'corruption' in net_config.keys():
             net_config.pop('corruption')
         self.autoencoder = StackedDenoisingAutoEncoder(**net_config)
-        # Get SDAE parameters
-        ae_params_filename = 'agg_weights_finetune_ae.npz' if noising is not None else 'agg_weights_pretrain_ae.npz'
-        # with open(self.out_dir/ae_params_filename, 'r') as file:
-        ae_parameters = np.load(self.out_dir/ae_params_filename, allow_pickle=True)
-        ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
-        self.set_ae_parameters(ae_parameters)
         # get DEC model
         self.dec_model = DEC(
             cluster_number=dec_config['n_clusters'],
             hidden_dimension=dec_config['hidden_dimension'],
             encoder=self.autoencoder.encoder,
             alpha=dec_config['alpha'])
-        # get initial centroids from server
-        # with open(self.out_dir/'agg_clusters_centers.npz', 'r') as file:
-        npy_file = np.load(self.out_dir/'agg_clusters_centers.npz', allow_pickle=True)
-        centroids = [npy_file[a] for a in npy_file]
-        # set initial centroids
-        cluster_centers = torch.tensor(
-            np.array(centroids),
-            dtype=torch.float,
-            requires_grad=True,
-        )
-        # initialise the cluster centers
-        with torch.no_grad():
-            self.dec_model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
         # get optimizer
         self.optimizer = opt_config['optimizer_fn'](
             opt_config['name'],
@@ -159,7 +138,6 @@ class DECClient(NumPyClient):
             opt_config['linears'],
             opt_config['lr'])(self.dec_model.parameters())
         # get previusly predicted labels
-        # with open(self.out_dir/'predicted_previous.npz', 'r') as file:
         npy_file = np.load(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), allow_pickle=True)
         self.predicted_previous = np.array([npy_file[a] for a in npy_file])
         # general initializations
@@ -172,7 +150,6 @@ class DECClient(NumPyClient):
     def get_parameters(self):
         """Get the model weights by model object."""
         return [val.cpu().numpy() for _, val in self.dec_model.state_dict().items()]
-    
 
     def set_ae_parameters(self, parameters):
         """Set the model weights by parameters object."""
@@ -245,7 +222,6 @@ class DECClient(NumPyClient):
         r_reassignment, cycle_accuracy = cluster_accuracy(r_predicted, predicted)
         # TODO: save metrics
         # save labels for predicted_previous of next step
-        # with open(self.out_dir/'predicted_previous.npz', 'w') as file:
         np.savez(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), *predicted)
         # returning the parameters necessary for evaluation
         return float(accuracy), len(self.ds_test), {'cycle accuracy': float(cycle_accuracy),

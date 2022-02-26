@@ -5,6 +5,7 @@ Created on Fri Oct 29 13:55:15 2021
 
 @author: relogu
 """
+from typing import OrderedDict
 import flwr as fl
 from flwr.common import Parameters
 import numpy as np
@@ -12,6 +13,7 @@ import os
 import pathlib
 from functools import partial
 
+import torch
 from torch.utils.data import DataLoader
 from torch.nn import ReLU, Sigmoid
 from torch.nn.modules.loss import MSELoss
@@ -393,11 +395,32 @@ if __name__ == "__main__":
                 'total_rounds': args.dec_epochs,
                 'model': 'dec'}
     # Mandatory set initial parameters
+    filename = 'agg_weights_pretrain_ae.npz' if net_config['noising'] is None else 'agg_weights_finetune_ae.npz'
+    ae_parameters = np.load(
+        path_to_out/filename,
+        allow_pickle=True)
+    ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
+    params_dict = zip(autoencoder.state_dict().keys(), ae_parameters)
+    state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+    autoencoder.load_state_dict(state_dict, strict=True)
     dec_model = DEC(
         cluster_number=dec_config['n_clusters'],
         hidden_dimension=dec_config['hidden_dimension'],
         encoder=autoencoder.encoder,
         alpha=dec_config['alpha'])
+    dec_parameters = [val.cpu().numpy() for _, val in dec_model.state_dict().items()]
+    # get initial centroids from server
+    npy_file = np.load(path_to_out/'agg_clusters_centers.npz', allow_pickle=True)
+    centroids = [npy_file[a] for a in npy_file]
+    # set initial centroids
+    cluster_centers = torch.tensor(
+        np.array(centroids),
+        dtype=torch.float,
+        requires_grad=True,
+    )
+    # initialise the cluster centers
+    with torch.no_grad():
+        dec_model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
     dec_parameters = [val.cpu().numpy() for _, val in dec_model.state_dict().items()]
     # dec_parameters = np.load(
     #     pathlib.Path(__file__).parent.parent.absolute()/'input_weights'/'dec_model.npz',
