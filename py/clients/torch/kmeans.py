@@ -151,7 +151,6 @@ class KMeansClient(NumPyClient):
             use_emp_centroids=self.use_emp_centroids,
         )
         couples = []
-        print(np.unique(predicted))
         for i in np.unique(predicted):
             idx = (predicted == i)
             couples.append(self.clusters_centers[i])
@@ -160,7 +159,6 @@ class KMeansClient(NumPyClient):
         np.savez(self.out_dir/'kmeans_cluster_centers_{}.npz'.format(self.client_id), *self.clusters_centers)
         # returning the parameters necessary for FedAvg
         # return self.clusters_centers, len(self.ds_train), 0.0
-        print(couples)
         return couples, len(self.ds_train), 0.0
     
     def evaluate(self, parameters, config):

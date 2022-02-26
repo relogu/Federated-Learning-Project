@@ -71,6 +71,8 @@ class KMeansStrategy(FedAvg):
         n_samples = []
         for _, fit_res in results:
             f_r = parameters_to_weights(fit_res.parameters)
+            print(f_r)
+            break
             for _ in range(f_r[1]):
                 all_centroids.append(f_r[0])
             n_samples.append(f_r[1])
