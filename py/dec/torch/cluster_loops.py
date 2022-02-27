@@ -85,13 +85,6 @@ def train(
     loss_function = KLDivLoss(reduction='sum')
     delta_label = None
     for epoch in range(epochs):
-        # predicted_previous, accuracy = assign_cluster_centers(
-        #     dataset=dataset,
-        #     model=model,
-        #     batch_size=batch_size,
-        #     collate_fn=collate_fn,
-        #     device=device,
-        # )
         features = []
         data_iterator = tqdm(
             train_dataloader,
@@ -105,19 +98,15 @@ def train(
             },
             disable=silent,
         )
-        # old_model = copy.deepcopy(model)
         model.train()
         for index, batch in enumerate(data_iterator):
-            # if index % 140:
-            #     old_model = copy.deepcopy(model)
             if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
                 batch
             ) == 2:
-                batch, _ = batch  # if we have a prediction label, strip it away
+                batch, _ = batch
             batch = batch.to(device, non_blocking=True)
             output = model(batch)
             soft_labels = output
-            # soft_labels = old_model(batch)
             target = target_distribution(soft_labels).detach()
             loss = loss_function(output.log(), target) / output.shape[0]
             data_iterator.set_postfix(
@@ -207,7 +196,7 @@ def predict(
     model.eval()
     for batch in data_iterator:
         if (isinstance(batch, tuple) or isinstance(batch, list)) and len(batch) == 2:
-            batch, value = batch  # unpack if we have a prediction label
+            batch, value = batch
             if return_actual:
                 actual.append(value)
         elif return_actual:
@@ -217,7 +206,7 @@ def predict(
         batch = batch.to(device, non_blocking=True)
         features.append(
             model(batch).detach().cpu()
-        )  # move to the CPU to prevent out of memory on the GPU
+        )
     if return_actual:
         return torch.cat(features).max(1)[1], torch.cat(actual).long()
     else:
@@ -271,13 +260,8 @@ def assign_cluster_centers(
         idx = (predicted == i)
         emp_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
     
-    # true_centroids = []
-    # for i in np.unique(actual.cpu().numpy()):
-    #     idx = (actual.cpu().numpy() == i)
-    #     true_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
-    
     cluster_centers = torch.tensor(
-        np.array(emp_centroids),#kmeans.cluster_centers_,np.array(true_centroids),#
+        np.array(emp_centroids),#kmeans.cluster_centers_,
         dtype=torch.float,
         requires_grad=False,#True
     )
