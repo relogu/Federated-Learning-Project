@@ -34,18 +34,19 @@ class CachedfEUROMDS(Dataset):
             accept_nan=fill_nans,
             fill_fn=fillcolumn_prob,
             verbose=verbose)).astype(np.float32)
+        
         self.n_features = self.ds.shape[1]
 
         self.hdp = np.array(get_euromds_dataset(
             path_to_data=path_to_data, groups=['HDP'])) if get_hdp else None
 
         self.y = self.hdp.argmax(1) if self.hdp is not None else None
-
-        self.outcomes = np.array(get_outcome_euromds_dataset(path_to_data=path_to_data)[
-                                 ['outcome_3', 'outcome_2']]) if get_outcomes else None
-
+        # TODO: manage federated outcomes
+        self.outcomes = np.array(get_outcome_euromds_dataset(path_to_data=path_to_data)) if get_outcomes else None
+        # TODO: manage federated ids
         self.ids = np.array(get_euromds_ids(
             path_to_data=path_to_data)) if get_ids else None
+        
         self.indices = get_f_indices(
             n_samples=self.ds.shape[0],
             balance=balance,
@@ -53,7 +54,6 @@ class CachedfEUROMDS(Dataset):
             client_id=client_id,
             seed=seed,
             verbose=verbose)
-        
         
         self._cache = dict()
         self.device = device
