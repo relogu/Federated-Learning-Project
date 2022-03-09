@@ -36,7 +36,7 @@ def main():
     out_folder = args.out_folder
     is_tied = True
     gpu_id = args.gpu_id
-    # get configuration dict
+    # Set configuration dict
     config = {
         'linears': args.linears,
         'f_dim': args.hidden_dimensions,
@@ -62,7 +62,7 @@ def main():
         'alpha': args.alpha,
         'scaler': args.scaler,
     }
-    # defining output folder
+    # Define output folder
     if out_folder is None:
         path_to_out = pathlib.Path(
             __file__).parent.parent.absolute()/'euromds_cl_best_modloss'
@@ -70,24 +70,24 @@ def main():
         path_to_out = pathlib.Path(out_folder)
     os.makedirs(path_to_out, exist_ok=True)
     print('Output folder {}'.format(path_to_out))
-    # defining data folder
+    # Define data folder
     if path_to_data is None:
         path_to_data = pathlib.Path(
             __file__).parent.parent.absolute()/'data/euromds'
     else:
         path_to_data = pathlib.Path(path_to_data)
     print('Data folder {}'.format(path_to_data))
-    # dumping current configuration
+    # Dump current configuration
     with open(path_to_out/'config.json', 'w') as file:
         json.dump(vars(args), file)
     writer = SummaryWriter(
         logdir=str(str(path_to_out)+'/runs/'),
-        flush_secs=5)  # create the TensorBoard object
-    # set device for PyTorch
+        flush_secs=5)  # this creates the TensorBoard object
+    # Set device for PyTorch
     device = "cpu"
     if torch.cuda.is_available():
         device = "cuda:{}".format(gpu_id)
-    # set up loss(es) used in training the SDAE
+    # Set up loss(es) used in training the SDAE
     if config['mod_loss'] is not None:
         loss_fn = get_mod_binary_loss(
             name=config['mod_loss'],
@@ -97,7 +97,7 @@ def main():
         loss_fn = [get_main_loss(config['main_loss'])]
         beta = [1.0]
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
-    # get dataset
+    # Get dataset
     ds_train = CachedEUROMDS(
         exclude_cols=args.ex_col,  # ['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
         groups=args.groups,  # ['Genetics', 'CNA'],
@@ -110,7 +110,7 @@ def main():
         device=device,
     )  # training dataset
     ds_val = ds_train
-    # set dataloaders
+    # Set dataloaders
     dataloader = DataLoader(
         ds_train,
         batch_size=config['ae_batch_size'],
@@ -126,7 +126,7 @@ def main():
         ds_train.n_features, img_repr))
     additions = img_repr[2]
     img_repr = (-1, 1, img_repr[0], img_repr[1])
-    # set noising to data
+    # Set noising to data
     noising = None
     if config['noising'] > 0:
         noising = TruncatedGaussianNoise(
@@ -135,11 +135,11 @@ def main():
             rate=1.0,
             device=device,
         )
-    # set corruption to data
+    # Set corruption to data
     corruption = None
     if config['corruption'] > 0:
         corruption = config['corruption']
-    # set up SDAE
+    # Set up SDAE
     autoencoder = StackedDenoisingAutoEncoder(
         get_linears(config['linears'], ds_train.n_features, config['f_dim']),
         activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
@@ -148,7 +148,7 @@ def main():
         dropout=config['dropout'],
         is_tied=is_tied,
     )
-    # set learning rate scheduler
+    # Set learning rate scheduler
     if config['lr_scheduler']:
         def scheduler(x): return ReduceLROnPlateau(
             x,

@@ -21,14 +21,14 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["RAY_DISABLE_IMPORT_WARNING"] = "1"
 
 from py.clients.torch import AutoencoderClient, KMeansClient, DECClient
-from py.strategies import SaveModelStrategy, KMeansStrategy
+from py.strategies import SaveModelStrategyFedAdam, SaveModelStrategyFedAvg, SaveModelStrategyFedYogi, KMeansStrategy
 from py.datasets.femnist import CachedFEMNIST
 from py.dec.torch.layers import TruncatedGaussianNoise
-from py.dec.torch.utils import get_main_loss, get_linears, get_ae_opt, get_scaler
+from py.dec.torch.utils import get_main_loss, get_linears, get_opt, get_scaler
 from py.parsers.fdec_femnist_parser import fdec_femnist_parser as get_parser
-    
 
-# TODO: write description
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
 if __name__ == "__main__":
     # Parse arguments
     args = get_parser().parse_args()
@@ -71,11 +71,11 @@ if __name__ == "__main__":
             path_to_data=data_folder),
         'trainloader_fn': partial(
             DataLoader,
-            batch_size=args.batch_size,
+            batch_size=args.ae_batch_size,
             shuffle=True),
         'valloader_fn': partial(
             DataLoader,
-            batch_size=args.batch_size,
+            batch_size=args.ae_batch_size,
             shuffle=False),
     }
     # Set loss configuration dict
@@ -102,10 +102,17 @@ if __name__ == "__main__":
     }
     # Set optimizer configuration dict
     ae_opt_config = {
-        'optimizer_fn': get_ae_opt,
-        'optimizer': args.optimizer,
-        'lr': args.lr,
+        'optimizer_fn': get_opt,
+        'dataset': 'mnist',
+        'linears': args.linears,
+        'lr': args.ae_lr,
     }
+    if args.optimizer == 'sgd':
+        main_strategy = partial(SaveModelStrategyFedAvg)
+    elif args.optimizer == 'adam':
+        main_strategy = partial(SaveModelStrategyFedAdam)
+    elif args.optimizer == 'yogi':
+        main_strategy = partial(SaveModelStrategyFedYogi)
     # Define the client fn to pass ray simulation
     def pae_client_fn(cid: int):
         # Create a single client instance from client id
@@ -136,7 +143,7 @@ if __name__ == "__main__":
                 'actual_round': rnd,
                 'total_rounds': args.pretrain_rounds}
     # Configure the strategy
-    current_strategy = SaveModelStrategy(
+    current_strategy = main_strategy(
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_pae_fn,
         on_evaluate_config_fn=on_eval_config_pae_fn,
@@ -190,7 +197,7 @@ if __name__ == "__main__":
                     'actual_round': rnd,
                     'total_rounds': args.pretrain_rounds}
         # Configure the strategy
-        current_strategy = SaveModelStrategy(
+        current_strategy = main_strategy(
             out_dir=path_to_out,
             on_fit_config_fn=on_fit_config_ftae_fn,
             on_evaluate_config_fn=on_eval_config_ftae_fn,
@@ -279,7 +286,7 @@ if __name__ == "__main__":
     # Dataloader configuration dict changes only here:
     data_loader_config['trainloader_fn'] = partial(
         DataLoader,
-        batch_size=args.batch_size*args.update_interval,
+        batch_size=args.dec_batch_size,
         shuffle=True)
     # Network configuration dict is the same as before
     # Set DEC configuration dict
@@ -290,9 +297,10 @@ if __name__ == "__main__":
     }
     # Set optimizer configuration dict
     dec_opt_config = {
-        'optimizer_fn': get_ae_opt,
-        'optimizer': 'sgd',
-        'lr': 0.01,
+        'optimizer_fn': get_opt,
+        'dataset': 'mnist',
+        'linears': args.linears,
+        'lr': args.dec_lr,
     }
     # Define the client fn to pass ray simulation
     def dec_client_fn(cid: str):
@@ -325,7 +333,7 @@ if __name__ == "__main__":
                 'total_rounds': args.dec_epochs,
                 'model': 'dec'}
     # Configure the strategy
-    current_strategy = SaveModelStrategy(
+    current_strategy = main_strategy(
         out_dir=path_to_out,
         on_fit_config_fn=on_fit_config_dec_fn,
         on_evaluate_config_fn=on_eval_config_dec_fn,

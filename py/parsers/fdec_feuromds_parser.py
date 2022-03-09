@@ -90,13 +90,13 @@ def fdec_feuromds_parser():
         help='architecture of linears in SDAE'
     )
     parser.add_argument(
-        '--ae-opt',
-        dest='ae_opt',
+        '--optimizer',
+        dest='optimizer',
         required=False,
         type=str,
         default='sgd',
         choices=['sgd', 'adam', 'yogi'],
-        help='name of the SDAE optimizer'
+        help='Optimizer to use on training TSAE and DEC'
     )
     parser.add_argument(
         '--ae-lr',
@@ -224,14 +224,6 @@ def fdec_feuromds_parser():
         type=str,
         default=None,
         help='path to output folder'
-    )
-    parser.add_argument(
-        '--in-folder',
-        dest='in_folder',
-        required=False,
-        type=str,
-        default=None,
-        help='path to input folder'
     )
     parser.add_argument(
         '--data-folder',

@@ -17,6 +17,7 @@ from typing import Union, Dict, Any, OrderedDict, Iterable
 from pathlib import Path
 
 from py.dec.torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.torch.utils import get_ae_lr
 
 def training_loop(
     n_epochs: int = 1, # number of epochs
@@ -120,10 +121,13 @@ class AutoencoderClient(NumPyClient):
         self.autoencoder = StackedDenoisingAutoEncoder(**net_config)
         # get optimizer
         self.optimizer = opt_config['optimizer_fn'](
-            opt_config['name'],
-            opt_config['dataset'],
-            opt_config['linears'],
-            opt_config['lr'])(self.autoencoder.parameters())
+            opt=opt_config['optimizer'],
+            lr=opt_config['lr'] if opt_config['lr'] is not None else get_ae_lr(
+                dataset=opt_config['dataset'],
+                linears=opt_config['linears'],
+                opt=opt_config['optimizer'],
+                )
+        )(self.autoencoder.parameters())
         # set output folder        
         if output_folder is None:
             self.out_dir = output_folder

@@ -13,12 +13,12 @@ def fdec_femnist_parser():
         help='set the number of local epochs'
     )
     parser.add_argument(
-        '--batch-size',
-        dest='batch_size',
+        '--ae-batch-size',
+        dest='ae_batch_size',
         required=False,
         type=int,
         default=256,
-        help='batch size used for SDAE training and DEC clustering'
+        help='Batch size used for TSAE training'
     )
     ## SDAE params
     parser.add_argument(
@@ -64,13 +64,13 @@ def fdec_femnist_parser():
     )
     ## SDAE training
     parser.add_argument(
-        '--ae-opt',
-        dest='ae_opt',
+        '--optimizer',
+        dest='optimizer',
         required=False,
         type=str,
         default='sgd',
         choices=['sgd', 'adam', 'yogi'],
-        help='name of the SDAE optimizer'
+        help='Optimizer to use on training TSAE and DEC'
     )
     parser.add_argument(
         '--ae-lr',
@@ -142,12 +142,20 @@ def fdec_femnist_parser():
         help='number of federated epochs for DEC training'
     )
     parser.add_argument(
-        '--update-interval',
-        dest='update_interval',
+        '--dec-batch-size',
+        dest='dec_batch_size',
         required=False,
         type=int,
-        default=160,
-        help='number of batches before updating auxiliary distribution'
+        default=None,
+        help='Batch size used for DEC training, if None the best is chosen (from hyperparameter tuning)'
+    )
+    parser.add_argument(
+        '--dec-lr',
+        dest='dec_lr',
+        required=False,
+        type=float,
+        default=None,
+        help='Learning rate for DEC optimizer, if None the default (choosen via hyperparamete tuning) is set'
     )
     ## general
     parser.add_argument(
@@ -173,14 +181,6 @@ def fdec_femnist_parser():
         type=str,
         default=None,
         help='path to output folder'
-    )
-    parser.add_argument(
-        '--in-folder',
-        dest='in_folder',
-        required=False,
-        type=str,
-        default=None,
-        help='path to input folder'
     )
     parser.add_argument(
         '--data-folder',

@@ -79,7 +79,7 @@ def dec_mnist_parser():
         dest='ae_batch_size',
         required=False,
         type=int,
-        default=8,
+        default=256,
         help='Batch size used for TSAE training'
     )
     parser.add_argument(

@@ -20,7 +20,7 @@ from pathlib import Path
 
 from py.dec.torch.sdae import StackedDenoisingAutoEncoder
 from py.dec.torch.dec import DEC
-from py.dec.torch.utils import target_distribution, cluster_accuracy
+from py.dec.torch.utils import target_distribution, cluster_accuracy, get_cl_lr
 
 
 def dec_model_training_loop(
@@ -133,10 +133,13 @@ class DECClient(NumPyClient):
             alpha=dec_config['alpha'])
         # get optimizer
         self.optimizer = opt_config['optimizer_fn'](
-            opt_config['name'],
-            opt_config['dataset'],
-            opt_config['linears'],
-            opt_config['lr'])(self.dec_model.parameters())
+            opt=opt_config['optimizer'],
+            lr=opt_config['lr'] if opt_config['lr'] is not None else get_cl_lr(
+                dataset=opt_config['dataset'],
+                linears=opt_config['linears'],
+                opt=opt_config['optimizer'],
+                )
+        )(self.dec_model.parameters())
         # get previusly predicted labels
         npy_file = np.load(self.out_dir/'predicted_previous{}.npz'.format(self.client_id), allow_pickle=True)
         self.predicted_previous = np.array([npy_file[a] for a in npy_file])

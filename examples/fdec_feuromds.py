@@ -31,12 +31,11 @@ from py.datasets.euromds import CachedEUROMDS
 from py.dec.torch.sdae import StackedDenoisingAutoEncoder
 from py.dec.torch.dec import DEC
 from py.dec.torch.layers import TruncatedGaussianNoise
-from py.dec.torch.utils import get_main_loss, get_linears, get_ae_opt, get_scaler
+from py.dec.torch.utils import get_main_loss, get_linears, get_opt, get_scaler
 from py.parsers.fdec_feuromds_parser import fdec_feuromds_parser as get_parser
 
-# os.environ["CUDA_VISIBLE_DEVICES"]="6,7"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
-# TODO: write description
 if __name__ == "__main__":
     # Parse arguments
     args = get_parser().parse_args()
@@ -61,7 +60,8 @@ if __name__ == "__main__":
         data_folder = pathlib.Path(args.data_folder)
     print('Data folder {}'.format(data_folder))
     
-    # set client resources for ray
+    # TODO: issue with ray simulation and gpu resources
+    # Set client resources for ray
     client_resources = {'num_cpus': args.n_cpus}
     # (optional) Specify ray config, for sure it is to be changed
     ray_config = {'include_dashboard': False}
@@ -71,11 +71,9 @@ if __name__ == "__main__":
     data_loader_config = {
         'get_train_fn': partial(
             CachedfEUROMDS,
-            # exclude_cols=args.ex_col,
-            # groups=args.groups,
-            exclude_cols=['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
-            groups=['Genetics', 'CNA'],
-            fill_nans=args.fill_nans,
+            exclude_cols=args.ex_col,  # ['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
+            groups=args.groups,  # ['Genetics', 'CNA'],
+            fill_nans=args.fill_nans,  # 2044,
             get_hdp=True,
             get_outcomes=True,
             get_ids=True,
@@ -86,11 +84,9 @@ if __name__ == "__main__":
             path_to_data=data_folder),
         'get_test_fn': partial(
             CachedfEUROMDS,
-            # exclude_cols=args.ex_col,
-            # groups=args.groups,
-            exclude_cols=['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
-            groups=['Genetics', 'CNA'],
-            fill_nans=args.fill_nans,
+            exclude_cols=args.ex_col,  # ['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
+            groups=args.groups,  # ['Genetics', 'CNA'],
+            fill_nans=args.fill_nans,  # 2044,
             get_hdp=True,
             get_outcomes=True,
             get_ids=True,
@@ -117,19 +113,18 @@ if __name__ == "__main__":
             },
     }
     # Set network configuration dict
-    # dataset = CachedEUROMDS(
-    #     exclude_cols=args.ex_col,
-    #     groups=args.groups,
-    #     path_to_data=data_folder,
-    #     fill_nans=args.fill_nans,
-    #     get_hdp=False,
-    #     verbose=True,
-    # )
-    # TODO: correct issue, is setting 1047
-    n_features = 54#dataset.n_features
-    # print("Number of features is: {}".format(n_features))
-    # print("Features are: {}".format(dataset.columns_names))
-    # del dataset
+    dataset = CachedEUROMDS(
+        exclude_cols=args.ex_col,
+        groups=args.groups,
+        path_to_data=data_folder,
+        fill_nans=args.fill_nans,
+        get_hdp=False,
+        verbose=True,
+    )
+    n_features = dataset.n_features
+    print("Number of features is: {}".format(n_features))
+    print("Features are: {}".format(dataset.columns_names))
+    del dataset
     net_config = {
         'noising': None if args.noising == 0 else TruncatedGaussianNoise(
             shape=n_features,
@@ -145,17 +140,17 @@ if __name__ == "__main__":
     }
     # Set optimizer configuration dict
     ae_opt_config = {
-        'optimizer_fn': get_ae_opt,
-        'name': args.ae_opt,
+        'optimizer_fn': get_opt,
+        'optimizer': args.optimizer,
         'dataset': 'euromds',
         'lr': args.ae_lr,
         'linears': args.linears,
     }
-    if args.ae_opt == 'sgd':
+    if args.optimizer == 'sgd':
         main_strategy = partial(SaveModelStrategyFedAvg)
-    elif args.ae_opt == 'adam':
+    elif args.optimizer == 'adam':
         main_strategy = partial(SaveModelStrategyFedAdam)
-    elif args.ae_opt == 'yogi':
+    elif args.optimizer == 'yogi':
         main_strategy = partial(SaveModelStrategyFedYogi)
     # Define the client fn to pass ray simulation
     def pae_client_fn(cid: int):
@@ -194,7 +189,9 @@ if __name__ == "__main__":
         dropout=0.0,
         is_tied=True,
     )
+    # Load initial parameters
     ae_parameters = [val.cpu().numpy() for _, val in autoencoder.state_dict().items()]
+    # # Load initial trained parameters
     # ae_parameters = np.load(
     #     pathlib.Path(__file__).parent.parent.absolute()/'input_weights'/'pretrain_ae.npz',
     #     allow_pickle=True)
@@ -219,7 +216,7 @@ if __name__ == "__main__":
         strategy=current_strategy,
         ray_init_args=ray_config)
     
-    if args.noising > 0:
+    if net_config['net_config'] is not None:
         ## Prepare generalized AutoencoderClient for finetuning
         # Dataloader configuration dict is the same as before
         # Loss configuration dict is the same as before
@@ -255,6 +252,7 @@ if __name__ == "__main__":
                     'verbose': args.verbose,
                     'actual_round': rnd,
                     'total_rounds': args.ae_epochs}
+        # Load initial parameters
         ae_parameters = np.load(
             path_to_out/'agg_weights_pretrain_ae.npz',
             allow_pickle=True)
@@ -323,7 +321,7 @@ if __name__ == "__main__":
                 'verbose': args.verbose,
                 'actual_round': rnd,
                 'total_rounds': 1}
-    # Get SDAE parameters
+    # Load TSAE parameters
     filename = 'agg_weights_pretrain_ae.npz' if net_config['noising'] is None else 'agg_weights_finetune_ae.npz'
     ae_parameters = np.load(
         path_to_out/filename,
@@ -364,8 +362,8 @@ if __name__ == "__main__":
     }
     # Set optimizer configuration dict
     dec_opt_config = {
-        'optimizer_fn': get_ae_opt,
-        'name': args.ae_opt,
+        'optimizer_fn': get_opt,
+        'optimizer': args.optimizer,
         'dataset': 'euromds',
         'linears': args.linears,
         'lr': args.dec_lr,
@@ -400,7 +398,7 @@ if __name__ == "__main__":
                 'actual_round': rnd,
                 'total_rounds': args.dec_epochs,
                 'model': 'dec'}
-    # Mandatory set initial parameters
+    # Mandatory load initial parameters
     filename = 'agg_weights_pretrain_ae.npz' if net_config['noising'] is None else 'agg_weights_finetune_ae.npz'
     ae_parameters = np.load(
         path_to_out/filename,
@@ -415,19 +413,20 @@ if __name__ == "__main__":
         encoder=autoencoder.encoder,
         alpha=dec_config['alpha'])
     dec_parameters = [val.cpu().numpy() for _, val in dec_model.state_dict().items()]
-    # get initial centroids from server
+    # Get initial centroids from server
     npy_file = np.load(path_to_out/'agg_clusters_centers.npz', allow_pickle=True)
     centroids = [npy_file[a] for a in npy_file]
-    # set initial centroids
+    # Set initial centroids
     cluster_centers = torch.tensor(
         np.array(centroids),
         dtype=torch.float,
         requires_grad=True,
     )
-    # initialise the cluster centers
+    # Initialise the cluster centers
     with torch.no_grad():
         dec_model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
     dec_parameters = [val.cpu().numpy() for _, val in dec_model.state_dict().items()]
+    # # Load initial trained parameters
     # dec_parameters = np.load(
     #     pathlib.Path(__file__).parent.parent.absolute()/'input_weights'/'dec_model.npz',
     #     allow_pickle=True)
