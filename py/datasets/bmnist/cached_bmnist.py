@@ -4,7 +4,7 @@ from torchvision import transforms
 from torchvision.datasets import MNIST
 
 class CachedBMNIST(Dataset):
-    def __init__(self, train, device, path=None, download=True, testing_mode=False):
+    def __init__(self, train, device, path: str = None, download=True, testing_mode=False):
         img_transform = transforms.Compose([transforms.Lambda(self._transformation)])
         self.ds = MNIST("./data" if path is None else path,
                         download=download,

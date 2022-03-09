@@ -2,14 +2,15 @@ from py.callbacks import ae_training_callback, dec_train_callback, embed_train_c
 from py.util import get_square_image_repr, compute_centroid_np
 from py.datasets.euromds import CachedEUROMDS
 from py.dec.torch.utils import (cluster_accuracy, get_main_loss, get_mod_binary_loss,
-                                    get_ae_opt, get_linears, get_scaler, target_distribution)
+                                get_opt, get_linears, get_scaler, target_distribution,
+                                get_ae_lr, get_cl_lr, get_cl_batch_size)
 from py.dec.torch.layers import TruncatedGaussianNoise
 from py.dec.torch.sdae import StackedDenoisingAutoEncoder
 from py.dec.torch.dec import DEC
+from py.parsers.dec_euromds_parser import dec_euromds_parser as get_parser
 from tensorboardX import SummaryWriter
 from sklearn.cluster import KMeans
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.optim import SGD
 from torch.utils.data import DataLoader
 from torch.nn import ReLU, Sigmoid, KLDivLoss, MSELoss
 import torch.nn.functional as F
@@ -27,50 +28,58 @@ tf.io.gfile = tb.compat.tensorflow_stub.io.gfile
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-def main(
-    # cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
-    #      glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta,
-    #      gaus_noise, ae_opt, lr, path_to_data
-         ):
-    path_to_data = None
-    out_folder = None
+
+def main():
+    # Parse arguments
+    args = get_parser().parse_args()
+    path_to_data = args.data_folder
+    out_folder = args.out_folder
     is_tied = True
-    testing_mode = False
-    gpu_id = 0
+    gpu_id = args.gpu_id
     # get configuration dict
     config = {
-        'linears': 'dec',
-        'f_dim': 10,
-        'activation': 'relu',
-        'final_activation': 'relu',
-        'dropout': 0.0,
-        'epochs': 150,
-        'n_clusters': 6,
-        'ae_batch_size': 8,
-        'update_interval': 50,
-        'optimizer': 'yogi',
-        'lr': None,
-        'lr_scheduler': False,
-        'main_loss': 'mse',
-        'mod_loss': 'bce+dice',
-        'beta': 0.4,
-        'corruption': 0.0,
-        'noising': 0.0,
-        'train_dec': 'yes',
-        'dec_batch_size': 64,
-        'alpha': 1,
-        'scaler': 'none',
+        'linears': args.linears,
+        'f_dim': args.hidden_dimensions,
+        'activation': args.activation,
+        'final_activation': args.final_activation,
+        'dropout': args.hidden_dropout,
+        'pretrain_epochs': args.pretrain_epochs,
+        'finetune_epochs': args.finetune_epochs,
+        'n_clusters': args.n_clusters,
+        'ae_batch_size': args.ae_batch_size,
+        'optimizer': args.opt,
+        'ae_lr': args.ae_lr,
+        'lr_scheduler': args.lr_sched,
+        'main_loss': args.main_loss,
+        'mod_loss': args.mod_loss,
+        'beta': args.beta,
+        'corruption': args.corruption,
+        'noising': args.noising,
+        'train_dec': args.train_dec,
+        'n_init': args.n_init,
+        'dec_batch_size': args.dec_batch_size,
+        'dec_lr': args.dec_lr,
+        'alpha': args.alpha,
+        'scaler': args.scaler,
     }
     # defining output folder
     if out_folder is None:
-        path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'euromds_cl_best_modloss'
+        path_to_out = pathlib.Path(
+            __file__).parent.parent.absolute()/'euromds_cl_best_modloss'
     else:
         path_to_out = pathlib.Path(out_folder)
     os.makedirs(path_to_out, exist_ok=True)
     print('Output folder {}'.format(path_to_out))
+    # defining data folder
+    if path_to_data is None:
+        path_to_data = pathlib.Path(
+            __file__).parent.parent.absolute()/'data/euromds'
+    else:
+        path_to_data = pathlib.Path(path_to_data)
+    print('Data folder {}'.format(path_to_data))
     # dumping current configuration
     with open(path_to_out/'config.json', 'w') as file:
-        json.dump(config, file)
+        json.dump(vars(args), file)
     writer = SummaryWriter(
         logdir=str(str(path_to_out)+'/runs/'),
         flush_secs=5)  # create the TensorBoard object
@@ -79,7 +88,7 @@ def main(
     if torch.cuda.is_available():
         device = "cuda:{}".format(gpu_id)
     # set up loss(es) used in training the SDAE
-    if config['mod_loss'] != 'none':
+    if config['mod_loss'] is not None:
         loss_fn = get_mod_binary_loss(
             name=config['mod_loss'],
         )
@@ -88,16 +97,12 @@ def main(
         loss_fn = [get_main_loss(config['main_loss'])]
         beta = [1.0]
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
-    # get datasets
-    path_to_data = pathlib.Path(
-        '/home/relogu/Desktop/OneDrive/UNIBO/Magistrale/Federated Learning Project/data/euromds') if path_to_data is None else pathlib.Path(path_to_data)
-    # path_to_data = pathlib.Path(
-    #     '~/Federated-Learning-Project/data/euromds') if path_to_data is None else pathlib.Path(path_to_data)
+    # get dataset
     ds_train = CachedEUROMDS(
-        exclude_cols=['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
-        groups=['Genetics', 'CNA'],
+        exclude_cols=args.ex_col,  # ['UTX', 'CSF3R', 'SETBP1', 'PPM1D'],
+        groups=args.groups,  # ['Genetics', 'CNA'],
         path_to_data=path_to_data,
-        fill_nans=2044,
+        fill_nans=args.fill_nans,  # 2044,
         get_hdp=True,
         get_outcomes=True,
         get_ids=True,
@@ -138,13 +143,14 @@ def main(
     autoencoder = StackedDenoisingAutoEncoder(
         get_linears(config['linears'], ds_train.n_features, config['f_dim']),
         activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
-        final_activation=ReLU() if config['final_activation'] == 'relu' else Sigmoid(),
+        final_activation=ReLU(
+        ) if config['final_activation'] == 'relu' else Sigmoid(),
         dropout=config['dropout'],
         is_tied=is_tied,
     )
     # set learning rate scheduler
     if config['lr_scheduler']:
-        scheduler = lambda x: ReduceLROnPlateau(
+        def scheduler(x): return ReduceLROnPlateau(
             x,
             mode='min',
             factor=0.5,
@@ -159,16 +165,18 @@ def main(
     else:
         print("Pretraining stage.")
         autoencoder.to(device)
-        optimizer = get_ae_opt(
-            name=config['optimizer'],
-            dataset='euromds',
-            linears=config['linears'],
-            lr=config['lr'])(autoencoder.parameters())
+        optimizer = get_opt(
+            opt=config['optimizer'],
+            lr=config['ae_lr'] if config['ae_lr'] is not None else get_ae_lr(
+                dataset='euromds',
+                linears=config['linears'],
+                opt=config['optimizer']),
+        )(autoencoder.parameters())
         if scheduler is not None:
             scheduler = scheduler(optimizer)
         autoencoder.train()
         val_loss = -1
-        for epoch in range(config['epochs']):
+        for epoch in range(config['pretrain_epochs']):
             running_loss = 0.0
             if scheduler is not None:
                 scheduler.step(val_loss)
@@ -195,10 +203,6 @@ def main(
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step(closure=None)
-                # print statistics
-                # running_loss += loss.item()
-                # print("[%d, %5d] loss: %.3f" %
-                #       (epoch+1, i+1, running_loss / (i+1)))
             running_loss = running_loss / (i+1)
 
             val_loss = 0.0
@@ -244,16 +248,20 @@ def main(
         print("Finetuning stage.")
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
         autoencoder.to(device)
-        optimizer = get_ae_opt(
+        optimizer = get_opt(
             name=config['optimizer'],
             dataset='euromds',
             linears=config['linears'],
-            lr=config['lr'])(autoencoder.parameters())
+            lr=config['ae_lr'] if config['ae_lr'] is not None else get_ae_lr(
+                dataset='euromds',
+                linears=config['linears'],
+                opt=config['optimizer']),
+        )(autoencoder.parameters())
         if scheduler is not None:
             scheduler = scheduler(optimizer)
         autoencoder.train()
         val_loss = -1
-        for epoch in range(config['epochs']):
+        for epoch in range(config['finetune_epochs']):
             running_loss = 0.0
             if scheduler is not None:
                 scheduler.step(val_loss)
@@ -276,10 +284,6 @@ def main(
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step(closure=None)
-                # print statistics
-                # running_loss += loss.item()
-                # print("[%d, %5d] loss: %.3f" %
-                #       (epoch+1, i+1, running_loss / (i+1)))
             running_loss = running_loss / (i+1)
 
             val_loss = ae_training_callback(
@@ -305,11 +309,14 @@ def main(
             ds_val,
             autoencoder)
 
-    if config['train_dec'] == 'yes':
+    if config['train_dec']:
         print("DEC stage.")
         dataloader = DataLoader(
             ds_train,
-            batch_size=config['dec_batch_size'],# *config['update_interval'],
+            batch_size=config['dec_batch_size'] if config['dec_batch_size'] is not None else get_cl_batch_size(
+                linears='dec',
+                dataset='euromds',
+                opt=config['optimizer']),
             shuffle=False,
         )
         autoencoder = autoencoder.to(device)
@@ -318,14 +325,18 @@ def main(
                     encoder=autoencoder.encoder,
                     alpha=config['alpha'])
         model = model.to(device)
-        # optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
-        optimizer = get_ae_opt(
-            name=config['optimizer'],
-            dataset='euromds',
-            lr=0.003)(model.parameters())
+        optimizer = get_opt(
+            opt=config['optimizer'],
+            lr=config['dec_lr'] if config['dec_lr'] is not None else get_cl_lr(
+                linears=config['linears'],
+                dataset='euromds',
+                opt=config['optimizer']),
+        )(model.parameters())
         scaler = get_scaler(
             config['scaler']) if config['scaler'] != 'none' else None
-        kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
+        kmeans = KMeans(
+            n_clusters=model.cluster_number,
+            n_init=config['n_init'])
         features = []
         actual = []
         for batch in dataloader:

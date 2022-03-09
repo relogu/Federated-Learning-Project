@@ -1,6 +1,5 @@
 from functools import partial
 import numpy as np
-from pyparsing import dictOf
 import torch
 from torch.optim import SGD, Adam
 from torch_optimizer import Yogi 
@@ -13,7 +12,7 @@ from py.losses.torch import (SobelLoss, GaussianBlurredLoss, ComboLoss,
                              TverskyLoss, LovaszHingeLoss, IoULoss)
 
 
-def get_cl_batch_size(name, dataset, opt):
+def get_cl_batch_size(linears, dataset, opt):
     batch_size_dict = {
         'mnist': {
             'dec': {
@@ -29,11 +28,29 @@ def get_cl_batch_size(name, dataset, opt):
                 'yogi': 64,
                 },
             },
+        # TODO: to set values properly
+        'euromds': {
+            'dec': {
+                'sgd': 64,
+                'adam': 64,
+                'yogi': 64,
+                },
+            'curves': {
+                'sgd': 64,
+                'adam': 64,
+                'yogi': 64,
+                },
+            'google': {
+                'sgd': 64,
+                'adam': 64,
+                'yogi': 64,
+                },
+        },
     }
-    return batch_size_dict[dataset][name][opt]
+    return batch_size_dict[dataset][linears][opt]
 
 
-def get_cl_lr(name, dataset, opt):
+def get_cl_lr(linears, dataset, opt):
     lr_dict = {
         'mnist': {
             'dec': {
@@ -49,27 +66,29 @@ def get_cl_lr(name, dataset, opt):
                 'yogi': 0.0015,
                 },
             },
+        # TODO: to set values properly
+        'euromds': {
+            'dec': {
+                'sgd': 3.6e-3,
+                'adam': 1e-4,
+                'yogi': 9e-4,
+                },
+            'curves': {
+                'sgd': 4.1e-2,
+                'adam': 1.2e-4,
+                'yogi': 1e-3,
+                },
+            'google': {
+                'sgd': 6.5e-3,
+                'adam': 1.2e-4,
+                'yogi': 7.5e-4,
+                },
+        },
     }
-    return lr_dict[dataset][name][opt]
+    return lr_dict[dataset][linears][opt]
 
-def get_linears(name, input_dim, f_dim):
-    linears_dict = {
-        'dec': [input_dim, 500, 500, 2000, f_dim],
-        'google': [input_dim, 1000, 500, 250, f_dim],
-        'curves': [input_dim, 400, 200, 100, 50, 25, 6],
-    }
-    return linears_dict[name]
 
-def get_scaler(name: str):
-    scaler_dict = {
-        'standard': StandardScaler(),
-        'normal-l1': Normalizer(norm='l1'),
-        'normal-l2': Normalizer(norm='l2'),
-        'none': None,
-    }
-    return scaler_dict[name]
-
-def get_ae_opt(name: str, dataset: str, linears: str = 'dec', lr: float = None):
+def get_ae_lr(linears, dataset, opt):
     lr_dataset_dict = {
         'euromds': {
             'dec': {
@@ -103,18 +122,39 @@ def get_ae_opt(name: str, dataset: str, linears: str = 'dec', lr: float = None):
             }
         },
     }
+    return lr_dataset_dict[dataset][linears][opt]
+
+def get_linears(linears, input_dim, f_dim):
+    linears_dict = {
+        'dec': [input_dim, 500, 500, 2000, f_dim],
+        'google': [input_dim, 1000, 500, 250, f_dim],
+        'curves': [input_dim, 400, 200, 100, 50, 25, 6],
+    }
+    return linears_dict[linears]
+
+def get_scaler(name: str):
+    scaler_dict = {
+        'standard': StandardScaler(),
+        'normal-l1': Normalizer(norm='l1'),
+        'normal-l2': Normalizer(norm='l2'),
+        'none': None,
+    }
+    return scaler_dict[name]
+
+def get_opt(opt: str, lr: float = None):
+    learning_rate = lr
     ae_opt_dict = {
         'sgd': partial(SGD,
-                       lr=lr_dataset_dict[dataset][linears]['sgd'] if lr is None else lr,
+                       lr=learning_rate if lr is None else lr,
                        momentum=0.9),
         'adam': partial(Adam,
-                        lr=lr_dataset_dict[dataset][linears]['adam'] if lr is None else lr),
+                        lr=learning_rate if lr is None else lr),
         'yogi': partial(Yogi,
-                        lr=lr_dataset_dict[dataset][linears]['yogi'] if lr is None else lr,
+                        lr=learning_rate if lr is None else lr,
                         eps=1e-3,
                         initial_accumulator=1e-6,),
     }
-    return ae_opt_dict[name]
+    return ae_opt_dict[opt]
 
 
 def get_main_loss(name: str):

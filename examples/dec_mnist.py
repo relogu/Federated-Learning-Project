@@ -1,3 +1,24 @@
+from py.parsers.dec_mnist_parser import dec_mnist_parser as get_parser
+from py.util import compute_centroid_np
+from py.callbacks import ae_training_callback, dec_train_callback, embed_train_callback
+from py.datasets.bmnist import CachedBMNIST
+from py.datasets.mnist import CachedMNIST
+from py.dec.torch.utils import (cluster_accuracy, get_main_loss, get_mod_loss,
+                                get_mod_binary_loss, get_opt, get_linears,
+                                target_distribution, get_scaler, get_cl_lr,
+                                get_cl_batch_size, get_ae_lr)
+from py.dec.torch.layers import TruncatedGaussianNoise
+from py.dec.torch.sdae import StackedDenoisingAutoEncoder
+from py.dec.torch.dec import DEC
+from tensorboardX import SummaryWriter
+from sklearn.cluster import KMeans
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils.data import DataLoader
+from torch.nn import ReLU, Sigmoid, KLDivLoss, MSELoss
+import torch.nn.functional as F
+import torch
+import tensorboard as tb
+import tensorflow as tf
 import os
 import pathlib
 import numpy as np
@@ -5,65 +26,46 @@ import json
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
-import tensorflow as tf
-import tensorboard as tb
 tf.io.gfile = tb.compat.tensorflow_stub.io.gfile
-import torch
-import torch.nn.functional as F
-from torch.nn import ReLU, Sigmoid, KLDivLoss, MSELoss
-from torch.utils.data import DataLoader
-from torch.optim import SGD
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from sklearn.cluster import KMeans
-from tensorboardX import SummaryWriter
 
-from py.dec.torch.dec import DEC
-from py.dec.torch.sdae import StackedDenoisingAutoEncoder
-from py.dec.torch.layers import TruncatedGaussianNoise
-from py.dec.torch.utils import (cluster_accuracy, get_main_loss, get_mod_loss,
-                                get_mod_binary_loss, get_ae_opt, get_linears,
-                                target_distribution, get_scaler, get_cl_lr, 
-                                get_cl_batch_size)
-from py.datasets.mnist import CachedMNIST
-from py.datasets.bmnist import CachedBMNIST
-from py.callbacks import ae_training_callback, dec_train_callback, embed_train_callback
-from py.util import compute_centroid_np
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-def main(
-    # cuda, gpu_id, batch_size, pretrain_epochs, finetune_epochs, testing_mode, out_folder,
-    #      glw_pretraining, is_tied, ae_main_loss, ae_mod_loss, alpha, input_do, hidden_do, beta,
-    #      gaus_noise, ae_opt, lr
-         ):
-    out_folder = None
+
+def main():
+    # Parse arguments
+    args = get_parser().parse_args()
+    path_to_data = args.data_folder
+    out_folder = args.out_folder
     is_tied = True
-    testing_mode = False
-    gpu_id = 0
+    gpu_id = args.gpu_id
+    testing_mode = args.testing_mode
     # get configuration dict
     config = {
-        'linears': 'dec',
-        'f_dim': 10,
-        'activation': 'relu',
-        'final_activation': 'relu',
-        'dropout': 0.0,
-        'epochs': 500,
-        'n_clusters': 10,
-        'ae_batch_size': 256,
-        'update_interval': 160,
-        'optimizer': 'yogi',
-        'lr': None,
-        'lr_scheduler': False,
-        'main_loss': 'mse',
-        'mod_loss': 'none',
-        'beta': 0.0,
-        'corruption': 0.0,
-        'noising': 0.0,
-        'train_dec': 'yes',
-        'dec_batch_size': 0,
-        'alpha': 9,
-        'scaler': 'normal-l1',
-        'binary': False,
+        'linears': args.linears,
+        'f_dim': args.hidden_dimensions,
+        'activation': args.activation,
+        'final_activation': args.final_activation,
+        'dropout': args.hidden_dropout,
+        'pretrain_epochs': args.pretrain_epochs,
+        'finetune_epochs': args.finetune_epochs,
+        'n_clusters': args.n_clusters,
+        'ae_batch_size': args.ae_batch_size,
+        'optimizer': args.opt,
+        'ae_lr': args.ae_lr,
+        'lr_scheduler': args.lr_sched,
+        'main_loss': args.main_loss,
+        'mod_loss': args.mod_loss,
+        'beta': args.beta,
+        'corruption': args.corruption,
+        'noising': args.noising,
+        'train_dec': args.train_dec,
+        'n_init': args.n_init,
+        'dec_batch_size': args.dec_batch_size,
+        'dec_lr': args.dec_lr,
+        'alpha': args.alpha,
+        'scaler': args.scaler,
+        'binary': args.binary,
     }
 
     # defining output folder
@@ -75,7 +77,7 @@ def main(
     print('Output folder {}'.format(path_to_out))
     # dumping current configuration
     with open(path_to_out/'config.json', 'w') as file:
-        json.dump(config, file)
+        json.dump(vars(args), file)
     writer = SummaryWriter(
         logdir=str(str(path_to_out)+'/runs/'),
         flush_secs=5)  # create the TensorBoard object
@@ -83,29 +85,28 @@ def main(
     device = "cpu"
     if torch.cuda.is_available():
         device = "cuda:{}".format(gpu_id)
-
     # set up loss(es) used in training the SDAE
     if config['binary']:
-        if config['mod_loss'] != 'none':
+        if config['mod_loss'] is not None:
             loss_fn = get_mod_binary_loss(
                 name=config['mod_loss'],
-                )
+            )
             beta = [1.0-config['beta'], config['beta']]
         else:
             loss_fn = [get_main_loss(config['main_loss'])]
             beta = [1.0]
     else:
-        if config['mod_loss'] != 'none':
+        if config['mod_loss'] is not None:
             loss_fn = get_mod_loss(
                 name=config['mod_loss'],
                 beta=config['beta'],
                 main_loss=config['main_loss'],
                 device=device,
-                )
+            )
         else:
             loss_fn = [get_main_loss(config['main_loss'])]
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
-    # set noising to data  
+    # set noising to data
     noising = None
     if config['noising'] > 0:
         noising = TruncatedGaussianNoise(
@@ -113,7 +114,7 @@ def main(
             stddev=config['noising'],
             rate=1.0,
             device=device,
-            )
+        )
     # set corruption to data
     corruption = None
     if config['corruption'] > 0:
@@ -122,13 +123,14 @@ def main(
     autoencoder = StackedDenoisingAutoEncoder(
         get_linears(config['linears'], 784, config['f_dim']),
         activation=ReLU() if config['activation'] == 'relu' else Sigmoid(),
-        final_activation=ReLU() if config['final_activation'] == 'relu' else Sigmoid(),
+        final_activation=ReLU(
+        ) if config['final_activation'] == 'relu' else Sigmoid(),
         dropout=config['dropout'],
         is_tied=is_tied,
     )
     # set learning rate scheduler
     if config['lr_scheduler']:
-        scheduler = lambda x: ReduceLROnPlateau(
+        def scheduler(x): return ReduceLROnPlateau(
             x,
             mode='min',
             factor=0.5,
@@ -139,17 +141,17 @@ def main(
     # get datasets
     if config['binary']:
         ds_train = CachedBMNIST(
-            train=True, device=device, testing_mode=testing_mode
+            path=path_to_data, train=True, device=device, testing_mode=testing_mode
         )  # training dataset
         ds_val = CachedBMNIST(
-            train=False, device=device, testing_mode=testing_mode
+            path=path_to_data, train=False, device=device, testing_mode=testing_mode
         )  # evaluation dataset
     else:
         ds_train = CachedMNIST(
-            train=True, device=device, testing_mode=testing_mode
+            path=path_to_data, train=True, device=device, testing_mode=testing_mode
         )  # training dataset
         ds_val = CachedMNIST(
-            train=False, device=device, testing_mode=testing_mode
+            path=path_to_data, train=False, device=device, testing_mode=testing_mode
         )  # evaluation dataset
     # set dataloaders
     dataloader = DataLoader(
@@ -162,26 +164,29 @@ def main(
         batch_size=config['ae_batch_size'],
         shuffle=False,
     )
-        
+
     if (path_to_out/'pretrain_ae').exists():
         print('Skipping pretraining since weights already exist.')
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
     else:
         print("Pretraining stage.")
         autoencoder.to(device)
-        optimizer = get_ae_opt(
-            name=config['optimizer'],
-            dataset='bmnist' if config['binary'] else 'mnist',
-            lr=config['lr'])(autoencoder.parameters())
+        optimizer = get_opt(
+            opt=config['optimizer'],
+            lr=config['ae_lr'] if config['ae_lr'] is not None else get_ae_lr(
+                dataset='bmnist' if config['binary'] else 'mnist',
+                linears=config['linears'],
+                opt=config['optimizer']),
+        )(autoencoder.parameters())
         if scheduler is not None:
             scheduler = scheduler(optimizer)
         autoencoder.train()
         val_loss = -1
-        for epoch in range(config['epochs']):
+        for epoch in range(config['pretrain_epochs']):
             running_loss = 0.0
             if scheduler is not None:
                 scheduler.step(val_loss)
-                
+
             for i, batch in enumerate(dataloader):
                 if (
                     isinstance(batch, tuple)
@@ -191,40 +196,39 @@ def main(
                     batch = batch[0]
                 batch = batch.to(device)
                 input = batch
-                
+
                 if noising is not None:
                     input = noising(input)
                 if corruption is not None:
                     input = F.dropout(input, corruption)
                 output = autoencoder(input)
-                
+
                 if config['binary']:
-                    losses = [beta*l_fn_i(output, batch) for beta, l_fn_i in zip(beta, loss_functions)]
+                    losses = [beta*l_fn_i(output, batch)
+                              for beta, l_fn_i in zip(beta, loss_functions)]
                 else:
-                    losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
+                    losses = [l_fn_i(output, batch)
+                              for l_fn_i in loss_functions]
                 loss = sum(losses)/len(loss_fn)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step(closure=None)
-                # print statistics
-                # running_loss += loss.item()
-                # print("[%d, %5d] loss: %.3f" % \
-                #     (epoch+1, i+1, running_loss / (i+1)))
             running_loss = running_loss / (i+1)
-                    
+
             val_loss = 0.0
             criterion = MSELoss()
             for i, val_batch in enumerate(validation_loader):
                 with torch.no_grad():
                     if (
-                        isinstance(val_batch, tuple) or isinstance(val_batch, list)
+                        isinstance(val_batch, tuple) or isinstance(
+                            val_batch, list)
                     ) and len(val_batch) in [1, 2]:
                         val_batch = val_batch[0]
                     val_batch = val_batch.to(device)
                     validation_output = autoencoder(val_batch)
                     loss = criterion(validation_output, val_batch)
                     val_loss += loss.cpu().numpy()
-            
+
             val_loss = ae_training_callback(
                 writer,
                 'pretraining',
@@ -254,15 +258,18 @@ def main(
         print("Finetuning stage.")
         autoencoder.load_state_dict(torch.load(path_to_out/'pretrain_ae'))
         autoencoder.to(device)
-        optimizer = get_ae_opt(
-            name=config['optimizer'],
-            dataset='bmnist' if config['binary'] else 'mnist',
-            lr=config['lr'])(autoencoder.parameters())
+        optimizer = get_opt(
+            opt=config['optimizer'],
+            lr=config['ae_lr'] if config['ae_lr'] is not None else get_ae_lr(
+                dataset='bmnist' if config['binary'] else 'mnist',
+                linears=config['linears'],
+                opt=config['optimizer']),
+        )(autoencoder.parameters())
         if scheduler is not None:
             scheduler = scheduler(optimizer)
         autoencoder.train()
         val_loss = -1
-        for epoch in range(config['epochs']):
+        for epoch in range(config['finetune_epochs']):
             running_loss = 0.0
             if scheduler is not None:
                 scheduler.step(val_loss)
@@ -276,23 +283,21 @@ def main(
                     batch = batch[0]
                 batch = batch.to(device)
                 input = batch
-                
+
                 output = autoencoder(input)
-                
+
                 if config['binary']:
-                    losses = [beta*l_fn_i(output, batch) for beta, l_fn_i in zip(beta, loss_functions)]
+                    losses = [beta*l_fn_i(output, batch)
+                              for beta, l_fn_i in zip(beta, loss_functions)]
                 else:
-                    losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
+                    losses = [l_fn_i(output, batch)
+                              for l_fn_i in loss_functions]
                 loss = sum(losses)/len(loss_fn)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step(closure=None)
-                # print statistics
-                # running_loss += loss.item()
-                # print("[%d, %5d] loss: %.3f" % \
-                #     (epoch+1, i+1, running_loss / (i+1)))
             running_loss = running_loss / (i+1)
-            
+
             val_loss = ae_training_callback(
                 writer,
                 'pretraining',
@@ -315,15 +320,15 @@ def main(
             (epoch+1),
             ds_val,
             autoencoder)
-    
+
     if config['train_dec'] == 'yes':
         print("DEC stage.")
         dataloader = DataLoader(
             ds_train,
             batch_size=get_cl_batch_size(
-                name='dec',
+                linears='dec',
                 dataset='bmnist' if config['binary'] else 'mnist',
-                opt=config['optimizer']),
+                opt=config['optimizer']) if config['dec_batch_size'] is not None else config['dec_batch_size'],
             shuffle=False,
         )
         autoencoder = autoencoder.to(device)
@@ -332,15 +337,15 @@ def main(
                     encoder=autoencoder.encoder,
                     alpha=config['alpha'])
         model = model.to(device)
-        optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9)
-        optimizer = get_ae_opt(
+        optimizer = get_opt(
             name=config['optimizer'],
-            dataset='bmnist' if config['binary'] else 'mnist',
-            lr=get_cl_lr(
-                name='dec',
+            lr=config['dec_lr'] if config['dec_lr'] is not None else get_cl_lr(
+                linears='dec',
                 dataset='bmnist' if config['binary'] else 'mnist',
-                opt=config['optimizer']))(model.parameters())
-        scaler = get_scaler(config['scaler']) if config['scaler'] != 'none' else None
+                opt=config['optimizer']),
+        )(model.parameters())
+        scaler = get_scaler(
+            config['scaler']) if config['scaler'] != 'none' else None
         kmeans = KMeans(n_clusters=model.cluster_number, n_init=20)
         features = []
         actual = []
@@ -353,7 +358,8 @@ def main(
         actual = torch.cat(actual).long()
 
         predicted = kmeans.fit_predict(
-            scaler.fit_transform(torch.cat(features).numpy()) if scaler is not None else torch.cat(features).numpy()
+            scaler.fit_transform(torch.cat(features).numpy(
+            )) if scaler is not None else torch.cat(features).numpy()
         )
         predicted_previous = torch.tensor(np.copy(predicted), dtype=torch.long)
         _, accuracy = cluster_accuracy(predicted, actual.cpu().numpy())
@@ -362,19 +368,22 @@ def main(
         emp_centroids = []
         for i in np.unique(predicted):
             idx = (predicted == i)
-            emp_centroids.append(compute_centroid_np(torch.cat(features).numpy()[idx, :]))
+            emp_centroids.append(compute_centroid_np(
+                torch.cat(features).numpy()[idx, :]))
 
         cluster_centers = torch.tensor(
-            np.array(emp_centroids) if scaler is not None else kmeans.cluster_centers_,
+            np.array(
+                emp_centroids) if scaler is not None else kmeans.cluster_centers_,
             dtype=torch.float,
             requires_grad=True,
         )
         cluster_centers = cluster_centers.to(device, non_blocking=True)
         with torch.no_grad():
-            model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
+            model.state_dict()["assignment.cluster_centers"].copy_(
+                cluster_centers)
 
         loss_function = KLDivLoss(reduction='sum')
-        for epoch in range(20):
+        for epoch in range(config['dec_epochs']):
             model.train()
             for batch in dataloader:
                 if (isinstance(batch, tuple) or isinstance(batch, list)) and len(
@@ -389,7 +398,7 @@ def main(
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step(closure=None)
-            
+
             predicted_previous = dec_train_callback(
                 writer,
                 config,
@@ -400,7 +409,7 @@ def main(
                 epoch,
                 predicted_previous,
             )
-            
+
             embed_train_callback(
                 writer,
                 0,
