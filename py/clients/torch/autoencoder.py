@@ -21,7 +21,6 @@ from py.dec.torch.utils import get_ae_lr
 
 def training_loop(
     n_epochs: int = 1, # number of epochs
-    scheduler_config: Dict = None, # lr scheduler config
     dataloader: DataLoader = None, # dataloader for train
     device: str = 'cpu', # device to pass torch
     optimizer: Any = None, # optimizer for train
@@ -34,8 +33,6 @@ def training_loop(
     if noising is not None:
         noising.to(device)
     autoencoder.train()
-    if scheduler_config['scheduler_fn'] is not None:
-        scheduler = scheduler_config['scheduler_fn'](optimizer)
     loss_functions = [loss_fn_i() for loss_fn_i in loss_fn]
     
     for _ in range(n_epochs):
@@ -63,9 +60,6 @@ def training_loop(
             loss.backward()
             optimizer.step(closure=None)
         ret_loss = ret_loss / (i+1)
-        # TODO: print statistics?
-        if scheduler_config['scheduler_fn'] is not None:
-            scheduler.step(scheduler_config['last_loss'])
     return ret_loss
 
 def evaluating_loop(
@@ -134,12 +128,6 @@ class AutoencoderClient(NumPyClient):
         else:
             self.out_dir = Path(output_folder)
             os.makedirs(self.out_dir, exist_ok=True)
-        # TODO: get lr scheduler state
-        # TODO: get last val loss for scheduler
-        self.scheduler_config = {
-            'scheduler_fn': None,
-            'last_loss': 0.0,
-        }
         # general initializations
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
     
@@ -166,7 +154,6 @@ class AutoencoderClient(NumPyClient):
         # fit the model
         loss = training_loop(
             n_epochs=config['n_epochs'],
-            scheduler_config=self.scheduler_config,
             dataloader=self.trainloader,
             device=device,
             optimizer=self.optimizer,
@@ -191,6 +178,5 @@ class AutoencoderClient(NumPyClient):
             device=device,
             autoencoder=self.autoencoder,
         )
-        # TODO: save val loss for scheduler
         # returning the parameters necessary for evaluation
         return float(eval_loss), len(self.ds_test), {}
