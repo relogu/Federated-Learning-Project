@@ -1,113 +1,30 @@
-*.txt
-!spec-file.txt
-CUDA Toolkit Helper*
-
-*.pyc
-
-# histories
-*_history
-*runs*
-
-# too many of those
-*results
-*results/*.png
-*RESULTS
-*.png
-*results/*/*.png
-*out_torch*
-*runs*
-
-# obscuring results for now
-#*results*
-#!results/*/*.png
-#!*results/*FED_g-K8/*
-#!*results/*FED_g-K6/*
-#!*results/*single_g_*/*
-
-*output*
-#!output.py
-*cycle_reg_*
-*gen_*
-*gen_classes_*
-
-
-*_images*
-
-*.ipynb*
-!bmnist_single_model_topo_results.ipynb
-!mnist_single_model_topo_results.ipynb
-!single_model_topo_results.ipynb
-
-*.dat
-
-# latex
-*.bbl
-*.blg
-*.nav
-*.pdfpc
-*.snm
-
 # onedrive issues
 *-relogu-XPS-15-9500*
-
-# model weights
-*.npz
 
 # conf
 *.env
 
+# personal files
 papers
 blocknotes.md
-*.tar
-*.gz
-*ubyte
-*.pt
-*.aux
-*.fdb_latexmk
-*.fls
-*.toc
-*.log
-*.out
-*.synctex*
-*.csv
-
 FL_workspace.code-workspace
-.vscode
+dev.env
+CUDA Toolkit Helper*
+results.7z
 
-# datasets
-*.json
-results/cal_har_score6.png
-results/cal_har_score6.png
-results/clustering_cycle_acc_metric.png
-results/Clustering_Model_G_metric.png
-results/fed_clustering_cycle_acc_metric.png
-results/fed_Clustering_Model_G_metric.png
-results/fed_Finetune_SAE_G_metric.png
-results/fed_Pretrain_SAE_G_metric.png
-results/Finetune_SAE_G_metric.png
-results/metrics6.png
-results/metrics8.png
-results/Pretrain_SAE_G_metric.png
-results/silh_score6.png
-results/DEC_8CEUROMDSfinal_FED_g-K6/AE_deno_model.png
-results/DEC_8CEUROMDSfinal_FED_g-K6/conf_matrix_cycle_accuracy.png
-results/DEC_8CEUROMDSfinal_FED_g-K6/data_pred_imgs.png
-results/DEC_8CEUROMDSfinal_FED_g-K6/labels_distribution.png
-results/DEC_8CEUROMDSfinal_FED_g-K6/lifelines.png
-results/DEC_8CEUROMDSfinal_FED_g-K6/README.md
-results/DEC_8CEUROMDSfinal_FED_g-K6/tsne_data_pred_labels.png
-results/DEC_8CEUROMDSfinal_FED_g-K6/tsne_feat_pred_labels.png
-results/DEC_EUROMDSfinal_single_g_K12/AE_deno_model.png
-results/DEC_EUROMDSfinal_single_g_K12/conf_matrix_cycle_accuracy.png
-results/DEC_EUROMDSfinal_single_g_K12/data_pred_imgs.png
-results/DEC_EUROMDSfinal_single_g_K12/labels_distribution.png
-results/DEC_EUROMDSfinal_single_g_K12/lifelines.png
-results/DEC_EUROMDSfinal_single_g_K12/README.md
-results/DEC_EUROMDSfinal_single_g_K12/tsne_data_pred_labels.png
-results/DEC_EUROMDSfinal_single_g_K12/tsne_feat_pred_labels.png
-results/DEC_EUROMDSfinal_single_g_K6/AE_deno_model.png
-results/DEC_EUROMDSfinal_single_g_K6/conf_matrix_cycle_accuracy.png
-results/DEC_EUROMDSfinal_single_g_K6/tsne_feat_pred_labels.png
+# images and csvs for thesis and presentation
+notebooks/*.png
+notebooks/*.csv
+
+# caches and vs code files
+*.ipynb_checkpoints
+*.pytest_cache
+*.vscode
+*.pyc
+
+# data sets
+data/*
+!data/README.md
 
 # ignore old files
 *.old
