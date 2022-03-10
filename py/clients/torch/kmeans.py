@@ -28,7 +28,6 @@ def fit_kmeans_loop(
     autoencoder: Module = None, # network
     kmeans: Any = None, # kmeans object
     scaler: Any = None, # scaler object
-    use_emp_centroids: bool = False, # flag for using empirical centroids
 ):
     autoencoder.to(device)
     autoencoder.eval()
@@ -53,7 +52,7 @@ def fit_kmeans_loop(
     )
     centroids = kmeans.cluster_centers_
     # if choosing empirical centroids or kmeans centroids
-    if use_emp_centroids:
+    if scaler is not None:
         emp_centroids = []
         for i in np.unique(predicted):
             idx = (predicted == i)
@@ -102,15 +101,11 @@ class KMeansClient(NumPyClient):
         self.autoencoder = StackedDenoisingAutoEncoder(**net_config)
         # kmeans initializations
         self.kmeans_config = kmeans_config
-        self.use_emp_centroids = False
-        if 'use_emp_centroids' in kmeans_config.keys():
-            self.use_emp_centroids = self.kmeans_config['use_emp_centroids']
-            kmeans_config.pop('use_emp_centroids')
         self.kmeans = KMeans(**self.kmeans_config)
         self.clusters_centers = []
         # get scaler
         self.scaler = None
-        if scaler_config['name'] is not None:
+        if scaler_config['name'] != 'none':
             self.scaler = scaler_config['get_scaler_fn'](scaler_config['name']) if scaler_config['scaler'] != 'none' else None
         # general initializations
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
@@ -142,7 +137,6 @@ class KMeansClient(NumPyClient):
             dataloader=self.trainloader,
             device=device,
             scaler=self.scaler,
-            use_emp_centroids=self.use_emp_centroids,
         )
         couples = []
         for i in np.unique(predicted):
