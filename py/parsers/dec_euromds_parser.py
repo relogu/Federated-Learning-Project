@@ -143,7 +143,7 @@ def dec_euromds_parser():
         default=150,
         help='Number of epochs for finetuning TSAE, used with noising only'
     )
-    ## data set parameters
+    ## EUROMDS data set parameters
     parser.add_argument(
         '--data-folder',
         dest='data_folder',
@@ -171,7 +171,7 @@ def dec_euromds_parser():
         type=int,
         default=2044,
         help='Maximum number of NaNs for accepting a column')
-    # train dec flag
+    # Train dec flag
     parser.add_argument(
         '--train-dec',
         dest='train_dec',
@@ -180,7 +180,7 @@ def dec_euromds_parser():
         default=True,
         help='Flag to set whether to train DEC or not'
     )
-    # number of cluster to search for
+    # Number of cluster to search for
     parser.add_argument(
         '--n-clusters',
         dest='n_clusters',
@@ -242,7 +242,7 @@ def dec_euromds_parser():
         default=None,
         help='Learning rate for DEC optimizer, if None the default (choosen via hyperparamete tuning) is set'
     )
-    ## general
+    ## General
     parser.add_argument(
         '--seed',
         dest='seed',

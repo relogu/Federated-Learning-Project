@@ -183,7 +183,7 @@ def dec_mnist_parser():
         required=False,
         type=int,
         default=10,
-        help='number of cluster to search for'
+        help='Number of cluster to search for'
     )
     ## KMeans parameters
     parser.add_argument(
@@ -220,7 +220,7 @@ def dec_mnist_parser():
         required=False,
         type=int,
         default=20,
-        help='Number of federated epochs for DEC training'
+        help='Number of epochs for DEC training'
     )
     parser.add_argument(
         '--dec-batch-size',
