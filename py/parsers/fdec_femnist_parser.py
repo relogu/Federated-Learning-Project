@@ -4,23 +4,7 @@ def fdec_femnist_parser():
     parser = argparse.ArgumentParser(
         description='Federeated DEC for FEMNIST'
     )
-    parser.add_argument(
-        '--n-local-epochs',
-        dest='n_local_epochs',
-        required=False,
-        type=int,
-        default=1,
-        help='set the number of local epochs'
-    )
-    parser.add_argument(
-        '--ae-batch-size',
-        dest='ae_batch_size',
-        required=False,
-        type=int,
-        default=256,
-        help='Batch size used for TSAE training'
-    )
-    ## SDAE params
+    ## TSAE params
     parser.add_argument(
         '--linears',
         dest='linears',
@@ -28,7 +12,25 @@ def fdec_femnist_parser():
         type=str,
         default='dec',
         choices=['dec', 'google', 'curves'],
-        help='architecture of linears in SDAE'
+        help='Architecture of linears in TSAE'
+    )
+    parser.add_argument(
+        '--activation',
+        dest='activation',
+        required=False,
+        type=str,
+        default='relu',
+        choices=['relu', 'sigmoid'],
+        help='Activation function for hidden nodes in TSAE'
+    )
+    parser.add_argument(
+        '--final-activation',
+        dest='final_activation',
+        required=False,
+        type=str,
+        default='relu',
+        choices=['relu', 'sigmoid'],
+        help='Final activation function for TSAE'
     )
     parser.add_argument(
         '--noising',
@@ -36,7 +38,7 @@ def fdec_femnist_parser():
         required=False,
         type=float,
         default=0.0,
-        help='stddev of gaussian noising in input of SDAE training'
+        help='Standard deviation of gaussian noising in input of TSAE training'
     )
     parser.add_argument(
         '--corruption',
@@ -44,7 +46,7 @@ def fdec_femnist_parser():
         required=False,
         type=float,
         default=0.0,
-        help='rate of corruption in input of SDAE training'
+        help='Rate of corruption in input of TSAE training'
     )
     parser.add_argument(
         '--hidden-dropout',
@@ -52,7 +54,7 @@ def fdec_femnist_parser():
         required=False,
         type=float,
         default=0.0,
-        help='rate of dropout for hidden layers in SDAE training'
+        help='Rate of dropout for hidden layers in TSAE'
     )
     parser.add_argument(
         '--hidden-dimensions',
@@ -60,7 +62,7 @@ def fdec_femnist_parser():
         required=False,
         type=int,
         default=10,
-        help='number of hidden dimension of the feature space'
+        help='Number of hidden dimension of the feature space'
     )
     ## SDAE training
     parser.add_argument(
@@ -70,7 +72,43 @@ def fdec_femnist_parser():
         type=str,
         default='sgd',
         choices=['sgd', 'adam', 'yogi'],
-        help='Optimizer to use on training TSAE and DEC'
+        help='Name of the optimizer in training both TSAE and DEC'
+    )
+    parser.add_argument(
+        '--ae-batch-size',
+        dest='ae_batch_size',
+        required=False,
+        type=int,
+        default=256,
+        help='Batch size used for TSAE training'
+    )
+    parser.add_argument(
+        '--main-loss',
+        dest='main_loss',
+        required=False,
+        type=str,
+        default='mse',
+        # TODO: put other choices
+        choices=['mse'],
+        help='Name of the main loss function in training TSAE'
+    )
+    parser.add_argument(
+        '--mod-loss',
+        dest='mod_loss',
+        required=False,
+        type=str,
+        default=None,
+        # TODO: put other choices
+        choices=[None, 'bce+dice'],
+        help='Name of the mod loss function in training TSAE'
+    )
+    parser.add_argument(
+        '--beta',
+        dest='beta',
+        required=False,
+        type=float,
+        default=0.0,
+        help='Fraction of the mod loss contribution w.r.t. the main loss'
     )
     parser.add_argument(
         '--ae-lr',
@@ -78,40 +116,67 @@ def fdec_femnist_parser():
         required=False,
         type=float,
         default=None,
-        help='learning rate for SDAE optimizer, if None the default (choosen via hyperparamete tuning) is set'
+        help='Learning rate for TSAE optimizer, if None the default (choosen via hyperparamete tuning) is set'
     )
     parser.add_argument(
-        '--ae-epochs',
-        dest='ae_epochs',
+        '--pretrain-epochs',
+        dest='pretrain_epochs',
         required=False,
         type=int,
-        default=300,
-        help='federated epochs to run in SDAE training'
+        default=500,
+        help='Number of epochs for pretraining TSAE'
+    )
+    parser.add_argument(
+        '--finetune-epochs',
+        dest='finetune_epochs',
+        required=False,
+        type=int,
+        default=500,
+        help='Number of epochs for finetuning TSAE, used with noising only'
+    )
+    # (B)MNIST data set params
+    parser.add_argument(
+        '--data-folder',
+        dest='data_folder',
+        required=False,
+        type=str,
+        default=None,
+        help='Path to data folder'
+    )
+    parser.add_argument(
+        '--binary',
+        dest='binary',
+        required=False,
+        type=bool,
+        default=True,
+        help='Flag to set whether to binarize MNIST to get BMNIST'
+    )
+    # train dec flag
+    parser.add_argument(
+        '--train-dec',
+        dest='train_dec',
+        required=False,
+        type=bool,
+        default=True,
+        help='Flag to set whether to train DEC or not'
     )
     ## KMeans parameters
+    # number of cluster to search for
+    parser.add_argument(
+        '--n-clusters',
+        dest='n_clusters',
+        required=False,
+        type=int,
+        default=10,
+        help='Number of cluster to search for'
+    )
     parser.add_argument(
         '--n-init',
         dest='n_init',
         required=False,
         type=int,
         default=20,
-        help='number of inititialization for KMeans fit'
-    )
-    parser.add_argument(
-        '--max-iter',
-        dest='max_iter',
-        required=False,
-        type=int,
-        default=300,
-        help='maximum number of iterations for KMeans fit'
-    )
-    parser.add_argument(
-        '--use-emp-centroids',
-        dest='use_emp_centroids',
-        required=False,
-        type=bool,
-        default=False,
-        help='flag to set whether to use or not empirical centroids'
+        help='Number of inititialization for KMeans fit'
     )
     ## scaler
     parser.add_argument(
@@ -119,9 +184,9 @@ def fdec_femnist_parser():
         dest='scaler',
         required=False,
         type=str,
-        default=None,
-        choices=['standard', 'normal-l1', 'normal-l2'],
-        help='name fo the scaler before to run KMeans'
+        default='none',
+        choices=['none', 'standard', 'normal-l1', 'normal-l2'],
+        help='Name fo the scaler before to run KMeans'
     )
     ## DEC param
     parser.add_argument(
@@ -129,8 +194,8 @@ def fdec_femnist_parser():
         dest='alpha',
         required=False,
         type=int,
-        default=1,
-        help='alpha parameter of DEC model'
+        default=9,
+        help='Alpha parameter of DEC model (best should be n_cluster-1)'
     )
     ## DEC training
     parser.add_argument(
@@ -139,7 +204,7 @@ def fdec_femnist_parser():
         required=False,
         type=int,
         default=20,
-        help='number of federated epochs for DEC training'
+        help='Number of federated epochs for DEC training'
     )
     parser.add_argument(
         '--dec-batch-size',
@@ -164,7 +229,7 @@ def fdec_femnist_parser():
         required=False,
         type=int,
         default=51550,
-        help='seed for initializing random generators'
+        help='Seed for initializing random generators'
     )
     parser.add_argument(
         '--n-cpus',
@@ -172,7 +237,7 @@ def fdec_femnist_parser():
         required=False,
         type=int,
         default=1,
-        help='set the number of cpus per client to set ray resources'
+        help='Set the number of cpus per client to set ray resources'
     )
     parser.add_argument(
         '--out-folder',
@@ -180,15 +245,7 @@ def fdec_femnist_parser():
         required=False,
         type=str,
         default=None,
-        help='path to output folder'
-    )
-    parser.add_argument(
-        '--data-folder',
-        dest='data_folder',
-        required=False,
-        type=str,
-        default=None,
-        help='path to data folder'
+        help='Path to output folder'
     )
     parser.add_argument(
         '--n-clients',
@@ -196,7 +253,7 @@ def fdec_femnist_parser():
         required=False,
         type=int,
         default=100,
-        help='number of clients that participate the federated training'
+        help='Number of clients that participate the federated training'
     )
     parser.add_argument(
         '--min-clients',
@@ -204,7 +261,15 @@ def fdec_femnist_parser():
         required=False,
         type=int,
         default=-1,
-        help='set the minimum number of clients available per round'
+        help='Set the minimum number of clients available per round'
+    )
+    parser.add_argument(
+        '--n-local-epochs',
+        dest='n_local_epochs',
+        required=False,
+        type=int,
+        default=1,
+        help='Set the number of local epochs'
     )
     parser.add_argument(
         '--dump-metrics',
@@ -212,7 +277,7 @@ def fdec_femnist_parser():
         required=False,
         type=bool,
         default=False,
-        help='flag to set whether to dump metrics or not along training'
+        help='Flag to set whether to dump metrics or not along training'
     )
     parser.add_argument(
         '--verbose',
@@ -220,6 +285,6 @@ def fdec_femnist_parser():
         required=False,
         type=bool,
         default=False,
-        help='flag to set verbosity'
+        help='Flag to set verbosity'
     )
     return parser
