@@ -18,17 +18,26 @@ def preprocess(dataset):
   return dataset.repeat(1).shuffle(100, seed=1).map(batch_format_fn).prefetch(10)
 
 def get_parser():
-    # TODO: descriptor
     parser = argparse.ArgumentParser(
-        description="")
-    parser.add_argument("--out_fol",
+        description="Script for building the folder containing Binary Federated EMNIST (BFEMNIST)")
+    parser.add_argument("--only-digits",
+                        dest="only_digits",
+                        type=bool,
+                        default=True,
+                        help="Flag for using only digits")
+    parser.add_argument("--cache-folder",
+                        dest="cache_folder",
+                        type=str,
+                        default=None,
+                        help="Folder to caching the download of images")
+    parser.add_argument("--out-folder",
                         dest="out_folder",
-                        type=type(str('')),
+                        type=str,
+                        default=None,
                         help="Folder to output images")
-    # TODO: add arguments
     return parser
-    
-# TODO: write description
+
+
 if __name__ == "__main__":
 
     args = get_parser().parse_args()
@@ -37,12 +46,16 @@ if __name__ == "__main__":
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/'output'
     else:
         path_to_out = pathlib.Path(args.out_folder)
+    # Define caching folder
+    cache_folder = None
+    if args.cache_folder is not None:
+        cache_folder = pathlib.Path(args.out_folder)
     print('Output folder {}'.format(path_to_out))
     (path_to_out/'bfemnist'/'train').mkdir(parents=True, exist_ok=True)
     (path_to_out/'bfemnist'/'test').mkdir(parents=True, exist_ok=True)
     
     train, test = tff.simulation.datasets.emnist.load_data(
-        only_digits=True, cache_dir=None
+        only_digits=args.only_digits, cache_dir=cache_folder
     )
     
     for client in train.client_ids:
