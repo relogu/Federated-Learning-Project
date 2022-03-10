@@ -39,7 +39,7 @@ def train(
     :param optimizer: instance of optimizer to use
     :param stopping_delta: label delta as a proportion to use for stopping, None to disable, default None
     :param collate_fn: function to merge a list of samples into mini-batch
-    :param device: TODO
+    :param device: str representing the device to pass PyTorch
     :param sampler: optional sampler to use in the DataLoader, defaults to None
     :param silent: set to True to prevent printing out summary statistics, defaults to False
     :param update_freq: frequency of batches with which to update counter, None disables, default 10
@@ -182,7 +182,7 @@ def predict(
     :param model: instance of DEC model to predict
     :param batch_size: size of the batch to predict with, default 1024
     :param collate_fn: function to merge a list of samples into mini-batch
-    :param device: TODO
+    :param device: str representing the device to pass PyTorch
     :param silent: set to True to prevent printing out summary statistics, defaults to False
     :param return_actual: return actual values, if present in the Dataset
     :return: tuple of prediction and actual if return_actual is True otherwise prediction
@@ -221,13 +221,14 @@ def assign_cluster_centers(
     device: str = 'cpu',
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
-    TODO
+    Assign clusters centers and returns the intial prediction and accuracy from K-Means
 
     :param dataset: instance of Dataset to use for training
     :param model: instance of DEC model to predict
     :param batch_size: size of the batch to predict with, default 1024
     :param collate_fn: function to merge a list of samples into mini-batch
-    :param device: TODO
+    :param device: str representing the device to pass PyTorch
+    :return: tuple of prediction of K-Means and accuracy from this assignments
     """
     static_dataloader = DataLoader(
         dataset,
