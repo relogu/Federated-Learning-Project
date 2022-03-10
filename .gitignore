@@ -7,7 +7,6 @@
 # personal files
 papers
 blocknotes.md
-FL_workspace.code-workspace
 dev.env
 CUDA Toolkit Helper*
 results.7z
@@ -17,6 +16,7 @@ notebooks/*.png
 notebooks/*.csv
 
 # caches and vs code files
+FL_workspace.code-workspace
 *.ipynb_checkpoints
 *.pytest_cache
 *.vscode
