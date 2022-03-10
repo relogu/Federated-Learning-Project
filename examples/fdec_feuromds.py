@@ -7,11 +7,11 @@ Created on Fri Oct 29 13:55:15 2021
 """
 from typing import OrderedDict
 import flwr as fl
-from flwr.common import Parameters
 import numpy as np
 import os
 import pathlib
 from functools import partial
+import json
 
 import torch
 from torch.utils.data import DataLoader
@@ -36,6 +36,7 @@ from py.parsers.fdec_feuromds_parser import fdec_feuromds_parser as get_parser
 
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
+
 if __name__ == "__main__":
     # Parse arguments
     args = get_parser().parse_args()
@@ -51,8 +52,11 @@ if __name__ == "__main__":
     if args.out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/foldername
     else:
-        path_to_out = pathlib.Path(args.out_folder)
+        path_to_out = pathlib.Path(args.out_folder)/foldername
     print('Output folder {}'.format(path_to_out))
+    # Dump current configuration
+    with open(path_to_out/'config.json', 'w') as file:
+        json.dump(vars(args), file)
     # Define data folder
     if args.data_folder is None:
         data_folder = pathlib.Path(__file__).parent.parent.absolute()/'data'/'euromds'
@@ -105,6 +109,7 @@ if __name__ == "__main__":
             shuffle=False),
     }
     # Set loss configuration dict
+    # TODO: set parameters for mod loss
     loss_config = {
         'eval_criterion': MSELoss,
         'get_loss_fn': get_main_loss,
@@ -133,8 +138,8 @@ if __name__ == "__main__":
             ),
         'corruption': args.corruption,
         'dimensions': get_linears(args.linears, n_features, args.hidden_dimensions),
-        'activation': ReLU(),
-        'final_activation': ReLU(),
+        'activation': ReLU() if args.activation == 'relu' else Sigmoid(),
+        'final_activation': ReLU() if args.final_activation == 'relu' else Sigmoid(),
         'dropout': args.hidden_dropout,
         'is_tied': True,
     }
@@ -146,6 +151,7 @@ if __name__ == "__main__":
         'lr': args.ae_lr,
         'linears': args.linears,
     }
+    # TODO: here should be possible to set server params for optimizers
     if args.optimizer == 'sgd':
         main_strategy = partial(SaveModelStrategyFedAvg)
     elif args.optimizer == 'adam':
@@ -167,9 +173,9 @@ if __name__ == "__main__":
         # Must have 'last', 'model' for server necessities; 
         # 'actual_round', 'total_rounds' for client necessities
         return {'model': 'pretrain_ae',
-                'last': rnd==args.ae_epochs,
+                'last': rnd==args.pretrain_epochs,
                 'actual_round': rnd,
-                'total_rounds': args.ae_epochs,
+                'total_rounds': args.pretrain_epochs,
                 'n_epochs': args.n_local_epochs}
     # Define on_evaluate_config_fn
     def on_eval_config_pae_fn(rnd: int):
@@ -180,12 +186,12 @@ if __name__ == "__main__":
                 'filename': '_pretrain_ae',
                 'verbose': args.verbose,
                 'actual_round': rnd,
-                'total_rounds': args.ae_epochs}
+                'total_rounds': args.pretrain_epochs}
     # Mandatory set parameters
     autoencoder = StackedDenoisingAutoEncoder(
         get_linears(args.linears, n_features, args.hidden_dimensions),
-        activation=ReLU(),
-        final_activation=ReLU(),
+        activation=net_config['activation'],
+        final_activation=net_config['final_activation'],
         dropout=0.0,
         is_tied=True,
     )
@@ -208,13 +214,16 @@ if __name__ == "__main__":
         initial_parameters=initial_param,
     )
     # Launch the simulation
-    fl.simulation.start_simulation(
-        client_fn=pae_client_fn,
-        num_clients=args.n_clients,
-        client_resources=client_resources,
-        num_rounds=args.ae_epochs,
-        strategy=current_strategy,
-        ray_init_args=ray_config)
+    try:
+        fl.simulation.start_simulation(
+            client_fn=pae_client_fn,
+            num_clients=args.n_clients,
+            client_resources=client_resources,
+            num_rounds=args.pretrain_epochs,
+            strategy=current_strategy,
+            ray_init_args=ray_config)
+    except:
+        print('TSAE federated pretraining failed!')
     
     if net_config['net_config'] is not None:
         ## Prepare generalized AutoencoderClient for finetuning
@@ -238,9 +247,9 @@ if __name__ == "__main__":
             # Must have 'last', 'model' for server necessities; 
             # 'actual_round', 'total_rounds' for client necessities
             return {'model': 'finetune_ae',
-                    'last': rnd==args.ae_epochs,
+                    'last': rnd==args.finetune_epochs,
                     'actual_round': rnd,
-                    'total_rounds': args.ae_epochs,
+                    'total_rounds': args.finetune_epochs,
                     'n_epochs': args.n_local_epochs}
         # Define on_evaluate_config_fn
         def on_eval_config_ftae_fn(rnd: int):
@@ -251,7 +260,7 @@ if __name__ == "__main__":
                     'filename': '_finetune_ae',
                     'verbose': args.verbose,
                     'actual_round': rnd,
-                    'total_rounds': args.ae_epochs}
+                    'total_rounds': args.finetune_epochs}
         # Load initial parameters
         ae_parameters = np.load(
             path_to_out/'agg_weights_pretrain_ae.npz',
@@ -269,183 +278,190 @@ if __name__ == "__main__":
             initial_parameters=initial_param,
         )
         # Launch the simulation
-        fl.simulation.start_simulation(
-            client_fn=ftae_client_fn,
-            num_clients=args.n_clients,
-            client_resources=client_resources,
-            num_rounds=args.ae_epochs,
-            strategy=current_strategy,
-            ray_init_args=ray_config)
+        try:
+            fl.simulation.start_simulation(
+                client_fn=ftae_client_fn,
+                num_clients=args.n_clients,
+                client_resources=client_resources,
+                num_rounds=args.finetune_epochs,
+                strategy=current_strategy,
+                ray_init_args=ray_config)
+        except:
+            print('TSAE federated finetuning failed!')
     
-    ## Prepare generalized KMeansClient for initializing clusters centers
-    # Dataloader configuration dict is the same as before
-    # Network configuration dict is the same as before
-    # Set kmeans configuration dict
-    kmeans_config = {
-        'use_emp_centroids': args.use_emp_centroids,
-        'n_clusters': args.n_clusters,
-        'n_init': args.n_init,
-        'random_state': args.seed,
-        'max_iter': args.max_iter,
-        'init': 'k-means++',
-    }
-    # Set scaler configuration dict
-    scaler_config = {
-        'get_scaler_fn': get_scaler,
-        'name': args.scaler,
-    }
-    # Define the client fn to pass ray simulation
-    def kmeans_client_fn(cid: int):
-        # Create a single client instance from client id
-        return KMeansClient(
-            client_id=cid,
-            data_loader_config=data_loader_config,
-            net_config=net_config,
-            kmeans_config=kmeans_config,
-            scaler_config=scaler_config,
-            output_folder=path_to_out)
-    # Define on_fit_config_fn
-    def on_fit_config_kmeans_fn(rnd: int):
-        # Must have 'last', 'model', 'n_clusters' for server necessities; 
-        # 'actual_round', 'total_rounds' for client necessities
-        return {'model': 'kmeans',
-                'last': rnd==1,
-                'actual_round': rnd,
-                'total_rounds': 1,
-                'n_clusters': args.n_clusters}
-    # Define on_evaluate_config_fn
-    def on_eval_config_kmeans_fn(rnd: int):
-        # Must have 'dump_metrics', 'verbose', 'actual_round'
-        # for client necessities
-        return {'dump_metrics': args.dump_metrics,
-                'verbose': args.verbose,
-                'actual_round': rnd,
-                'total_rounds': 1}
-    # Load TSAE parameters
-    filename = 'agg_weights_pretrain_ae.npz' if net_config['noising'] is None else 'agg_weights_finetune_ae.npz'
-    ae_parameters = np.load(
-        path_to_out/filename,
-        allow_pickle=True)
-    ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
-    initial_param = fl.common.weights_to_parameters(ae_parameters)
-    # Configure the strategy
-    current_strategy = KMeansStrategy(
-        out_dir=path_to_out,
-        method=args.kmeans_agg,
-        on_fit_config_fn=on_fit_config_kmeans_fn,
-        on_evaluate_config_fn=on_eval_config_kmeans_fn,
-        min_available_clients=args.n_clients,
-        min_fit_clients=args.n_clients,
-        min_eval_clients=args.n_clients,
-        initial_parameters=initial_param,
-    )
-    # Launch the simulation
-    fl.simulation.start_simulation(
-        client_fn=kmeans_client_fn,
-        num_clients=args.n_clients,
-        client_resources=client_resources,
-        num_rounds=1,
-        strategy=current_strategy,
-        ray_init_args=ray_config)
-    ## Prepare generalized DECClient for clustering step
-    # Dataloader configuration dict changes only here:
-    data_loader_config['trainloader_fn'] = partial(
-        DataLoader,
-        batch_size=args.dec_batch_size,
-        shuffle=False)
-    # Network configuration dict is the same as before
-    # Set DEC configuration dict
-    dec_config = {
-        'n_clusters': args.n_clusters,
-        'hidden_dimension': args.hidden_dimensions,
-        'alpha': args.alpha,
-    }
-    # Set optimizer configuration dict
-    dec_opt_config = {
-        'optimizer_fn': get_opt,
-        'optimizer': args.optimizer,
-        'dataset': 'euromds',
-        'linears': args.linears,
-        'lr': args.dec_lr,
-    }
-    # Define the client fn to pass ray simulation
-    def dec_client_fn(cid: str):
-        # Create a single client instance from client id
-        return DECClient(
-            client_id=cid,
-            data_loader_config=data_loader_config,
-            net_config=net_config,
-            dec_config=dec_config,
-            opt_config=dec_opt_config,
-            output_folder=path_to_out)
-    # Define on_fit_config_fn
-    def on_fit_config_dec_fn(rnd: int, train: bool = True):
-        # Must have 'last', 'model' for server necessities; 
-        # 'actual_round', 'total_rounds', 'update_interval', 
-        # 'train_or_not_param' for client necessities
-        return {'model': 'dec',
-                'last': rnd==args.dec_epochs,
-                'actual_round': rnd,
-                'total_rounds': args.dec_epochs,
-                'train': train,
-                'n_epochs': args.n_local_epochs}
-    # Define on_evaluate_config_fn
-    def on_eval_config_dec_fn(rnd: int):
-        # Must have 'dump_metrics', 'verbose', 'actual_round'
-        # for client necessities; 'n_clusters' for server necessities
-        return {'dump_metrics': args.dump_metrics,
-                'verbose': args.verbose,
-                'actual_round': rnd,
-                'total_rounds': args.dec_epochs,
-                'model': 'dec'}
-    # Mandatory load initial parameters
-    filename = 'agg_weights_pretrain_ae.npz' if net_config['noising'] is None else 'agg_weights_finetune_ae.npz'
-    ae_parameters = np.load(
-        path_to_out/filename,
-        allow_pickle=True)
-    ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
-    params_dict = zip(autoencoder.state_dict().keys(), ae_parameters)
-    state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-    autoencoder.load_state_dict(state_dict, strict=True)
-    dec_model = DEC(
-        cluster_number=dec_config['n_clusters'],
-        hidden_dimension=dec_config['hidden_dimension'],
-        encoder=autoencoder.encoder,
-        alpha=dec_config['alpha'])
-    dec_parameters = [val.cpu().numpy() for _, val in dec_model.state_dict().items()]
-    # Get initial centroids from server
-    npy_file = np.load(path_to_out/'agg_clusters_centers.npz', allow_pickle=True)
-    centroids = [npy_file[a] for a in npy_file]
-    # Set initial centroids
-    cluster_centers = torch.tensor(
-        np.array(centroids),
-        dtype=torch.float,
-        requires_grad=True,
-    )
-    # Initialise the cluster centers
-    with torch.no_grad():
-        dec_model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
-    dec_parameters = [val.cpu().numpy() for _, val in dec_model.state_dict().items()]
-    # # Load initial trained parameters
-    # dec_parameters = np.load(
-    #     pathlib.Path(__file__).parent.parent.absolute()/'input_weights'/'dec_model.npz',
-    #     allow_pickle=True)
-    # dec_parameters = [dec_parameters[a] for a in dec_parameters][0]
-    initial_param = fl.common.weights_to_parameters(dec_parameters)
-    # Configure the strategy
-    current_strategy = main_strategy(
-        out_dir=path_to_out,
-        on_fit_config_fn=on_fit_config_dec_fn,
-        on_evaluate_config_fn=on_eval_config_dec_fn,
-        min_available_clients=args.n_clients,
-        min_fit_clients=args.n_clients,
-        min_eval_clients=args.n_clients,
-        initial_parameters=initial_param,
-    )
-    # Launch the simulation
-    fl.simulation.start_simulation(
-        client_fn=dec_client_fn,
-        num_clients=args.n_clients,
-        num_rounds=args.dec_epochs,
-        strategy=current_strategy,
-        ray_init_args=ray_config)
+    if args.train_dec:
+        ## Prepare generalized KMeansClient for initializing clusters centers
+        # Dataloader configuration dict is the same as before
+        # Network configuration dict is the same as before
+        # Set kmeans configuration dict
+        kmeans_config = {
+            'n_clusters': args.n_clusters,
+            'n_init': args.n_init,
+            'init': 'k-means++',
+        }
+        # Set scaler configuration dict
+        scaler_config = {
+            'get_scaler_fn': get_scaler,
+            'name': args.scaler,
+        }
+        # Define the client fn to pass ray simulation
+        def kmeans_client_fn(cid: int):
+            # Create a single client instance from client id
+            return KMeansClient(
+                client_id=cid,
+                data_loader_config=data_loader_config,
+                net_config=net_config,
+                kmeans_config=kmeans_config,
+                scaler_config=scaler_config,
+                output_folder=path_to_out)
+        # Define on_fit_config_fn
+        def on_fit_config_kmeans_fn(rnd: int):
+            # Must have 'last', 'model', 'n_clusters' for server necessities; 
+            # 'actual_round', 'total_rounds' for client necessities
+            return {'model': 'kmeans',
+                    'last': rnd==1,
+                    'actual_round': rnd,
+                    'total_rounds': 1,
+                    'n_clusters': args.n_clusters}
+        # Define on_evaluate_config_fn
+        def on_eval_config_kmeans_fn(rnd: int):
+            # Must have 'dump_metrics', 'verbose', 'actual_round'
+            # for client necessities
+            return {'dump_metrics': args.dump_metrics,
+                    'verbose': args.verbose,
+                    'actual_round': rnd,
+                    'total_rounds': 1}
+        # Load TSAE parameters
+        filename = 'agg_weights_pretrain_ae.npz' if net_config['noising'] is None else 'agg_weights_finetune_ae.npz'
+        ae_parameters = np.load(
+            path_to_out/filename,
+            allow_pickle=True)
+        ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
+        initial_param = fl.common.weights_to_parameters(ae_parameters)
+        # Configure the strategy
+        current_strategy = KMeansStrategy(
+            out_dir=path_to_out,
+            method=args.kmeans_agg,
+            on_fit_config_fn=on_fit_config_kmeans_fn,
+            on_evaluate_config_fn=on_eval_config_kmeans_fn,
+            min_available_clients=args.n_clients,
+            min_fit_clients=args.n_clients,
+            min_eval_clients=args.n_clients,
+            initial_parameters=initial_param,
+        )
+        # Launch the simulation
+        try:
+            fl.simulation.start_simulation(
+                client_fn=kmeans_client_fn,
+                num_clients=args.n_clients,
+                client_resources=client_resources,
+                num_rounds=1,
+                strategy=current_strategy,
+                ray_init_args=ray_config)
+        except:
+            print('Federated initialization of centroids failed!')
+        ## Prepare generalized DECClient for clustering step
+        # Dataloader configuration dict changes only here:
+        data_loader_config['trainloader_fn'] = partial(
+            DataLoader,
+            batch_size=args.dec_batch_size,
+            shuffle=False)
+        # Network configuration dict is the same as before
+        # Set DEC configuration dict
+        dec_config = {
+            'n_clusters': args.n_clusters,
+            'hidden_dimension': args.hidden_dimensions,
+            'alpha': args.alpha,
+        }
+        # Set optimizer configuration dict
+        dec_opt_config = {
+            'optimizer_fn': get_opt,
+            'optimizer': args.optimizer,
+            'dataset': 'euromds',
+            'linears': args.linears,
+            'lr': args.dec_lr,
+        }
+        # Define the client fn to pass ray simulation
+        def dec_client_fn(cid: str):
+            # Create a single client instance from client id
+            return DECClient(
+                client_id=cid,
+                data_loader_config=data_loader_config,
+                net_config=net_config,
+                dec_config=dec_config,
+                opt_config=dec_opt_config,
+                output_folder=path_to_out)
+        # Define on_fit_config_fn
+        def on_fit_config_dec_fn(rnd: int, train: bool = True):
+            # Must have 'last', 'model' for server necessities; 
+            # 'actual_round', 'total_rounds', 'update_interval', 
+            # 'train_or_not_param' for client necessities
+            return {'model': 'dec',
+                    'last': rnd==args.dec_epochs,
+                    'actual_round': rnd,
+                    'total_rounds': args.dec_epochs,
+                    'train': train,
+                    'n_epochs': args.n_local_epochs}
+        # Define on_evaluate_config_fn
+        def on_eval_config_dec_fn(rnd: int):
+            # Must have 'dump_metrics', 'verbose', 'actual_round'
+            # for client necessities; 'n_clusters' for server necessities
+            return {'dump_metrics': args.dump_metrics,
+                    'verbose': args.verbose,
+                    'actual_round': rnd,
+                    'total_rounds': args.dec_epochs,
+                    'model': 'dec'}
+        # Mandatory load initial parameters
+        filename = 'agg_weights_pretrain_ae.npz' if net_config['noising'] is None else 'agg_weights_finetune_ae.npz'
+        ae_parameters = np.load(
+            path_to_out/filename,
+            allow_pickle=True)
+        ae_parameters = [ae_parameters[a] for a in ae_parameters][0]
+        params_dict = zip(autoencoder.state_dict().keys(), ae_parameters)
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        autoencoder.load_state_dict(state_dict, strict=True)
+        dec_model = DEC(
+            cluster_number=dec_config['n_clusters'],
+            hidden_dimension=dec_config['hidden_dimension'],
+            encoder=autoencoder.encoder,
+            alpha=dec_config['alpha'])
+        dec_parameters = [val.cpu().numpy() for _, val in dec_model.state_dict().items()]
+        # Get initial centroids from server
+        npy_file = np.load(path_to_out/'agg_clusters_centers.npz', allow_pickle=True)
+        centroids = [npy_file[a] for a in npy_file]
+        # Set initial centroids
+        cluster_centers = torch.tensor(
+            np.array(centroids),
+            dtype=torch.float,
+            requires_grad=True,
+        )
+        # Initialise the cluster centers
+        with torch.no_grad():
+            dec_model.state_dict()["assignment.cluster_centers"].copy_(cluster_centers)
+        dec_parameters = [val.cpu().numpy() for _, val in dec_model.state_dict().items()]
+        # # Load initial trained parameters
+        # dec_parameters = np.load(
+        #     pathlib.Path(__file__).parent.parent.absolute()/'input_weights'/'dec_model.npz',
+        #     allow_pickle=True)
+        # dec_parameters = [dec_parameters[a] for a in dec_parameters][0]
+        initial_param = fl.common.weights_to_parameters(dec_parameters)
+        # Configure the strategy
+        current_strategy = main_strategy(
+            out_dir=path_to_out,
+            on_fit_config_fn=on_fit_config_dec_fn,
+            on_evaluate_config_fn=on_eval_config_dec_fn,
+            min_available_clients=args.n_clients,
+            min_fit_clients=args.n_clients,
+            min_eval_clients=args.n_clients,
+            initial_parameters=initial_param,
+        )
+        # Launch the simulation
+        try:
+            fl.simulation.start_simulation(
+                client_fn=dec_client_fn,
+                num_clients=args.n_clients,
+                num_rounds=args.dec_epochs,
+                strategy=current_strategy,
+                ray_init_args=ray_config)
+        except:
+            print('Federated DEC training failed!')
