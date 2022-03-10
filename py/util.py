@@ -26,7 +26,6 @@ def distance_from_centroids(centroids_array, vector):
     return min(distances)
 
 
-# TODO: give by argument the distance function
 # TODO: give by argument the closeness criteria
 def sync_centroids(server_centroids, client_centroids, metric=np.linalg.norm, verbose: bool = False):
     # labels array where index == server_label and
