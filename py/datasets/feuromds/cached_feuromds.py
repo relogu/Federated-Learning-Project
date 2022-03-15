@@ -41,11 +41,6 @@ class CachedfEUROMDS(Dataset):
             path_to_data=path_to_data, groups=['HDP'])) if get_hdp else None
 
         self.y = self.hdp.argmax(1) if self.hdp is not None else None
-        # TODO: manage federated outcomes
-        self.outcomes = np.array(get_outcome_euromds_dataset(path_to_data=path_to_data)) if get_outcomes else None
-        # TODO: manage federated ids
-        self.ids = np.array(get_euromds_ids(
-            path_to_data=path_to_data)) if get_ids else None
         
         self.indices = get_f_indices(
             n_samples=self.ds.shape[0],
@@ -54,6 +49,13 @@ class CachedfEUROMDS(Dataset):
             client_id=client_id,
             seed=seed,
             verbose=verbose)
+        
+        outcomes = np.array(get_outcome_euromds_dataset(path_to_data=path_to_data)) if get_outcomes else None
+        self.outcomes = np.array([self._get_additional_feature(i, outcomes) for i in range(len(self.indices))])
+        
+        ids = np.array(get_euromds_ids(
+            path_to_data=path_to_data)) if get_ids else None
+        self.ids = np.array([self._get_additional_feature(i, ids) for i in range(len(self.indices))])
         
         self._cache = dict()
         self.device = device
@@ -67,7 +69,12 @@ class CachedfEUROMDS(Dataset):
             self._cache[index][1] = self._cache[index][1].to(self.device, non_blocking=True)
         return self._cache[index]
     
-    # TODO: correct these for filtering indices
+    def _get_additional_feature(self, index: int, features):
+        idx = self.indices[index]
+        return features[idx]
+            
+    
+    # FIXME: correct these for filtering indices
     # def _get_up_frequencies(self) -> List[float]:
     #     not_binary_indices = return_not_binary_indices(self.ds)
     #     binary_indices = list(range(self.n_features))[len(not_binary_indices):]
