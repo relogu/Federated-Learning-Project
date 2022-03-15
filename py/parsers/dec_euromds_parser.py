@@ -1,4 +1,5 @@
 import argparse
+from py.dec.torch.utils import LOSS_DICT, BINARY_MOD_LOSS_DICT
 
 def dec_euromds_parser():
     parser = argparse.ArgumentParser(
@@ -89,8 +90,7 @@ def dec_euromds_parser():
         required=False,
         type=str,
         default='mse',
-        # TODO: put other choices
-        choices=['mse'],
+        choices=list(LOSS_DICT.keys()),
         help='Name of the main loss function in training TSAE'
     )
     parser.add_argument(
@@ -99,8 +99,7 @@ def dec_euromds_parser():
         required=False,
         type=str,
         default=None,
-        # TODO: put other choices
-        choices=[None, 'bce+dice'],
+        choices=list(BINARY_MOD_LOSS_DICT.keys())+[None],
         help='Name of the mod loss function in training TSAE'
     )
     parser.add_argument(

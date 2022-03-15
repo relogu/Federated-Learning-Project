@@ -1,4 +1,5 @@
 import argparse
+from py.dec.torch.utils import LOSS_DICT, BINARY_MOD_LOSS_DICT, MOD_LOSS_DICT
 
 def fdec_femnist_parser():
     parser = argparse.ArgumentParser(
@@ -88,8 +89,7 @@ def fdec_femnist_parser():
         required=False,
         type=str,
         default='mse',
-        # TODO: put other choices
-        choices=['mse'],
+        choices=list(LOSS_DICT.keys()),
         help='Name of the main loss function in training TSAE'
     )
     parser.add_argument(
@@ -98,8 +98,7 @@ def fdec_femnist_parser():
         required=False,
         type=str,
         default=None,
-        # TODO: put other choices
-        choices=[None, 'bce+dice'],
+        choices=list(MOD_LOSS_DICT.keys())+list(BINARY_MOD_LOSS_DICT.keys())+[None],
         help='Name of the mod loss function in training TSAE'
     )
     parser.add_argument(
