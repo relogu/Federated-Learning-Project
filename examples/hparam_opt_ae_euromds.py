@@ -34,11 +34,11 @@ def train_ae(
     device: str = 'cpu',
 ) -> None:
     """
-    TODO
+    Main training function called by Ray Tune
 
-    :param config: TODO
+    :param config: configurational dictionary for the training loop
     :param scheduler: scheduler to use, or None to disable, defaults to None
-    :param device: TODO
+    :param device: string representing the device to pass to PyTorch
     :return: None
     """
     # Instantiate DataLoaders
