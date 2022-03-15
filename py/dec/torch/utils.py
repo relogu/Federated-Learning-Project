@@ -12,6 +12,59 @@ from py.losses.torch import (SobelLoss, GaussianBlurredLoss, ComboLoss,
                              TverskyLoss, LovaszHingeLoss, IoULoss)
 
 
+LOSS_DICT = {
+    'mse': torch.nn.MSELoss,
+    'ce': torch.nn.CrossEntropyLoss,
+    'bce': torch.nn.BCELoss,
+    'bce-wl': torch.nn.BCEWithLogitsLoss,
+}
+
+MOD_LOSS_DICT = {
+    'sobel': [],
+    'gausk1': [],
+    'gausk3': [],
+    'mix': [],
+    'mix-gk': [],
+    'mix-s-gk1': [],
+    'mix-s-gk3': [],
+}
+
+BINARY_MOD_LOSS_DICT = {
+    'dice': [
+        torch.nn.MSELoss,
+        DiceLoss,
+    ],
+    'lovasz-hinge': [
+        torch.nn.MSELoss,
+        LovaszHingeLoss
+    ],
+    'iou': [
+        torch.nn.MSELoss,
+        IoULoss
+    ],
+    'combo': [
+        torch.nn.MSELoss,
+        ComboLoss
+    ],
+    'focal': [
+        torch.nn.MSELoss,
+        FocalLoss
+    ],
+    'tversky': [
+        torch.nn.MSELoss,
+        TverskyLoss
+    ],
+    'focal-tversky': [
+        torch.nn.MSELoss,
+        FocalTverskyLoss
+    ],
+    'bce+dice': [
+        torch.nn.MSELoss,
+        partial(DiceBCELoss, use_sigmoid=True)
+    ],
+}
+
+
 def get_cl_batch_size(linears, dataset, opt):
     batch_size_dict = {
         'mnist': {
@@ -158,13 +211,7 @@ def get_opt(opt: str, lr: float = None):
 
 
 def get_main_loss(name: str):
-    loss_dict = {
-        'mse': torch.nn.MSELoss,
-        'ce': torch.nn.CrossEntropyLoss,
-        'bce': torch.nn.BCELoss,
-        'bce-wl': torch.nn.BCEWithLogitsLoss,
-    }
-    return loss_dict[name]
+    return LOSS_DICT[name]
 
 
 def get_mod_loss(
@@ -174,70 +221,36 @@ def get_mod_loss(
     unflatten: bool = True,
     device: str = 'cpu',
     ):
+    # get main loss
     main_loss = get_main_loss(main_loss)
-    loss_dict = {
-        'sobel': [partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, device)],
-        'gausk1': [partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, device)],
-        'gausk3': [partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, device)],
-        'mix': [
-            partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, device),
-            partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, device),
-            partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, device),
-        ],
-        'mix-gk': [
-            partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, device),
-            partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, device),
-        ],
-        'mix-s-gk1': [
-            partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, device),
-            partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, device),
-        ],
-        'mix-s-gk3': [
-            partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, device),
-            partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, device),
-        ],
-    }
-    return loss_dict[name]
+    # fill dictionary
+    MOD_LOSS_DICT['sobel'] = [partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, device)]
+    MOD_LOSS_DICT['gausk1'] = [partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, device)]
+    MOD_LOSS_DICT['gausk3'] = [partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, device)]
+    MOD_LOSS_DICT['mix'] = [
+        partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, device),
+        partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, device),
+        partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, device),
+    ]
+    MOD_LOSS_DICT['mix-gk'] = [
+        partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, device),
+        partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, device),
+    ]
+    MOD_LOSS_DICT['mix-s-gk1'] = [
+        partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, device),
+        partial(GaussianBlurredLoss, 1, beta, main_loss, unflatten, device),
+    ]
+    MOD_LOSS_DICT['mix-s-gk3'] = [
+        partial(SobelLoss, beta, main_loss, main_loss!='mse', unflatten, True, device),
+        partial(GaussianBlurredLoss, 3, beta, main_loss, unflatten, device),
+    ]
+    return MOD_LOSS_DICT[name]
 
 
 def get_mod_binary_loss(
     name: str,
     ):
-    loss_dict = {
-        'dice': [
-            torch.nn.MSELoss,
-            DiceLoss,
-        ],
-        'lovasz-hinge': [
-            torch.nn.MSELoss,
-            LovaszHingeLoss
-        ],
-        'iou': [
-            torch.nn.MSELoss,
-            IoULoss
-        ],
-        'combo': [
-            torch.nn.MSELoss,
-            ComboLoss
-        ],
-        'focal': [
-            torch.nn.MSELoss,
-            FocalLoss
-        ],
-        'tversky': [
-            torch.nn.MSELoss,
-            TverskyLoss
-        ],
-        'focal-tversky': [
-            torch.nn.MSELoss,
-            FocalTverskyLoss
-        ],
-        'bce+dice': [
-            torch.nn.MSELoss,
-            partial(DiceBCELoss, use_sigmoid=True)
-        ],
-    }
-    return loss_dict[name]
+    return BINARY_MOD_LOSS_DICT[name]
 
 def cluster_accuracy(y_true, y_predicted, cluster_number: Optional[int] = None):
     """
