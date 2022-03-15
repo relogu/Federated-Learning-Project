@@ -44,7 +44,6 @@ from py.datasets.mnist import CachedMNIST
 def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode):
     writer = SummaryWriter()  # create the TensorBoard object
     # callback function to call during training, uses writer from the scope
-
     def training_callback(epoch, lr, loss, validation_loss):
         writer.add_scalars(
             "data/autoencoder",
@@ -120,7 +119,7 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode):
         writer.add_embedding(
             torch.cat(features),
             metadata=predicted,
-            label_img=ds_train.ds.train_data.float().unsqueeze(1),  # TODO bit ugly
+            label_img=ds_train.ds.train_data.float().unsqueeze(1),  # FIXME bit ugly
             tag="predicted",
         )
         writer.close()

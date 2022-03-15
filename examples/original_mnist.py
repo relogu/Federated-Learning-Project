@@ -120,7 +120,7 @@ def main(cuda, batch_size, pretrain_epochs, finetune_epochs, testing_mode):
         writer.add_embedding(
             torch.cat(features),
             metadata=predicted,
-            label_img=ds_train.ds.train_data.float().unsqueeze(1),  # TODO bit ugly
+            label_img=ds_train.ds.train_data.float().unsqueeze(1),  # FIXME bit ugly
             tag="predicted",
         )
         writer.close()
