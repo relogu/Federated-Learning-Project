@@ -53,7 +53,7 @@ if __name__ == "__main__":
         data_folder = pathlib.Path(args.data_folder)
     print('Data folder {}'.format(data_folder))
     
-    # TODO: issue with ray simulation and gpu resources
+    # FIXME: issue with ray simulation and gpu resources
     # Set client resources for ray
     client_resources = {'num_cpus': args.n_cpus}
     # (optional) Specify ray config, for sure it is to be changed
@@ -63,7 +63,6 @@ if __name__ == "__main__":
 
     ## Prepare generalized AutoencoderClient for pretraining
     # Set dataloader configuration dict
-    # TODO: check consistency of datasets and dataloaders
     data_loader_config = {
         'get_train_fn': partial(
             CachedBFEMNIST if args.binary else CachedFEMNIST,
