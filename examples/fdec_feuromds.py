@@ -64,7 +64,7 @@ if __name__ == "__main__":
         data_folder = pathlib.Path(args.data_folder)
     print('Data folder {}'.format(data_folder))
     
-    # TODO: issue with ray simulation and gpu resources
+    # FIXME: issue with ray simulation and gpu resources
     # Set client resources for ray
     client_resources = {'num_cpus': args.n_cpus}
     # (optional) Specify ray config, for sure it is to be changed
