@@ -12,7 +12,7 @@ from tensorboardX import SummaryWriter
 from sklearn.cluster import KMeans
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
-from torch.nn import ReLU, Sigmoid, KLDivLoss, MSELoss
+from torch.nn import ReLU, Sigmoid, KLDivLoss
 import torch.nn.functional as F
 import torch
 import tensorboard as tb
