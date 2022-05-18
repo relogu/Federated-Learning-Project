@@ -161,7 +161,7 @@ if __name__ == "__main__":
         min_fit_clients=min_clients,
         min_eval_clients=min_clients,
     )
-    # Launch the simulation
+    # Launch the simulation, try-except clause is to avoid warnings
     try:
         fl.simulation.start_simulation(
             client_fn=pae_client_fn,
@@ -170,8 +170,8 @@ if __name__ == "__main__":
             num_rounds=args.pretrain_epochs,
             strategy=current_strategy,
             ray_init_args=ray_config)
-    except:
-        print('TSAE federated pretraining failed!')
+    except ImportError:
+        print('TSAE federated pretraining failed! Ray may still be missing.')
     
     if args.noising > 0:
         ## Prepare generalized AutoencoderClient for finetuning
@@ -218,7 +218,7 @@ if __name__ == "__main__":
             min_fit_clients=min_clients,
             min_eval_clients=min_clients,
         )
-        # Launch the simulation
+        # Launch the simulation, try-except clause is to avoid warnings
         try:
             fl.simulation.start_simulation(
                 client_fn=ftae_client_fn,
@@ -227,8 +227,8 @@ if __name__ == "__main__":
                 num_rounds=args.finetune_epochs,
                 strategy=current_strategy,
                 ray_init_args=ray_config)
-        except:
-            print('TSAE federated finetuning failed!')
+        except ImportError:
+            print('TSAE federated finetuning failed! Ray may still be missing.')
     
     if args.train_dec:
         ## Prepare generalized KMeansClient for initializing clusters centers
@@ -290,7 +290,7 @@ if __name__ == "__main__":
             min_eval_clients=min_clients,
             initial_parameters=ae_parameters,
         )
-        # Launch the simulation
+        # Launch the simulation, try-except clause is to avoid warnings
         try:
             fl.simulation.start_simulation(
                 client_fn=kmeans_client_fn,
@@ -299,8 +299,8 @@ if __name__ == "__main__":
                 num_rounds=1,
                 strategy=current_strategy,
                 ray_init_args=ray_config)
-        except:
-            print('Federated initialization of centroids failed!')
+        except ImportError:
+            print('Federated initialization of centroids failed! Ray may still be missing.')
         ## Prepare generalized DECClient for clustering step
         # Dataloader configuration dict changes only here:
         data_loader_config['trainloader_fn'] = partial(
@@ -360,7 +360,7 @@ if __name__ == "__main__":
             min_fit_clients=min_clients,
             min_eval_clients=min_clients,
         )
-        # Launch the simulation
+        # Launch the simulation, try-except clause is to avoid warnings
         try:
             fl.simulation.start_simulation(
                 client_fn=dec_client_fn,
@@ -368,5 +368,5 @@ if __name__ == "__main__":
                 num_rounds=args.dec_epochs,
                 strategy=current_strategy,
                 ray_init_args=ray_config)
-        except:
-            print('Federated DEC training failed!')
+        except ImportError:
+            print('Federated DEC training failed! Ray may still be missing.')
