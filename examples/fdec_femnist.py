@@ -114,6 +114,7 @@ if __name__ == "__main__":
         'dataset': 'bmnist' if args.binary else 'mnist',
         'linears': args.linears,
         'lr': args.ae_lr,
+        'optimizer': args.optimizer
     }
     # TODO: here should be possible to set server params for optimizers
     if args.optimizer == 'sgd':
@@ -150,7 +151,7 @@ if __name__ == "__main__":
                 'filename': '_pretrain_ae',
                 'verbose': args.verbose,
                 'actual_round': rnd,
-                'total_rounds': args.pretrain_rounds}
+                'total_rounds': args.pretrain_epochs}
     # Configure the strategy
     current_strategy = main_strategy(
         out_dir=path_to_out,
