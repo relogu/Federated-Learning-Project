@@ -384,7 +384,7 @@ if __name__ == "__main__":
                 actual.append(value)
             batch = batch.to(device, non_blocking=True)
             features.append(model.encoder(batch).detach().cpu())
-        # Retrieve true labels (in this case they exist)
+        # Retrieve true labels (in this case HDP labels are used)
         actual = torch.cat(actual).long()
         # Predict labels via KMeans
         predicted = kmeans.fit_predict(
