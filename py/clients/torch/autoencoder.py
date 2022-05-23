@@ -45,13 +45,12 @@ def training_loop(
             ):
                 batch = batch[0]
             batch = batch.to(device)
-            input = batch
             
             if noising is not None:
-                input = noising(input)
+                batch = noising(batch)
             if corruption > 0:
-                input = F.dropout(input, corruption)
-            output = autoencoder(input)
+                batch = F.dropout(batch, corruption)
+            output = autoencoder(batch)
             
             losses = [l_fn_i(output, batch) for l_fn_i in loss_functions]
             loss = sum(losses)/len(loss_fn)
@@ -163,7 +162,7 @@ class AutoencoderClient(NumPyClient):
             corruption=self.corruption,
         )
         # returning the parameters necessary for FedAvg
-        return self.get_parameters(), len(self.ds_train), loss
+        return self.get_parameters(), len(self.ds_train), {loss}
     
     def evaluate(self, parameters, config):
         """Perform the eval step after having assigned new weights."""
