@@ -181,7 +181,7 @@ class DECClient(NumPyClient):
             optimizer=self.optimizer,
         )
         # returning the parameters necessary for FedAvg
-        return self.get_parameters(), len(self.ds_train), loss
+        return self.get_parameters(), len(self.ds_train), {loss}
     
     def evaluate(self, parameters, config):
         # get device

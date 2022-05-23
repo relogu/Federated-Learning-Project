@@ -146,7 +146,7 @@ class KMeansClient(NumPyClient):
         # save clusters_centers
         np.savez(self.out_dir/'kmeans_cluster_centers_{}.npz'.format(self.client_id), *self.clusters_centers)
         # returning the parameters necessary for FedAvg
-        return couples, len(self.ds_train), 0.0
+        return couples, len(self.ds_train), {0.0}
     
     def evaluate(self, parameters, config):
         # get device
