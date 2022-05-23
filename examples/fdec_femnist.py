@@ -29,6 +29,7 @@ from py.dec.torch.layers import TruncatedGaussianNoise
 from py.dec.torch.utils import get_main_loss, get_linears, get_opt, get_scaler
 from py.parsers.fdec_femnist_parser import fdec_femnist_parser as get_parser
 
+# Restrict the number of available GPUs to the first
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 
