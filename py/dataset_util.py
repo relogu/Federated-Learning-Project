@@ -129,8 +129,8 @@ def get_euromds_cols(path_to_data: Union[Path, str] = None):
 # pylint: 
 def get_euromds_dataset(
     accept_nan: int = 0,
-    groups: list[str] = None,
-    exclude_cols: list[str] = None,
+    groups: List[str] = None,
+    exclude_cols: List[str] = None,
     path_to_data: Union[Path, str] = None,
     verbose: bool = False,
     fill_fn: Callable[[Series, bool], Series] = None
@@ -188,8 +188,8 @@ def get_euromds_dataset(
     return filtered
 
 def check_groups_and_columns(
-    groups: list[str] = None,
-    exclude_cols: list[str] = None,
+    groups: List[str] = None,
+    exclude_cols: List[str] = None,
     ):
     if groups is not None:
         for g in groups:
@@ -370,7 +370,7 @@ def build_dataset(n_clients: int, total_samples: int, noise: float, seed: int = 
     return x, y
 
 
-def build_mnist_dataset(n_clients: int, total_samples: int, noise: float, seed: int = 51550):
+def build_mnist_dataset(n_clients: int, total_samples: int):
     """Build the entire dataset, to be distributed.
 
     Args:
