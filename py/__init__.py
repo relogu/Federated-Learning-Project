@@ -1,4 +1,4 @@
-from . import clients, dec, dumping, losses, scripts, strategies
+from . import clients, dec, losses, scripts, strategies
 from .util import (check_weights_dict, compute_centroid_np,
                    complete_basis_centroids, distance_from_centroids,
                    generate_prob_labels, sync_centroids,
@@ -9,7 +9,6 @@ from .util import (check_weights_dict, compute_centroid_np,
 __all__ = [
     "clients",
     "dec",
-    "dumping",
     "losses",
     "scripts",
     "strategies",
