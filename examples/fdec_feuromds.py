@@ -46,13 +46,15 @@ if __name__ == "__main__":
     foldername = 'feuromds_{}_{}_{}'. \
         format(
             'unif' if args.balance < 0 else 'skew{}'.format(args.balance),
-            'fedavg' if args.ae_opt == 'sgd' else 'fed{}'.format(args.ae_opt),
+            'fedavg' if args.optimizer == 'sgd' else 'fed{}'.format(args.optimizer),
             args.kmeans_agg
         )
     if args.out_folder is None:
         path_to_out = pathlib.Path(__file__).parent.parent.absolute()/foldername
     else:
         path_to_out = pathlib.Path(args.out_folder)/foldername
+    # Create the output folder, preventing to output an error message if the folder exists
+    os.makedirs(path_to_out, exist_ok=True)
     print('Output folder {}'.format(path_to_out))
     # Dump current configuration
     with open(path_to_out/'config.json', 'w') as file:
@@ -222,10 +224,10 @@ if __name__ == "__main__":
             num_rounds=args.pretrain_epochs,
             strategy=current_strategy,
             ray_init_args=ray_config)
-    except:
-        print('TSAE federated pretraining failed!')
+    except ImportError:
+        print('TSAE federated pretraining failed! Ray may still be missing.')
     
-    if net_config['net_config'] is not None:
+    if net_config['noising'] is not None:
         ## Prepare generalized AutoencoderClient for finetuning
         # Dataloader configuration dict is the same as before
         # Loss configuration dict is the same as before
@@ -286,8 +288,8 @@ if __name__ == "__main__":
                 num_rounds=args.finetune_epochs,
                 strategy=current_strategy,
                 ray_init_args=ray_config)
-        except:
-            print('TSAE federated finetuning failed!')
+        except ImportError:
+            print('TSAE federated finetuning failed! Ray may still be missing.')
     
     if args.train_dec:
         ## Prepare generalized KMeansClient for initializing clusters centers
@@ -358,8 +360,8 @@ if __name__ == "__main__":
                 num_rounds=1,
                 strategy=current_strategy,
                 ray_init_args=ray_config)
-        except:
-            print('Federated initialization of centroids failed!')
+        except ImportError:
+            print('Federated initialization of centroids failed! Ray may still be missing.')
         ## Prepare generalized DECClient for clustering step
         # Dataloader configuration dict changes only here:
         data_loader_config['trainloader_fn'] = partial(
@@ -463,5 +465,5 @@ if __name__ == "__main__":
                 num_rounds=args.dec_epochs,
                 strategy=current_strategy,
                 ray_init_args=ray_config)
-        except:
-            print('Federated DEC training failed!')
+        except ImportError:
+            print('Federated DEC training failed! Ray may still be missing.')
